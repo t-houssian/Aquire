@@ -1,5 +1,13 @@
 # Validation record
 
+## iPhone board sizing and landscape gutters — September 29, 2026
+
+The active game now applies iPhone safe-area padding once, at the game view. The previous nested padding reproduced a 118px left gutter with a 59px emulated notch inset. Portrait boards fill the height remaining above the actual turn controls; landscape uses two compact header rows and a narrower action column. Cells adapt to the frame, including wide shaped maps. Expanded maps have Fit/Zoom controls, and choosing a rack tile recenters only the zoomed board. Text sizing is stable when iOS changes orientation.
+
+Production build and all 88 unit/rendering tests passed. The complete browser suite passed 112 tests with 22 environment/platform skips, including a new WebKit mobile project. Coverage includes 320×568 through desktop sizes, iPhone safe insets on either side, toolbar-reduced 852×320 and 393×650 windows, orientation changes, full-frame Twin Docks, 12-seat fit/zoom/pan, rack selection, stock purchases, and merger choices. Safe-area overrides use Chromium's device protocol; the WebKit checks exercise the rendered layout without physical iPhone browser chrome. Reviewed portrait and landscape screenshots are saved in `artifacts/phone-layout-*-20260929.png`.
+
+Capacitor sync, Android debug APK/release AAB, and iOS simulator builds passed. All 30 web assets match the native projects and the refreshed native/web archives; archive integrity and SHA-256 checks passed. `artifacts/aquire-web-dist.zip` is ready to publish. This update was not deployed to the public Cloudflare website.
+
 ## Dice reveals and market timing — September 29, 2026
 
 Dividend and market house-rule events now open an animated dice reveal after each complete round, with the selected hotel, payout outcome, and resulting market value. Optional market frequency supports a roll before every investor's turn (including the opening turn), or after every second or third complete round; dividends retain their round-end schedule. The current market status is visible beside the board on desktop and in the compact phone bar. Recent dice reports are bounded to one table rotation so online updates can reveal bot turns without accumulating event history. Private payout totals remain hidden under the money/privacy house rules.
@@ -95,7 +103,7 @@ The sidebar and desktop layout update passed 115 automated tests (55 unit, 34 ex
 npm run check:all
 ```
 
-Install the browser first if needed with `npx playwright install chromium`. The backend test command downloads Deno through npx and runs without Docker. Internet access is needed when downloading dependencies/runtimes for the first time.
+Install the browsers first if needed with `npx playwright install chromium webkit`. The backend test command downloads Deno through npx and runs without Docker. Internet access is needed when downloading dependencies/runtimes for the first time.
 
 ## Visual review
 

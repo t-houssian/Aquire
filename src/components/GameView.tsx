@@ -1,4 +1,4 @@
-import { useEffect, useState, type CSSProperties } from 'react';
+import { useEffect, useRef, useState, type CSSProperties } from 'react';
 import {
   ArrowLeft,
   ArrowRight,
@@ -21,6 +21,8 @@ import {
   TrendingDown,
   TrendingUp,
   Users,
+  ZoomIn,
+  Scan,
 } from 'lucide-react';
 import {
   CHAINS,
@@ -54,6 +56,15 @@ const phaseNames: Record<string, string> = {
   ended: 'The closing bell',
 };
 const emptyCart = () => Object.fromEntries(CHAINS.map((c) => [c.id, 0])) as Stocks;
+function centerBoardTile(stage: HTMLDivElement | null, tile: Tile | null) {
+  if (!stage || !tile) return;
+  const target = stage.querySelector<HTMLElement>(`[data-tile="${CSS.escape(tile)}"]`);
+  if (!target) return;
+  // Pan only the board, keeping the rack and confirmation button stationary.
+  const frame = stage.getBoundingClientRect(), cell = target.getBoundingClientRect();
+  stage.scrollLeft += cell.left + cell.width / 2 - frame.left - frame.width / 2;
+  stage.scrollTop += cell.top + cell.height / 2 - frame.top - frame.height / 2;
+}
 export default function GameView({
   game,
   viewerId,
@@ -97,10 +108,22 @@ export default function GameView({
     [clockNow, setClockNow] = useState(Date.now()),
     [sell, setSell] = useState(0),
     [trade, setTrade] = useState(0),
+    [enlargedBoard, setEnlargedBoard] = useState(false),
     [compactView, setCompactView] = useState<'board' | 'market'>(game.phase === 'buy' ? 'market' : 'board'),
     [tab, setTab] = useState<'market' | 'investors' | 'activity' | 'results' | 'rules'>(
       game.phase === 'ended' ? 'results' : 'market',
     );
+  const boardStage = useRef<HTMLDivElement>(null);
+  useEffect(() => {
+    setEnlargedBoard(false);
+  }, [game.id]);
+  useEffect(() => {
+    const stage = boardStage.current;
+    if (!stage || !enlargedBoard || !selected) return;
+    const observer = new ResizeObserver(() => centerBoardTile(stage, selected));
+    observer.observe(stage);
+    return () => observer.disconnect();
+  }, [selected, enlargedBoard, compactView]);
   useEffect(() => {
     setTab(game.phase === 'ended' ? 'results' : 'market');
   }, [game.id, game.phase === 'ended']);
@@ -180,7 +203,10 @@ export default function GameView({
       .map((log) => [log.chain, log.tile]),
   );
   const select = (tile: Tile) => {
-    if (controllable && game.phase === 'place' && player.hand.includes(tile)) setSelected(tile);
+    if (controllable && game.phase === 'place' && player.hand.includes(tile)) {
+      setSelected(tile);
+      if (enlargedBoard) centerBoardTile(boardStage.current, tile);
+    }
   };
   const add = (id: ChainId, change: number) =>
     setCart((prev) => ({ ...prev, [id]: Math.max(0, prev[id] + change) }));
@@ -276,7 +302,7 @@ export default function GameView({
               {marketTone === 'low' ? <TrendingDown size={13} /> : marketTone === 'high' ? <TrendingUp size={13} /> : <Minus size={13} />}
               Market {marketStatus}
             </span>
-          : compactView === 'board' && (cityMap.columns > 12 || cityMap.rows > 9) ? 'Drag to explore' : phaseNames[game.phase]}</span>
+          : compactView === 'board' && enlargedBoard ? 'Drag to explore' : phaseNames[game.phase]}</span>
         <div>
           <button type="button" aria-pressed={compactView === 'board'} aria-controls="game-board-panel" className={compactView === 'board' ? 'active' : ''} onClick={() => setCompactView('board')}>
             <Layers3 size={15} /> Board
@@ -288,19 +314,25 @@ export default function GameView({
       </div>
       <div className="game-layout">
         <div className="board-column">
-          <section id="game-board-panel" className={`board-card map-themed ${cityMap.maxPlayers > 6 || cityMap.columns !== 12 || cityMap.rows !== 9 ? 'expansion-board' : ''}`} style={mapThemeStyle(cityMap)} data-map={cityMap.id}>
+          <section id="game-board-panel" className={`board-card map-themed ${cityMap.maxPlayers > 6 || cityMap.columns !== 12 || cityMap.rows !== 9 ? 'expansion-board' : ''}`} style={mapThemeStyle(cityMap)} data-map={cityMap.id} data-board-scale={enlargedBoard ? 'detail' : 'fit'}>
             <div className="board-title">
               <div>
                 <span className="live-dot" />
                 <strong>{cityMap.id === 'classic' ? 'The city' : cityMap.name}</strong>
                 <span className="muted small">{cityMap.palette.name}</span>
               </div>
-              <span className="tiles-count">
-                <Layers3 size={14} />
-                {Object.keys(game.board).length} / {cityMap.tiles.length} · Rack {player.hand.length} · Bag {game.bag.length}
-              </span>
+              <div className="board-tools">
+                <span className="tiles-count">
+                  <Layers3 size={14} />
+                  {Object.keys(game.board).length} / {cityMap.tiles.length} · Rack {player.hand.length} · Bag {game.bag.length}
+                </span>
+                <button type="button" className="board-scale-toggle" aria-label={enlargedBoard ? 'Fit entire board' : 'Enlarge board tiles'} aria-pressed={enlargedBoard} onClick={() => setEnlargedBoard((value) => !value)}>
+                  {enlargedBoard ? <Scan size={14} /> : <ZoomIn size={14} />}
+                  {enlargedBoard ? 'Fit' : 'Zoom'}
+                </button>
+              </div>
             </div>
-            <div className="board-stage">
+            <div className="board-stage" ref={boardStage}>
               <div className="board-wrap">
                 <div className="board-columns">
                   {Array.from({ length: cityMap.columns }, (_, i) => (
@@ -328,6 +360,7 @@ export default function GameView({
                       return (
                         <button
                           key={tile}
+                          data-tile={tile}
                           className={`board-tile ${!isPlayableSpace ? 'map-void' : ''} ${chain ? 'occupied' : ''} ${chain === 'independent' ? 'independent-tile' : ''} ${def ? 'chain-tile' : ''} ${head ? 'chain-headquarters' : ''} ${!removalMode && inHand && legal.includes(tile) ? 'playable' : ''} ${removalMode && removableTiles.has(tile) ? 'removal-target' : ''} ${selected === tile || selectedRemoval === tile ? 'tile-selected' : ''} ${game.lastPlacedTile === tile ? 'last-placed' : ''}`}
                           style={
                             def

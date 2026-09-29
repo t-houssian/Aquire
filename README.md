@@ -41,7 +41,9 @@ Ending an unfinished local game removes its save without adding a match result. 
 
 ## Turn recaps and preferences
 
-On desktop, use **Hide sidebar** beside the logo to reclaim its space, then **Show sidebar** at the top left to restore it. The choice persists across reloads. Desktop game windows at least 1060 × 650 pixels fit all 108 spaces of the printed board, the current action, and all seven market rows without page scrolling. Expansion boards pan inside their own frame so the rest of the game remains in view. A finished game opens the full-screen closing ceremony, with each sell-off revealed in order. Smaller windows and phones retain a flexible flowing layout.
+On desktop, use **Hide sidebar** beside the logo to reclaim its space, then **Show sidebar** at the top left to restore it. The choice persists across reloads. Desktop game windows at least 1060 × 650 pixels fit all 108 spaces of the printed board, the current action, and all seven market rows without page scrolling. Expansion boards pan inside their own frame so the rest of the game remains in view. A finished game opens the full-screen closing ceremony, with each sell-off revealed in order.
+
+Phone games fill the available browser height, with the turn controls below the board in portrait and in a narrow column in landscape. Board cells adapt to the available frame so every row and column is visible by default. On shaped and larger maps, **Zoom** enlarges the cells for panning and **Fit** returns to the complete city. Selecting a rack tile also brings it into view on a zoomed board. iPhone safe-area padding is applied once, and the layout adjusts when browser toolbars or orientation change.
 
 Open **Table preferences** using the sliders button. **Hide opponents’ holdings**, enabled by default, keeps your own portfolio visible but conceals other investors’ stock counts and stock details in the activity history. **Hide remaining stock counts** replaces bank quantities with **Available** or **Sold out**, including during merger trades. These independent preferences save on this device and can be changed before or during a game. Final holdings and payouts are revealed at the closing bell.
 
@@ -88,7 +90,7 @@ New games use state version 2, explicitly marked `ruleset: '2008'`, in `aquire.g
 
 ```sh
 npm run check          # strict TypeScript + production build + rules/rendering tests
-npx playwright install chromium
+npx playwright install chromium webkit
 npm run test:e2e       # actual desktop and mobile browser gameplay
 npm run test:e2e:online # HTTP-mocked online room UI (not a live Supabase session)
 npm run test:backend   # privacy/authorization and PostgreSQL migration regressions

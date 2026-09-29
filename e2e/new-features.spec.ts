@@ -98,7 +98,8 @@ test('large map tiers expose 8, 10 and 12 seats and render the full max city', a
       return { pageWidth: document.documentElement.scrollWidth, viewportWidth: innerWidth, boardWidth: stage.scrollWidth, frameWidth: stage.clientWidth };
     });
     expect(geometry.pageWidth).toBeLessThanOrEqual(geometry.viewportWidth);
-    expect(geometry.boardWidth).toBeGreaterThan(geometry.frameWidth);
+    expect(geometry.boardWidth).toBeLessThanOrEqual(geometry.frameWidth + 1);
+    await expect(page.getByRole('button', { name: 'Enlarge board tiles' })).toBeVisible();
   }
   if (process.env.AQUIRE_CAPTURE_MAPS === '1') {
     await page.waitForTimeout(700);

@@ -13,6 +13,9 @@
   --line: #e3e7dc;
   --cream: #f7f8f2;
   --serif: 'Instrument Serif', Georgia, serif;
+  /* iOS landscape text inflation can resize labels independently of their cells. */
+  -webkit-text-size-adjust: 100%;
+  text-size-adjust: 100%;
 }
 * {
   box-sizing: border-box;
