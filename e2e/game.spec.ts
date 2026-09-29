@@ -77,6 +77,20 @@ async function reveal(page: Page) {
   await expect(page.locator('.privacy-panel')).toHaveCount(0);
 }
 
+test('new table starts when randomUUID is unavailable on local-network HTTP', async ({ page }) => {
+  await page.addInitScript(() => {
+    Object.defineProperty(crypto, 'randomUUID', { configurable: true, value: undefined });
+  });
+  await page.goto('/');
+  await expect.poll(() => page.evaluate(() => typeof crypto.randomUUID)).toBe('undefined');
+  await page.getByRole('button', { name: /Let’s play/ }).first().click();
+  await page.getByRole('dialog', { name: 'A new opportunity' }).getByRole('button', { name: /Let’s build something/ }).click();
+  await expect(page.getByRole('heading', { name: 'The boardroom.' })).toBeVisible();
+  const game = await savedGame(page);
+  expect(game.players).toHaveLength(3);
+  expect(new Set(game.players.map(player => player.id)).size).toBe(3);
+});
+
 test('leaving a local game offers save or removal, and My games can end a saved game', async ({ page }) => {
   const game = createGame({ id: 'exit-choice-game', seed: 52,
     players: ['Alex', 'Morgan', 'Riley'].map((name, index) => ({ id: `p${index}`, name })) });

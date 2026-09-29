@@ -75,7 +75,9 @@ function recapFixture(playerIndex: number): { before: GameState; after: GameStat
 }
 
 async function preferences(page: Page) {
-  await page.locator('.topbar').getByRole('button', { name: 'Table preferences' }).click();
+  const compact = page.locator('.game-topline').getByRole('button', { name: 'Table preferences' });
+  if (await compact.isVisible()) await compact.click();
+  else await page.locator('.topbar').getByRole('button', { name: 'Table preferences' }).click();
   await expect(page.getByRole('dialog', { name: 'Make yourself at home' })).toBeVisible();
 }
 
@@ -158,6 +160,8 @@ test('memory play hides opponents’ portfolios and purchase history while retai
   await preferences(page);
   await page.getByRole('switch', { name: 'Hide opponents’ holdings', exact: true }).click();
   await closePreferences(page);
+  const stocksView = page.getByRole('group', { name: 'Game view' }).getByRole('button', { name: 'Stocks' });
+  if (await stocksView.isVisible()) await stocksView.click();
   await page.getByRole('button', { name: 'Investors', exact: true }).click();
   const own = page.locator('.investor-list details').filter({ has: page.locator('summary', { hasText: 'Alex' }) });
   const opponents = page.locator('.investor-list details').filter({ hasNot: page.locator('summary', { hasText: 'Alex' }) });
@@ -227,6 +231,8 @@ test('memory play shows purchases once in the recap, hides their history, and do
   await recap(page).getByRole('button', { name: 'Continue', exact: true }).click();
   await expect(recap(page)).toHaveCount(0);
   expect(getCurrentActor(await saved(page)).id).toBe('p0');
+  const stocksView = page.getByRole('group', { name: 'Game view' }).getByRole('button', { name: 'Stocks' });
+  if (await stocksView.isVisible()) await stocksView.click();
   await page.getByRole('button', { name: 'Activity', exact: true }).click();
   const purchaseLog = fixture.after.logs.find((log) => log.turn === fixture.before.turn && log.type === 'buy')!;
   await expect(page.locator('.activity-list')).not.toContainText(purchaseLog.message);

@@ -11,6 +11,7 @@ import {
   Landmark,
   Layers3,
   LockKeyhole,
+  Menu,
   Minus,
   Plus,
   ShieldCheck,
@@ -57,6 +58,7 @@ export default function GameView({
   viewerId,
   onAction,
   onHome,
+  onMenu,
   onRules,
   onSettings,
   busy = false,
@@ -71,6 +73,7 @@ export default function GameView({
   viewerId: string;
   onAction: (action: GameAction) => void;
   onHome: () => void;
+  onMenu: () => void;
   onRules: () => void;
   onSettings: () => void;
   busy?: boolean;
@@ -102,6 +105,7 @@ export default function GameView({
   }, [game.id, game.phase === 'ended']);
   useEffect(() => {
     setCompactView(game.phase === 'buy' ? 'market' : 'board');
+    if (game.phase === 'buy') setTab('market');
   }, [game.id, game.phase, game.turn]);
   useEffect(() => {
     setSelected(null);
@@ -180,9 +184,14 @@ export default function GameView({
   return (
     <div className={`game-view ${cityMap.maxPlayers > 6 || cityMap.columns !== 12 || cityMap.rows !== 9 ? 'expansion-game' : ''} ${isEnded ? 'game-ended' : ''}`} data-phase={game.phase} data-compact-view={compactView}>
       <div className="game-topline">
-        <button className="text-button" onClick={onHome}>
-          <ArrowLeft size={16} /> The clubhouse
-        </button>
+        <div className="game-navigation">
+          <button className="text-button compact-menu" onClick={onMenu} aria-label="Open navigation" aria-controls="sidebar-navigation">
+            <Menu size={18} />
+          </button>
+          <button className="text-button" onClick={onHome}>
+            <ArrowLeft size={16} /> The clubhouse
+          </button>
+        </div>
         <div className="game-toplinks">
           {onlineCode && <span className="room-tag">ROOM {onlineCode}</span>}
           <span className="save-indicator">
@@ -246,13 +255,13 @@ export default function GameView({
         ))}
       </div>
       <div className="compact-view-switcher" role="group" aria-label="Game view">
-        <span className="compact-view-context">{phaseNames[game.phase]}</span>
+        <span className="compact-view-context">{compactView === 'board' && (cityMap.columns > 12 || cityMap.rows > 9) ? 'Drag to explore' : phaseNames[game.phase]}</span>
         <div>
           <button type="button" aria-pressed={compactView === 'board'} aria-controls="game-board-panel" className={compactView === 'board' ? 'active' : ''} onClick={() => setCompactView('board')}>
             <Layers3 size={15} /> Board
           </button>
           <button type="button" aria-pressed={compactView === 'market'} aria-controls="game-market-panel" className={compactView === 'market' ? 'active' : ''} onClick={() => setCompactView('market')}>
-            <TrendingUp size={15} /> Market
+            <TrendingUp size={15} /> Stocks
           </button>
         </div>
       </div>

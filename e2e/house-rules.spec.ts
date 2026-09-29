@@ -22,6 +22,8 @@ test('hotel roster and per-chain share supplies persist into a playable game', a
   expect(state.houseRules.hotelChains).not.toContain('sackson');
   expect(state.bank.goldspire).toBe(40);
   expect(state.bank.worldwide).toBe(8);
+  const stocksView = page.getByRole('button', { name: 'Stocks', exact: true });
+  if (await stocksView.isVisible()) await stocksView.click();
   await page.getByRole('button', { name: 'Market' }).click();
   await expect(page.locator('.stock-row')).toHaveCount(7);
   await expect(page.locator('.stock-list')).toContainText('Goldspire');
@@ -72,6 +74,8 @@ test('house-rule defaults live in preferences and can be changed for a new table
   expect(Object.keys(state.board)).toHaveLength(12);
   expect(state.players.every((player: { cash: number }) => player.cash === 9000)).toBe(true);
   expect(state.houseRules).toMatchObject({ startingTilesPerPlayer: 4, placementsPerTurn: 3, removalsPerTurn: 2, buyLimit: 5, anonymousBuying: true, marketMode: 'crazy' });
+  const stocksView = page.getByRole('button', { name: 'Stocks', exact: true });
+  if (await stocksView.isVisible()) await stocksView.click();
   await page.getByRole('button', { name: 'House rules' }).click();
   await expect(page.locator('.house-rules-summary')).toContainText('9,000');
   await expect(page.locator('.house-rules-summary')).toContainText('Crazy fluctuation');

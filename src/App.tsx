@@ -687,6 +687,7 @@ export default function App() {
                 viewerId={viewerId}
                 onAction={perform}
                 onHome={() => navigate('home')}
+                onMenu={() => setMobileNav(true)}
                 onRules={() => setModal('rules')}
                 onSettings={() => setModal('settings')}
                 hints={settings.hints}
