@@ -1,0 +1,131 @@
+# Aquire
+
+A complete playable implementation of **Acquire**, built with **React + TypeScript + Vite + Capacitor + Supabase**. Original architectural artwork, a warm green interface, and the **2008 Avalon Hill edition** rules.
+
+## Play now
+
+```sh
+npm install
+npm run dev
+```
+
+Open **http://localhost:5173**. Choose **Against the house** for a solo game or **Around the table** for private pass-and-play. No account, database, API key, or internet connection is required for local gameplay once the app has loaded. The native apps bundle the entire game and fonts.
+
+To play in a phone browser, connect to the same Wi-Fi as this computer and open the Network address printed by Vite. Local game saves belong to the particular browser/device; they do not transfer between devices.
+
+## What is implemented
+
+- Complete 3–6 player games on the printed board and custom expansion games with up to 8, 10, or 12 players; three computer difficulty levels and the 2008 majority/minority shareholder bonuses.
+- All 108 printed tiles, the seven 2008 hotel chains and 25 shares each by default, exact stock/bonus tables, founder stock when available, safe chains, tied and multiple-chain mergers, ordered shareholder decisions, and keep/sell/2:1 trade combinations.
+- Optional final-turn declaration, full bonus and stock liquidation, shared victories, safe-chain tile retirement, the 2008 full-rack exchange, and finite-game safeguards for rare deadlocks.
+- Private racks in pass-and-play, automatic local saves with a save-or-end exit choice, a separate End game control for unfinished tables in My games, compact completed-match history, leaderboards, trophy cases, contextual hints, sound preferences, and native haptics.
+- Colored chain initials on every occupied chain tile, and centered opponent-turn recaps with the exact board location, purchases, founding shares, and merger activity.
+- Optional memory preferences: hide opponents’ holdings/history details (on by default) and show stock availability without remaining quantities (off by default). Both can also be changed while setting up a game.
+- Optional per-table house rules for choosing 2–12 hotel chains and 1–100 shares per chain, opening tiles and cash, up to six placements and five safe removals per turn, 1–10 regular share buys, timed turns, hidden cash and anonymous buying, dividends, turn trading, and normal or crazy market rolls. Set defaults in Table preferences, adjust them in local or online setup, and inspect the active rules in the game’s House rules tab. Printed 2008 settings remain the default.
+- The official 108-tile board plus thirty-three optional, rotationally balanced maps. The eight newest six-seat maps break away from the original 12×9 dimensions with long docks, a tall obelisk, an S-bend, a star, a pinwheel, crossed diagonals, and lagoons. Two new maps each for 8, 10, and 12 seats add sky courts, skyline prongs, carved avenues, a plaza lattice, a 30-column ring, and an eight-point megacity star. Every map has its own palette and live preview. Custom maps keep 2008 prices and turn rules while showing any changed end target during setup.
+- A closing-bell ceremony that reveals final hotel payouts smallest to largest, then standings, a winner celebration, and an award for every investor.
+- Responsive phone/tablet/desktop layouts, keyboard-accessible controls and dialogs, reduced-motion support, bundled fonts, branded native icons and splash screens.
+- A collapsible desktop sidebar with a remembered preference, and a desktop game layout that fits the board, current decision, and market into the available window height.
+- Supabase private rooms: persistent guest authentication, host/join/start flows, server-side bots, validated commands, hidden opponent tiles, optimistic concurrency, reconnectable room polling, online match history, and friends leaderboards. Full completed rooms are pruned after seven days; small summaries remain for 365 days.
+
+Ending an unfinished local game removes its save without adding a match result. An online host can end a room for everyone; guests can leave without closing the shared game. Saved online rooms appear in My games and return after a reload using the same guest session.
+
+| Expansion tier | Board dimensions | Maps (playable tiles) | Maximum seats |
+| --- | --- | --- | --- |
+| New six-seat shapes | 20×7 to 11×17 | Twin Docks (108), The Obelisk (139), Coral Crown (136), Lightning Run (118), Compass Rose (127), The Pinwheel (136), Starfall X (115), Twin Lagoons (144) | 6 |
+| Big | 16×12, 23×11, 15×18 | Grand Rectangle (192), Crater City (168), Twin Harbors (160), Aurora Gate (185), Trident Towers (206) | 8 |
+| Mega | 20×14, 27×13, 18×19 | Diamond Dominion (240), Three Rivers (240), The Great Divide (232), The Triple Arch (255), Citadel Grid (262) | 10 |
+| Max | 24×16, 30×17, 23×23 | Metropolis Max (384), Grand Archipelago (292), The Grand Cross (312), Celestial Ring (366), Orion Star (409) | 12 |
+
+**Live online rooms require a configured Supabase project.** This workspace’s connected project was deployed and tested with real Auth, a joined room, a full game, archived results, and cleanup on September 28, 2026. Follow [the Supabase setup guide](docs/ONLINE.md) for another project. Only the public project base URL and publishable key belong in `.env.local`.
+
+## Turn recaps and preferences
+
+On desktop, use **Hide sidebar** beside the logo to reclaim its space, then **Show sidebar** at the top left to restore it. The choice persists across reloads. Desktop game windows at least 1060 × 650 pixels fit all 108 spaces of the printed board, the current action, and all seven market rows without page scrolling. Expansion boards pan inside their own frame so the rest of the game remains in view. A finished game opens the full-screen closing ceremony, with each sell-off revealed in order. Smaller windows and phones retain a flexible flowing layout.
+
+Open **Table preferences** using the sliders button. **Hide opponents’ holdings**, enabled by default, keeps your own portfolio visible but conceals other investors’ stock counts and stock details in the activity history. **Hide remaining stock counts** replaces bank quantities with **Available** or **Sold out**, including during merger trades. These independent preferences save on this device and can be changed before or during a game. Final holdings and payouts are revealed at the closing bell.
+
+Other investors’ completed turns always get a centered recap, whether holdings are visible or hidden. The recap highlights the played square and lists purchased shares, founder shares, and public merger events. Press **Continue** when ready; local computer players pause while you read. Pass-and-play shows the recap before the next private handoff. Online updates containing several turns queue a separate recap for each. Resuming a saved table does not replay its old turns.
+
+## iOS and Android
+
+Native projects are already generated in `ios/` and `android/`.
+
+```sh
+npm run ios       # builds the web app, syncs, opens Xcode
+npm run android   # builds the web app, syncs, opens Android Studio
+```
+
+See [native build and test instructions](docs/NATIVE.md), including the ready-to-install Android debug APK and iOS simulator build. [Publication steps and remaining account/listing requirements](docs/DEPLOY.md) are separate from these development builds.
+
+## Rules and source
+
+[Rule implementation notes](docs/RULES.md) link to the complete [official 2008 rulebook](https://media.wizards.com/2015/downloads/ah/acquire_rules.pdf) with page references. The PDF was authored in January 2008 and carries the 2008 copyright; its publisher URL is dated 2015 because the file was hosted again then.
+
+The 2008 stock tiers and colors are implemented throughout the board and market:
+
+| Starting price at two tiles | Chains                                             |
+| --------------------------- | -------------------------------------------------- |
+| $200                        | Worldwide (purple), Sackson (orange)               |
+| $300                        | Festival (green), Imperial (gold), American (blue) |
+| $400                        | Continental (red), Tower (gray)                    |
+
+Five optional hotels extend the price ladder: Budgeton ($100 at two tiles), Heritage ($200), Riviera ($300), Monarch ($400), and Goldspire ($500). Each has its own color. Select them and adjust each chain’s share supply under **Hotels in this game** in Table preferences or the new-game setup. The default remains the printed seven at 25 shares each.
+
+Only majority and minority bonuses apply. A founder receives no bonus when the bank has no stock. Tiles that would merge two safe chains may be retired and replaced. Tiles waiting for an available chain remain in the rack when another tile is playable. If no tile can be played at the beginning of a turn, the [printed 2008 FAQ](https://media.wizards.com/2015/downloads/ah/acquire_rules.pdf) permits revealing and setting aside the entire rack, including temporarily blocked tiles, then drawing six replacements. Adjacent setup tiles stay unincorporated until a later placement founds their group. End declaration is available only after placing a tile. Later-edition two-player and Tycoon rules are not included.
+
+House rules apply only to a new table and are stored with it. A configurable opening places 1–10 random tiles per player, subject to enough remaining tiles for six-tile racks. Multi-placement turns resolve each founding or merger before the next tile and refill the rack afterward. Removals return older tiles to the bag and cannot disconnect a chain or reduce it below two buildings. The timer runs for 5–600 seconds and automatically completes unfinished decisions when it expires. Anonymous buying also hides cash, since visible cash would reveal purchase amounts. See [house-rule details](docs/RULES.md).
+
+For an exhausted tile bag, the app draws as many replacement tiles as remain and settles when no legal move can be reached. These rare digital safeguards are documented separately from the printed rules.
+
+### Earlier saves
+
+New games use state version 2, explicitly marked `ruleset: '2008'`, in `aquire.games.v2`. Earlier `aquire.games.v1` saves remain untouched in the same browser/app; they are not silently converted or resumed under different prices and rules. My games indicates when earlier saves exist. Preferences carry over. Existing online tables remain stored but require a new 2008 table; an additive Supabase migration handles the edition boundary.
+
+## Verify
+
+```sh
+npm run check          # strict TypeScript + production build + rules/rendering tests
+npx playwright install chromium
+npm run test:e2e       # actual desktop and mobile browser gameplay
+npm run test:e2e:online # HTTP-mocked online room UI (not a live Supabase session)
+npm run test:backend   # privacy/authorization and PostgreSQL migration regressions
+```
+
+The rules suite includes complete seeded games on every map, including full 8-, 10-, and 12-seat expansion games, stock/tile conservation, safe-chain invariants, merger ordering, privacy, and final settlements. Browser tests cover the tall 11×17 board, the 30×17 ring, and placement in its 30th column. Backend SQL tests use embedded PostgreSQL. The connected hosted project is checked separately; temporary test rooms and completed matches are removed afterward.
+
+To typecheck the Edge Function:
+
+```sh
+npm run supabase:sync
+npx --yes deno check --config supabase/functions/acquire-room/deno.json supabase/functions/acquire-room/index.ts
+```
+
+See [the validation record](docs/TESTING.md) and [a sample game](docs/screenshots/desktop-game.png).
+
+## Build and deploy the website
+
+```sh
+npm run build
+npm run preview
+```
+
+Serve `dist/` with a static HTTPS host. Supabase hosts the backend, not the Vite site itself. Set public Supabase environment values **before building**. See [the deployment guide](docs/DEPLOY.md) for the web and stores.
+
+## Code map
+
+| Location           | Responsibility                                                       |
+| ------------------ | -------------------------------------------------------------------- |
+| `src/game/`        | Pure deterministic rules, bot strategy, serializable actions, tests  |
+| `src/components/`  | Board, market, merger decisions, setup, rules, online lobby          |
+| `src/game-layout.css`, `src/sidebar.css`, `src/recap-layout.css` | Desktop viewport, collapsible navigation, and recap layout |
+| `src/App.tsx`      | Navigation, persistence, private handoffs, bot scheduling            |
+| `src/lib/`         | Local saves/preferences and authenticated Supabase client            |
+| `supabase/`        | Private Postgres schema, authoritative Edge Function, security tests |
+| `ios/`, `android/` | Capacitor native projects using the same `dist/` build               |
+| `e2e/`             | Real browser interaction regressions                                 |
+
+The server's generated shared engine is synchronized from `src/game` using `npm run supabase:sync`; do not edit the generated copy. Never execute client-submitted replacement game state. Online requests carry actions, and the authenticated server decides the result.
+
+Acquire was designed by Sid Sackson. This is an independent implementation with original UI and artwork, not an official Hasbro or Renegade product.
+# Aquire
