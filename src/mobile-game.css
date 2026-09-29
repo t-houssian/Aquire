@@ -6,6 +6,25 @@
   display: none;
 }
 .game-navigation { display: flex; align-items: center; gap: 9px; }
+.game-title-row { display: flex; align-items: center; gap: 13px; min-width: 0; }
+.market-status-pill {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 5px;
+  flex: none;
+  padding: 5px 9px;
+  border: 1px solid #cbdcc8;
+  border-radius: 99px;
+  background: #eaf2e6;
+  color: #3d6e45;
+  font-size: 10px;
+  font-weight: 700;
+  line-height: 1;
+  white-space: nowrap;
+}
+.market-status-pill.low { border-color: #e6c4b7; background: #fcf0e9; color: #a85a41; }
+.market-status-pill.normal { border-color: #d7e1d2; background: #f2f5ef; color: #57705b; }
 
 @media (max-width: 1059px) {
   .app-shell.playing-game {
@@ -122,6 +141,7 @@
     line-height: 1.05;
     letter-spacing: 0;
   }
+  .playing-game .game-title-row > .market-status-pill { display: none; }
   .playing-game .game-heading .eyebrow {
     font-size: 10px;
     letter-spacing: 1px;
@@ -198,6 +218,7 @@
     font-size: 11px;
     font-weight: 600;
   }
+  .playing-game .compact-view-context .market-status-pill { padding: 4px 7px; font-size: 10px; }
   .playing-game .compact-view-switcher > div {
     display: flex;
     flex: none;

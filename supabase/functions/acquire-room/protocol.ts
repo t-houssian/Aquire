@@ -160,7 +160,10 @@ export function publicRoom(room: StoredRoom, userId: string) {
       removalsThisTurn: state.removalsThisTurn,
       turnDeadlineAt: state.turnDeadlineAt,
       marketShift: state.marketShift,
-      lastRoundRolls: state.lastRoundRolls,
+      lastRoundRolls: state.lastRoundRolls && (privateMoney
+        ? { ...state.lastRoundRolls, dividendPaid: undefined } : state.lastRoundRolls),
+      recentDiceRolls: state.recentDiceRolls?.map((report) => privateMoney
+        ? { ...report, dividendPaid: undefined } : report),
       seed: 0,
       rng: 0,
       revision: state.revision,
@@ -222,7 +225,7 @@ export function publicRoom(room: StoredRoom, userId: string) {
     game,
     viewerId: userId,
     updatedAt: room.updated_at,
-    features: ['maps-v1', 'large-maps-v1', 'shaped-maps-v2', 'difficulty-v1', 'match-history-v1', 'house-rules-v1', 'hotel-roster-v1', 'hotel-stock-v1'],
+    features: ['maps-v1', 'large-maps-v1', 'shaped-maps-v2', 'difficulty-v1', 'match-history-v1', 'house-rules-v1', 'hotel-roster-v1', 'hotel-stock-v1', 'market-frequency-v1'],
   };
 }
 

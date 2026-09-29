@@ -160,8 +160,9 @@ export default function OnlinePanel({
                     {selectedMap.maxPlayers > 6 && <p className="small muted">Expansion end: {selectedMap.endSize} hotels in one chain, or all active chains safe after 38% of the city is built.</p>}
                     {selectedMap.maxPlayers === 6 && selectedMap.endSize !== 41 && <p className="small muted">Custom-city end: {selectedMap.endSize} hotels in one chain, or all active chains safe.</p>}
                     {bots > 0 && <><label className="field-label" htmlFor="online-difficulty">Computer difficulty</label><select id="online-difficulty" value={botDifficulty} disabled={!room.features?.includes('difficulty-v1')} onChange={(event) => setBotDifficulty(event.target.value as BotDifficulty)}><option value="casual">Casual</option><option value="standard">Standard</option><option value="strategist">Strategist</option></select></>}
-                    {room.features?.includes('house-rules-v1') && <HouseRulesControls value={effectiveHouseRules} onChange={setHouseRules} mapTiles={selectedMap.tiles.length} players={Math.max(1, room.players.length + selectedBots)} hotelSelectionAvailable={room.features?.includes('hotel-roster-v1')} shareSupplyAvailable={room.features?.includes('hotel-stock-v1')} />}
+                    {room.features?.includes('house-rules-v1') && <HouseRulesControls value={effectiveHouseRules} onChange={setHouseRules} mapTiles={selectedMap.tiles.length} players={Math.max(1, room.players.length + selectedBots)} hotelSelectionAvailable={room.features?.includes('hotel-roster-v1')} shareSupplyAvailable={room.features?.includes('hotel-stock-v1')} marketFrequencyAvailable={room.features?.includes('market-frequency-v1')} />}
                     {room.features?.includes('house-rules-v1') && !room.features?.includes('hotel-roster-v1') && <p className="small muted">Update the room function to choose hotels online. This server uses the printed seven.</p>}
+                    {room.features?.includes('house-rules-v1') && !room.features?.includes('market-frequency-v1') && <p className="small muted">Update the room function for custom market timing online. This server rolls after each complete round.</p>}
                     {!room.features?.includes('maps-v1') && <p className="small muted">Update your Supabase room function to enable new maps and difficulty.</p>}
                     {settings && onSettingsChange && <div className="setup-privacy"><label><input type="checkbox" checked={settings.hideOpponentHoldings} onChange={(event) => onSettingsChange({ ...settings, hideOpponentHoldings: event.target.checked })} /> Hide opponents’ holdings after moves</label><label><input type="checkbox" checked={settings.hideStockAvailability} onChange={(event) => onSettingsChange({ ...settings, hideStockAvailability: event.target.checked })} /> Hide remaining stock counts</label></div>}
                   </div>
@@ -177,6 +178,10 @@ export default function OnlinePanel({
                         delete legacyRules.shareSupply;
                         const rosterRules: Partial<typeof effectiveHouseRules> = { ...effectiveHouseRules };
                         if (!room.features?.includes('hotel-stock-v1')) delete rosterRules.shareSupply;
+                        if (!room.features?.includes('market-frequency-v1')) {
+                          delete legacyRules.marketFrequency;
+                          delete rosterRules.marketFrequency;
+                        }
                         const r = await startRoom(
                           room.code,
                           selectedBots,

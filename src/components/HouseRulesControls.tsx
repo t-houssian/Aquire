@@ -6,13 +6,14 @@ export function maximumOpeningTiles(mapTiles: number, players: number) {
   return Math.min(10, Math.max(1, Math.floor(mapTiles / players) - 6));
 }
 
-export default function HouseRulesControls({ value, onChange, mapTiles, players, hotelSelectionAvailable = true, shareSupplyAvailable = true }: {
+export default function HouseRulesControls({ value, onChange, mapTiles, players, hotelSelectionAvailable = true, shareSupplyAvailable = true, marketFrequencyAvailable = true }: {
   value: HouseRules;
   onChange: (next: HouseRules) => void;
   mapTiles?: number;
   players?: number;
   hotelSelectionAvailable?: boolean;
   shareSupplyAvailable?: boolean;
+  marketFrequencyAvailable?: boolean;
 }) {
   const openingLimit = mapTiles && players ? maximumOpeningTiles(mapTiles, players) : 10;
   const change = (patch: Partial<HouseRules>) => onChange({ ...value, ...patch });
@@ -88,8 +89,17 @@ export default function HouseRulesControls({ value, onChange, mapTiles, players,
           <option value="market">Market · one row up or down</option>
           <option value="crazy">Crazy market · up to two rows</option>
         </select>
-        <small>Roll after each complete round; affects every valuation.</small>
+        <small>The current market applies to buying, selling, mergers, dividends, and final scores.</small>
       </label>
+      {value.marketMode !== 'off' && marketFrequencyAvailable && <label>Market roll frequency
+        <select aria-label="Market roll frequency" value={value.marketFrequency} onChange={(event) => change({ marketFrequency: event.target.value as HouseRules['marketFrequency'] })}>
+          <option value="round">After every complete round</option>
+          <option value="turn">Before every player's turn</option>
+          <option value="two-rounds">After every 2 complete rounds</option>
+          <option value="three-rounds">After every 3 complete rounds</option>
+        </select>
+        <small>Dividends still roll after every complete round when enabled.</small>
+      </label>}
     </div>
     <label className="house-rule-toggle"><input type="checkbox" checked={value.turnTimerSeconds > 0}
       onChange={(event) => change({ turnTimerSeconds: event.target.checked ? 60 : 0 })} /> Enforce a turn timer</label>

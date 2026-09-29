@@ -33,6 +33,7 @@ export type MapId =
   | 'max-celestial-ring' | 'max-orion-star';
 export type BotDifficulty = 'casual' | 'standard' | 'strategist';
 export type MarketMode = 'off' | 'market' | 'crazy';
+export type MarketFrequency = 'round' | 'turn' | 'two-rounds' | 'three-rounds';
 export interface HouseRules {
   hotelChains: ChainId[];
   /** Only overrides are stored; every unspecified chain has 25 certificates. */
@@ -48,6 +49,7 @@ export interface HouseRules {
   dividends: boolean;
   trading: boolean;
   marketMode: MarketMode;
+  marketFrequency: MarketFrequency;
 }
 export type Stocks = Record<ChainId, number>;
 export type Phase =
@@ -130,6 +132,20 @@ export interface FinalResult {
   total: number;
   rank: number;
 }
+export interface DiceRollReport {
+  round: number;
+  dividendDie: number | null;
+  stockDie: number | null;
+  chain: ChainId | null;
+  marketDie: number | null;
+  marketShift: number;
+  /** Added after the first release; old saves can have only the fields above. */
+  atTurn?: number;
+  kind?: 'opening' | 'round' | 'turn';
+  fullClusters?: number;
+  dividendPaid?: number;
+  insideTilesReturned?: number;
+}
 export interface GameState {
   version: 2;
   ruleset: '2008';
@@ -142,7 +158,9 @@ export interface GameState {
   removalsThisTurn?: number;
   turnDeadlineAt?: number | null;
   marketShift?: number;
-  lastRoundRolls?: { round: number; dividendDie: number | null; stockDie: number | null; chain: ChainId | null; marketDie: number | null; marketShift: number };
+  lastRoundRolls?: DiceRollReport;
+  /** A bounded window lets online clients show rolls from bot turns batched into one update. */
+  recentDiceRolls?: DiceRollReport[];
   seed: number;
   rng: number;
   revision: number;

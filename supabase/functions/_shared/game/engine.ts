@@ -135,6 +135,7 @@ export const DEFAULT_HOUSE_RULES: HouseRules = {
   dividends: false,
   trading: false,
   marketMode: 'off',
+  marketFrequency: 'round',
 };
 export const getHouseRules = (source?: GameState | Partial<HouseRules>): HouseRules => {
   const chosen = source && 'players' in source ? source.houseRules : source;
@@ -165,6 +166,7 @@ export function validateHouseRules(input?: Partial<HouseRules>): HouseRules {
   assert(rules.turnTimerSeconds === 0 || integer(rules.turnTimerSeconds, 5, 600), 'The turn timer must be off or between five seconds and ten minutes.');
   assert(integer(rules.buyLimit, 1, 10), 'The share purchase limit must be between one and ten.');
   assert(['off', 'market', 'crazy'].includes(rules.marketMode), 'Choose an available market mode.');
+  assert(['round', 'turn', 'two-rounds', 'three-rounds'].includes(rules.marketFrequency), 'Choose an available market roll frequency.');
   assert(['hiddenMoney', 'anonymousBuying', 'dividends', 'trading'].every((key) => typeof rules[key as keyof HouseRules] === 'boolean'), 'Choose valid house-rule switches.');
   return rules;
 }
@@ -554,6 +556,11 @@ export function createGame(config: GameConfig): GameState {
     `${state.players[state.currentPlayer].name} goes first with the tile closest to 1A.`,
     { playerId: state.players[state.currentPlayer].id },
   );
+  if (houseRules.marketMode !== 'off' && houseRules.marketFrequency === 'turn') {
+    settleDice(state, false, true, true);
+    if (houseRules.turnTimerSeconds)
+      state.turnDeadlineAt = Date.now() + houseRules.turnTimerSeconds * 1000 + DICE_REVEAL_GRACE_MS;
+  }
   return state;
 }
 function payBonuses(state: GameState, chain: ChainId, size: number): number[] {
@@ -687,6 +694,7 @@ function finishGame(state: GameState, reason: string) {
   );
 }
 const rollDie = (state: GameState, sides: number) => 1 + Math.floor(nextRandom(state) * sides);
+const DICE_REVEAL_GRACE_MS = 6000;
 export function getInsideTiles(state: GameState, chain: ChainId): Tile[] {
   return Object.keys(state.board).filter((tile) => {
     if (state.board[tile] !== chain) return false;
@@ -701,17 +709,20 @@ export function getInsideTiles(state: GameState, chain: ChainId): Tile[] {
     return true;
   });
 }
-function settleRound(state: GameState) {
+function settleDice(state: GameState, roundComplete: boolean, marketDue: boolean, opening = false) {
   const rules = getHouseRules(state);
   const round = Math.ceil(state.turn / state.players.length);
   let dividendDie: number | null = null;
   let stockDie: number | null = null;
   let selectedChain: ChainId | null = null;
-  if (rules.dividends) {
+  let fullClusters = 0;
+  let dividendPaid = 0;
+  let insideTilesReturned = 0;
+  if (roundComplete && rules.dividends) {
     const hotels = getHotelChains(state);
     const clusters = [...new Set(hotels.map((chain) => DEFINITIONS[chain].tier))]
       .map((tier) => hotels.filter((chain) => DEFINITIONS[chain].tier === tier));
-    const fullClusters = clusters.filter((group) => group.every((chain) => getChainSize(state, chain) >= 2)).length;
+    fullClusters = clusters.filter((group) => group.every((chain) => getChainSize(state, chain) >= 2)).length;
     if (fullClusters) dividendDie = rollDie(state, 3);
     if (dividendDie !== null && dividendDie <= fullClusters) {
       stockDie = rollDie(state, hotels.length);
@@ -722,16 +733,16 @@ function settleRound(state: GameState) {
         log(state, 'dividend', `Round ${round}: dividend die ${dividendDie} succeeds; stock die ${stockDie} selects inactive ${DEFINITIONS[chain].name}. No payout.`);
       } else {
         const inside = getInsideTiles(state, chain);
-        let total = 0;
         for (const shareholder of state.players) {
           const payout = Math.floor(shareholder.stocks[chain] / 3) * price;
           if (!payout) continue;
           shareholder.cash += payout;
-          total += payout;
+          dividendPaid += payout;
           log(state, 'dividend', `${shareholder.name} receives ${money(payout)} from ${DEFINITIONS[chain].name} dividends.`,
             { playerId: shareholder.id, chain });
         }
         if (inside.length) {
+          insideTilesReturned = inside.length;
           for (const tile of inside) {
             delete state.board[tile];
             state.bag.push(tile);
@@ -739,7 +750,7 @@ function settleRound(state: GameState) {
           }
           shuffle(state, state.bag);
         }
-        log(state, 'dividend', `Round ${round}: dividend die ${dividendDie} succeeds; stock die ${stockDie} selects ${DEFINITIONS[chain].name}. ${money(total)} paid${inside.length ? `; ${inside.length} inside tile${inside.length === 1 ? '' : 's'} returned to the bag` : ''}.`,
+        log(state, 'dividend', `Round ${round}: dividend die ${dividendDie} succeeds; stock die ${stockDie} selects ${DEFINITIONS[chain].name}. ${money(dividendPaid)} paid${inside.length ? `; ${inside.length} inside tile${inside.length === 1 ? '' : 's'} returned to the bag` : ''}.`,
           { chain });
       }
     } else {
@@ -748,22 +759,41 @@ function settleRound(state: GameState) {
   }
   let marketDie: number | null = null;
   let marketShift = state.marketShift ?? 0;
-  if (rules.marketMode !== 'off') {
+  if (marketDue && rules.marketMode !== 'off') {
     marketDie = rollDie(state, 6);
     marketShift = rules.marketMode === 'crazy'
       ? [-2, -1, 0, 0, 1, 2][marketDie - 1]
       : marketDie <= 2 ? -1 : marketDie <= 4 ? 0 : 1;
     state.marketShift = marketShift;
-    log(state, 'market', `Round ${round}: market die ${marketDie}. Prices are ${marketShift === 0 ? 'normal' : `${Math.abs(marketShift)} row${Math.abs(marketShift) === 1 ? '' : 's'} ${marketShift < 0 ? 'lower' : 'higher'}`}.`);
+    const timing = opening ? 'Before the opening turn' : rules.marketFrequency === 'turn'
+      ? `Before ${state.players[(state.currentPlayer + 1) % state.players.length].name}'s turn`
+      : `Round ${round}`;
+    log(state, 'market', `${timing}: market die ${marketDie}. Prices are ${marketShift === 0 ? 'normal' : `${Math.abs(marketShift)} row${Math.abs(marketShift) === 1 ? '' : 's'} ${marketShift < 0 ? 'lower' : 'higher'}`}.`);
   }
-  state.lastRoundRolls = { round, dividendDie, stockDie, chain: selectedChain, marketDie, marketShift };
+  if ((roundComplete && rules.dividends) || marketDie !== null) {
+    const report = {
+      round, dividendDie, stockDie, chain: selectedChain, marketDie, marketShift,
+      atTurn: opening ? 0 : state.turn,
+      kind: opening ? 'opening' as const : roundComplete ? 'round' as const : 'turn' as const,
+      fullClusters, dividendPaid, insideTilesReturned,
+    };
+    state.lastRoundRolls = report;
+    state.recentDiceRolls = [...(state.recentDiceRolls ?? []), report].slice(-state.players.length);
+  }
 }
 function finishTurn(state: GameState) {
   if (state.endDeclared) {
     finishGame(state, 'The end of the game was declared.');
     return;
   }
-  if (state.turn % state.players.length === 0) settleRound(state);
+  const rules = getHouseRules(state);
+  const roundComplete = state.turn % state.players.length === 0;
+  const completedRound = Math.ceil(state.turn / state.players.length);
+  const marketDue = rules.marketMode !== 'off' && (rules.marketFrequency === 'turn' ||
+    (roundComplete && (rules.marketFrequency === 'round' ||
+      rules.marketFrequency === 'two-rounds' && completedRound % 2 === 0 ||
+      rules.marketFrequency === 'three-rounds' && completedRound % 3 === 0)));
+  if (roundComplete || marketDue) settleDice(state, roundComplete, marketDue);
   // A digital deadlock safeguard: if no remaining or held tile can ever be played, settle the table.
   const anyoneCanPlay = state.players.some((player) => getLegalTiles(state, player.id).length > 0);
   const drawableCanPlay = state.bag.some((tile) => analyzeTile(state, tile).legal);
@@ -788,7 +818,8 @@ function finishTurn(state: GameState) {
   state.placementsThisTurn = 0;
   state.removalsThisTurn = 0;
   const seconds = getHouseRules(state).turnTimerSeconds;
-  state.turnDeadlineAt = seconds ? Date.now() + seconds * 1000 : null;
+  const diceJustRolled = state.lastRoundRolls?.atTurn === state.turn - 1;
+  state.turnDeadlineAt = seconds ? Date.now() + seconds * 1000 + (diceJustRolled ? DICE_REVEAL_GRACE_MS : 0) : null;
   state.foundingTiles = [];
   log(state, 'turn', `${state.players[state.currentPlayer].name}'s turn.`, {
     playerId: state.players[state.currentPlayer].id,

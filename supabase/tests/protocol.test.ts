@@ -46,6 +46,7 @@ function fixture(): StoredRoom {
 Deno.test('room views preserve only the viewer hand and reveal no bag/seed/rng', () => {
   const room = fixture();
   const view = publicRoom(room, 'alice');
+  assert(view.features.includes('market-frequency-v1'), 'Market timing capability was not advertised');
   assert(view.game?.seed === 0 && view.game.rng === 0, 'RNG leaked');
   assert(
     view.game.bag.length === room.game!.bag.length && view.game.bag.every((tile) => tile === '?'),
@@ -102,16 +103,22 @@ Deno.test('anonymous house rules mask cash, holdings, bank counts, and private t
   state.logs.push({ id: 100, turn: 2, type: 'buy', playerId: 'bob', message: 'Bob buys 4 Worldwide for $800.' });
   state.logs.push({ id: 101, turn: 2, type: 'sell', playerId: 'bob', message: 'Bob sells 1 Sackson for $200.' });
   state.logs.push({ id: 102, turn: 2, type: 'dividend', message: 'Round 1: $2,000 paid.' });
+  state.lastRoundRolls = { round: 1, atTurn: 3, kind: 'round', dividendDie: 1, stockDie: 1,
+    chain: 'worldwide', marketDie: 5, marketShift: 1, dividendPaid: 2000 };
+  state.recentDiceRolls = [state.lastRoundRolls];
   const view = publicRoom(room, 'alice');
   const bob = view.game!.players.find((player) => player.id === 'bob')!;
   assert(bob.cash === 0 && bob.stocks.worldwide === 0, 'Opponent wealth leaked');
   assert(view.game!.bank.worldwide === 13, 'Bank quantity leaked');
   assert(view.game!.logs.filter((entry) => entry.id >= 100).every((entry) => !entry.message.includes('$')), 'Private financial log leaked');
+  assert(view.game!.lastRoundRolls?.dividendPaid === undefined && view.game!.recentDiceRolls?.[0].dividendPaid === undefined,
+    'Private dividend total leaked in dice reports');
   assert(room.game!.players.find((player) => player.id === 'bob')!.cash === 3400, 'Authoritative state mutated');
   room.game!.phase = 'ended';
   const finalView = publicRoom(room, 'alice');
   assert(finalView.game!.players.find((player) => player.id === 'bob')!.cash === 3400, 'Final money stayed hidden');
   assert(finalView.game!.bank.worldwide === 21, 'Final bank stayed hidden');
+  assert(finalView.game!.lastRoundRolls?.dividendPaid === 2000, 'Completed game lost its public dividend result');
 });
 
 Deno.test(

@@ -43,7 +43,7 @@ class MockSupabase {
       game: null,
       viewerId,
       updatedAt: new Date().toISOString(),
-      features: ['maps-v1', 'large-maps-v1', 'shaped-maps-v2', 'difficulty-v1', 'match-history-v1', 'house-rules-v1', 'hotel-roster-v1', 'hotel-stock-v1'],
+      features: ['maps-v1', 'large-maps-v1', 'shaped-maps-v2', 'difficulty-v1', 'match-history-v1', 'house-rules-v1', 'hotel-roster-v1', 'hotel-stock-v1', 'market-frequency-v1'],
     };
   }
   snapshot(): OnlineRoom {
@@ -351,13 +351,14 @@ test.describe('online room UI — HTTP-mocked Supabase', () => {
     await lobby.getByLabel('Tiles to place per turn').fill('2');
     await lobby.getByLabel('Shares to buy per turn').fill('5');
     await lobby.getByLabel('Market fluctuation').selectOption('market');
+    await lobby.getByLabel('Market roll frequency').selectOption('turn');
     await lobby.getByLabel('Round-end dividends').check();
     await lobby.locator('.hotel-choice').filter({ hasText: 'Budgeton' }).locator('input[type="checkbox"]').check();
     await lobby.locator('.hotel-choice').filter({ hasText: 'Sackson' }).locator('input[type="checkbox"]').uncheck();
     await lobby.getByRole('spinbutton', { name: 'Budgeton shares available' }).fill('50');
     await lobby.getByRole('button', { name: 'Start the game' }).click();
     await expectBoard(page);
-    expect(backend.operations.find((operation) => operation.operation === 'start')).toMatchObject({ houseRules: { startingCash: 12000, placementsPerTurn: 2, buyLimit: 5, dividends: true, marketMode: 'market', shareSupply: { budgeton: 50 } } });
+    expect(backend.operations.find((operation) => operation.operation === 'start')).toMatchObject({ houseRules: { startingCash: 12000, placementsPerTurn: 2, buyLimit: 5, dividends: true, marketMode: 'market', marketFrequency: 'turn', shareSupply: { budgeton: 50 } } });
     expect(backend.fullGame?.players.every((player) => player.cash === 12000)).toBe(true);
     expect(backend.fullGame?.houseRules?.hotelChains).toContain('budgeton');
     expect(backend.fullGame?.houseRules?.hotelChains).not.toContain('sackson');
@@ -366,7 +367,7 @@ test.describe('online room UI — HTTP-mocked Supabase', () => {
 
   test('older room functions hide hotel controls and receive only supported rules', async ({ page }) => {
     const backend = new MockSupabase();
-    backend.room.features = backend.room.features?.filter((feature) => !['hotel-roster-v1', 'hotel-stock-v1'].includes(feature));
+    backend.room.features = backend.room.features?.filter((feature) => !['hotel-roster-v1', 'hotel-stock-v1', 'market-frequency-v1'].includes(feature));
     await backend.install(page);
     await page.goto('/');
     await openOnline(page);
@@ -374,11 +375,14 @@ test.describe('online room UI — HTTP-mocked Supabase', () => {
     await page.getByRole('button', { name: 'Open your table' }).click();
     const lobby = page.getByRole('dialog', { name: 'Your private table' });
     await expect(lobby.locator('.hotel-roster-grid')).toHaveCount(0);
+    await lobby.getByLabel('Market fluctuation').selectOption('market');
+    await expect(lobby.getByLabel('Market roll frequency')).toHaveCount(0);
     await lobby.getByRole('button', { name: 'Start the game' }).click();
     await expectBoard(page);
     const operation = backend.operations.find((entry) => entry.operation === 'start') as { houseRules: Record<string, unknown> };
     expect(operation.houseRules).not.toHaveProperty('hotelChains');
     expect(operation.houseRules).not.toHaveProperty('shareSupply');
+    expect(operation.houseRules).not.toHaveProperty('marketFrequency');
     expect(backend.fullGame?.houseRules?.hotelChains).toHaveLength(7);
   });
 

@@ -29,8 +29,8 @@ import {
 } from 'lucide-react';
 import { Capacitor } from '@capacitor/core';
 import { Haptics, ImpactStyle } from '@capacitor/haptics';
-import { applyAction, CHAINS, chooseBotAction, createGame, expireTurn, getCurrentActor } from './game/engine';
-import type { GameAction, GameConfig, GameState } from './game/types';
+import { applyAction, CHAINS, chooseBotAction, createGame, expireTurn, getCurrentActor, getHouseRules } from './game/engine';
+import type { DiceRollReport, GameAction, GameConfig, GameState } from './game/types';
 import {
   money,
   playTone,
@@ -54,6 +54,7 @@ import Rulebook, { RULEBOOK_URL } from './components/Rulebook';
 import Modal from './components/Modal';
 import OnlinePanel from './components/OnlinePanel';
 import TurnRecap from './components/TurnRecap';
+import DiceReveal from './components/DiceReveal';
 import HouseRulesControls from './components/HouseRulesControls';
 import { collectTurnRecaps, type TurnRecapData } from './lib/turnRecaps';
 import './sidebar.css';
@@ -85,7 +86,9 @@ export default function App() {
   const [endingOnlineRoom, setEndingOnlineRoom] = useState(false);
   const [legacyGameCount] = useState(readLegacyGameCount);
   const [turnRecaps, setTurnRecaps] = useState<TurnRecapData[]>([]);
+  const [diceRecaps, setDiceRecaps] = useState<DiceRollReport[]>([]);
   const previousGame = useRef<GameState | null>(null);
+  const newlyStartedGameId = useRef<string | null>(null);
   const forgottenRoomCodes = useRef(new Set<string>());
   const hideSidebarButton = useRef<HTMLButtonElement>(null);
   const showSidebarButton = useRef<HTMLButtonElement>(null);
@@ -101,6 +104,14 @@ export default function App() {
     : '';
   const closeModal = useCallback(() => setModal(null), []);
   const continueAfterRecap = useCallback(() => setTurnRecaps((pending) => pending.slice(1)), []);
+  const continueAfterDice = useCallback(() => {
+    setDiceRecaps((pending) => pending.slice(1));
+    if (activeMode === 'local') setLocalGame((current) => {
+      if (!current || current.phase === 'ended') return current;
+      const seconds = getHouseRules(current).turnTimerSeconds;
+      return seconds ? { ...current, turnDeadlineAt: Date.now() + seconds * 1000 } : current;
+    });
+  }, [activeMode]);
   const updateRoom = useCallback((next: OnlineRoom | null) => {
     if (next && forgottenRoomCodes.current.has(next.code)) return;
     if (!next) setPage('home');
@@ -146,6 +157,7 @@ export default function App() {
       room.status !== 'lobby';
     previousRoom.current = room ? { id: room.id, status: room.status } : null;
     if (started && room?.game && modal === 'online') {
+      newlyStartedGameId.current = room.game.id;
       setActiveMode('online');
       setPage('play');
       setModal(null);
@@ -198,6 +210,9 @@ export default function App() {
     previousGame.current = game;
     if (page !== 'play' || !game || previous?.id !== game.id) {
       setTurnRecaps([]);
+      setDiceRecaps(page === 'play' && game?.id === newlyStartedGameId.current
+        ? game.recentDiceRolls ?? (game.lastRoundRolls?.kind === 'opening' ? [game.lastRoundRolls] : []) : []);
+      newlyStartedGameId.current = null;
       return;
     }
     const recaps = collectTurnRecaps(
@@ -207,6 +222,10 @@ export default function App() {
       activeMode === 'local' && kind === 'local',
     );
     if (recaps.length) setTurnRecaps((pending) => [...pending, ...recaps]);
+    const lastSeenTurn = previous.lastRoundRolls?.atTurn ?? -1;
+    const newRolls = game.recentDiceRolls?.filter((roll) => roll.atTurn !== undefined && roll.atTurn > lastSeenTurn)
+      ?? (game.lastRoundRolls?.atTurn !== undefined && game.lastRoundRolls.atTurn > lastSeenTurn ? [game.lastRoundRolls] : []);
+    if (newRolls.length) setDiceRecaps((pending) => [...pending, ...newRolls]);
   }, [game, page, viewerId, activeMode, kind]);
   useEffect(() => {
     if (
@@ -214,7 +233,7 @@ export default function App() {
       activeMode === 'online' ||
       page !== 'play' ||
       modal ||
-      turnRecaps.length > 0 ||
+      turnRecaps.length > 0 || diceRecaps.length > 0 ||
       game.phase === 'ended' ||
       !actor?.isBot
     )
@@ -231,14 +250,14 @@ export default function App() {
       }
     }, settings.speed);
     return () => clearTimeout(timer);
-  }, [game, actor?.isBot, activeMode, page, modal, settings, turnRecaps.length]);
+  }, [game, actor?.isBot, activeMode, page, modal, settings, turnRecaps.length, diceRecaps.length]);
   useEffect(() => {
-    if (activeMode !== 'local' || !localGame?.turnDeadlineAt || localGame.phase === 'ended') return;
+    if (activeMode !== 'local' || !localGame?.turnDeadlineAt || localGame.phase === 'ended' || turnRecaps.length || diceRecaps.length) return;
     const check = () => setLocalGame((current) => current ? expireTurn(current) : current);
     const timer = setInterval(check, 500);
     check();
     return () => clearInterval(timer);
-  }, [activeMode, localGame?.turnDeadlineAt, localGame?.phase]);
+  }, [activeMode, localGame?.turnDeadlineAt, localGame?.phase, turnRecaps.length, diceRecaps.length]);
   const setSidebarCollapsed = (collapsed: boolean) => {
     setSettings((previous) => ({ ...previous, sidebarCollapsed: collapsed }));
     requestAnimationFrame(() =>
@@ -266,6 +285,7 @@ export default function App() {
       setSaves(readGames());
       setLocalGame(null);
       setTurnRecaps([]);
+      setDiceRecaps([]);
       goTo(exitDestination);
       setExitDestination(null);
     } catch {
@@ -283,6 +303,7 @@ export default function App() {
       setRoom(null);
       setActiveMode('local');
       setTurnRecaps([]);
+      setDiceRecaps([]);
       if (exitDestination) goTo(exitDestination);
       setExitDestination(null);
       setEndingOnlineRoom(false);
@@ -307,7 +328,10 @@ export default function App() {
     try {
       previousGame.current = null;
       setTurnRecaps([]);
-      setLocalGame(createGame(config));
+      setDiceRecaps([]);
+      const nextGame = createGame(config);
+      newlyStartedGameId.current = nextGame.id;
+      setLocalGame(nextGame);
       setKind(newKind);
       setActiveMode('local');
       setRevealed('');
@@ -320,6 +344,8 @@ export default function App() {
   const resume = (save: SavedGame) => {
     previousGame.current = null;
     setTurnRecaps([]);
+    setDiceRecaps([]);
+    newlyStartedGameId.current = null;
     setLocalGame(save.game);
     setKind(save.kind);
     setActiveMode('local');
@@ -327,7 +353,7 @@ export default function App() {
     navigate('play');
   };
   const perform = (action: GameAction) => {
-    if (!game || busy || turnRecaps.length) return;
+    if (!game || busy || turnRecaps.length || diceRecaps.length) return;
     if (settings.sound) playTone(action.type === 'found');
     if (Capacitor.isNativePlatform())
       void Haptics.impact({ style: ImpactStyle.Light }).catch(() => {});
@@ -679,8 +705,8 @@ export default function App() {
           {page === 'play' && game && (
             <div
               className="game-screen"
-              inert={turnRecaps.length > 0}
-              aria-hidden={turnRecaps.length ? true : undefined}
+              inert={turnRecaps.length > 0 || diceRecaps.length > 0}
+              aria-hidden={turnRecaps.length || diceRecaps.length ? true : undefined}
             >
               <GameView
                 game={game}
@@ -967,6 +993,14 @@ export default function App() {
           recap={turnRecaps[0]}
           onContinue={continueAfterRecap}
           remaining={turnRecaps.length - 1}
+        />
+      )}
+      {page === 'play' && !modal && !turnRecaps[0] && diceRecaps[0] && game && (
+        <DiceReveal
+          key={`${game.id}:${diceRecaps[0].atTurn}`}
+          report={diceRecaps[0]}
+          rules={getHouseRules(game)}
+          onContinue={continueAfterDice}
         />
       )}
       {exitDestination && activeMode === 'local' && localGame?.phase !== 'ended' && (

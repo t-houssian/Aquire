@@ -180,6 +180,38 @@ describe('optional house rules', () => {
     }
   });
 
+  it('rolls a personal market before the opening turn and each following turn', () => {
+    let state = game({ marketMode: 'market', marketFrequency: 'turn' });
+    expect(state.lastRoundRolls).toMatchObject({ kind: 'opening', atTurn: 0, marketDie: expect.any(Number) });
+    for (let completed = 1; completed <= 9; completed++) {
+      state = applyAction({ ...state, phase: 'buy' }, { type: 'buy', stocks: {} });
+      expect(state.lastRoundRolls).toMatchObject({ atTurn: completed, marketDie: expect.any(Number) });
+      expect(state.lastRoundRolls?.kind).toBe(completed % state.players.length === 0 ? 'round' : 'turn');
+      expect(state.lastRoundRolls?.marketShift).toBe(state.marketShift);
+    }
+    expect(state.recentDiceRolls?.map((roll) => roll.atTurn)).toEqual([7, 8, 9]);
+    const timed = game({ marketMode: 'market', marketFrequency: 'turn', turnTimerSeconds: 5 });
+    expect(timed.turnDeadlineAt! - Date.now()).toBeGreaterThan(10000);
+    const nextTimed = applyAction({ ...timed, phase: 'buy' }, { type: 'buy', stocks: {} });
+    expect(nextTimed.turnDeadlineAt! - Date.now()).toBeGreaterThan(10000);
+  });
+
+  it('can wait two or three completed rounds between market rolls while dividends stay roundly', () => {
+    let everyTwo = game({ dividends: true, marketMode: 'market', marketFrequency: 'two-rounds' });
+    for (let completed = 1; completed <= 6; completed++) {
+      everyTwo = applyAction({ ...everyTwo, phase: 'buy' }, { type: 'buy', stocks: {} });
+      if (completed === 3) expect(everyTwo.lastRoundRolls).toMatchObject({ atTurn: 3, marketDie: null });
+      if (completed === 6) expect(everyTwo.lastRoundRolls).toMatchObject({ atTurn: 6, marketDie: expect.any(Number) });
+    }
+    let everyThree = game({ marketMode: 'crazy', marketFrequency: 'three-rounds' });
+    for (let completed = 1; completed <= 9; completed++) {
+      everyThree = applyAction({ ...everyThree, phase: 'buy' }, { type: 'buy', stocks: {} });
+      if (completed < 9) expect(everyThree.lastRoundRolls).toBeUndefined();
+    }
+    expect(everyThree.lastRoundRolls).toMatchObject({ atTurn: 9, marketDie: expect.any(Number) });
+    expect(() => game({ marketFrequency: 'sometimes' as HouseRules['marketFrequency'] })).toThrow('market roll frequency');
+  });
+
   it('enforces a turn deadline by completing the current turn automatically', () => {
     const state = game({ placementsPerTurn: 3, turnTimerSeconds: 5 });
     expect(expireTurn(state, state.turnDeadlineAt! - 1)).toBe(state);

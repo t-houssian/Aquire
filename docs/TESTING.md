@@ -1,5 +1,11 @@
 # Validation record
 
+## Dice reveals and market timing — September 29, 2026
+
+Dividend and market house-rule events now open an animated dice reveal after each complete round, with the selected hotel, payout outcome, and resulting market value. Optional market frequency supports a roll before every investor's turn (including the opening turn), or after every second or third complete round; dividends retain their round-end schedule. The current market status is visible beside the board on desktop and in the compact phone bar. Recent dice reports are bounded to one table rotation so online updates can reveal bot turns without accumulating event history. Private payout totals remain hidden under the money/privacy house rules.
+
+Verification passed 88 unit/rendering tests, 103 desktop/mobile browser tests with 21 platform-specific skips, 15 HTTP-mocked online UI tests, 9 backend/PostgreSQL tests, a production build, and the Edge Function typecheck. WebKit visual checks at 844×390, 390×844, and 320×568 found no page or dice-dialog scrolling. The linked Supabase Edge Function was deployed; a live temporary room accepted per-turn market timing and returned its persisted opening roll in recent events, then was closed. Capacitor sync, Android debug APK and unsigned release AAB builds, and the iOS simulator build passed. All 30 web files matched both native projects and all three packaged builds byte-for-byte; SHA-256 checks passed.
+
 ## Save or end an unfinished game — September 29, 2026
 
 Leaving an unfinished local or online boardroom now prompts to keep playing, save and exit, or end/leave the game. My games has a separate confirmed End game control. Local abandonment removes the full save without producing a completed-match summary. An online host can close the shared room for everyone; guests can leave only their own device's room shortcut. Saved online rooms are restored after reload. The host-only database operation is service-role restricted and does not trigger the finished-match archive. The migration and Edge Function were deployed to the connected Supabase project; a hosted temporary room was created, started, ended, and verified absent from the room table. Its temporary guest account was deleted.

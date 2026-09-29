@@ -18,6 +18,7 @@ import {
   Settings2,
   Sparkles,
   Trophy,
+  TrendingDown,
   TrendingUp,
   Users,
 } from 'lucide-react';
@@ -122,6 +123,15 @@ export default function GameView({
     return () => clearInterval(timer);
   }, [game.turnDeadlineAt, game.phase]);
   const rules = getHouseRules(game);
+  const marketShift = game.marketShift ?? 0;
+  const marketTone = marketShift < 0 ? 'low' : marketShift > 0 ? 'high' : 'normal';
+  const marketStatus = marketShift === 0 ? 'Normal' : `${marketShift < 0 ? 'Low' : 'High'} · ${marketShift > 0 ? '+' : ''}${marketShift}`;
+  const marketFrequency = {
+    round: 'after each round',
+    turn: 'before each turn',
+    'two-rounds': 'every 2 rounds',
+    'three-rounds': 'every 3 rounds',
+  }[rules.marketFrequency];
   const hotels = CHAINS.filter((chain) => rules.hotelChains.includes(chain.id));
   const anonymous = rules.anonymousBuying && game.phase !== 'ended';
   const hiddenCash = rules.hiddenMoney || anonymous;
@@ -212,9 +222,15 @@ export default function GameView({
             2008 EDITION <span> / </span> TURN {game.turn}
             <span className="compact-turn-name"> · {actor.name}</span>
           </span>
-          <h1>
-            The boardroom<span className="serif-dot">.</span>
-          </h1>
+          <div className="game-title-row">
+            <h1>
+              The boardroom<span className="serif-dot">.</span>
+            </h1>
+            {rules.marketMode !== 'off' && <span className={`market-status-pill ${marketTone}`} role="status" title={`Market rolls ${marketFrequency}`}>
+              {marketTone === 'low' ? <TrendingDown size={14} /> : marketTone === 'high' ? <TrendingUp size={14} /> : <Minus size={14} />}
+              Market {marketStatus}
+            </span>}
+          </div>
         </div>
         <div className="personal-stats">
           <div>
@@ -255,7 +271,12 @@ export default function GameView({
         ))}
       </div>
       <div className="compact-view-switcher" role="group" aria-label="Game view">
-        <span className="compact-view-context">{compactView === 'board' && (cityMap.columns > 12 || cityMap.rows > 9) ? 'Drag to explore' : phaseNames[game.phase]}</span>
+        <span className="compact-view-context">{rules.marketMode !== 'off'
+          ? <span className={`market-status-pill ${marketTone}`} role="status" title={`Market rolls ${marketFrequency}`}>
+              {marketTone === 'low' ? <TrendingDown size={13} /> : marketTone === 'high' ? <TrendingUp size={13} /> : <Minus size={13} />}
+              Market {marketStatus}
+            </span>
+          : compactView === 'board' && (cityMap.columns > 12 || cityMap.rows > 9) ? 'Drag to explore' : phaseNames[game.phase]}</span>
         <div>
           <button type="button" aria-pressed={compactView === 'board'} aria-controls="game-board-panel" className={compactView === 'board' ? 'active' : ''} onClick={() => setCompactView('board')}>
             <Layers3 size={15} /> Board
@@ -795,10 +816,10 @@ export default function GameView({
               </div>
               {game.lastRoundRolls && (rules.dividends || rules.marketMode !== 'off') && <div className="round-report" role="status">
                 <Sparkles size={16} />
-                <span><strong>Round {game.lastRoundRolls.round} rolled</strong><br />
-                  {rules.dividends && (game.lastRoundRolls.dividendDie === null ? 'No full cluster · no dividend' : `Dividend die ${game.lastRoundRolls.dividendDie}${game.lastRoundRolls.stockDie ? ` · stock die ${game.lastRoundRolls.stockDie} (${chainName(game.lastRoundRolls.chain!)})` : ' · no payout'}`)}
-                  {rules.dividends && rules.marketMode !== 'off' ? ' · ' : ''}
-                  {rules.marketMode !== 'off' && `Market die ${game.lastRoundRolls.marketDie} · ${game.lastRoundRolls.marketShift === 0 ? 'normal' : `${Math.abs(game.lastRoundRolls.marketShift)} row${Math.abs(game.lastRoundRolls.marketShift) === 1 ? '' : 's'} ${game.lastRoundRolls.marketShift < 0 ? 'low' : 'high'}`}`}
+                <span><strong>{game.lastRoundRolls.kind === 'opening' ? 'Opening market roll' : game.lastRoundRolls.kind === 'turn' ? `Market roll before turn ${(game.lastRoundRolls.atTurn ?? 0) + 1}` : `Round ${game.lastRoundRolls.round} rolled`}</strong><br />
+                  {rules.dividends && game.lastRoundRolls.kind !== 'turn' && game.lastRoundRolls.kind !== 'opening' && (game.lastRoundRolls.dividendDie === null ? 'No full cluster · no dividend' : `Dividend die ${game.lastRoundRolls.dividendDie}${game.lastRoundRolls.stockDie ? ` · stock die ${game.lastRoundRolls.stockDie} (${chainName(game.lastRoundRolls.chain!)})` : ' · no payout'}`)}
+                  {rules.dividends && game.lastRoundRolls.kind !== 'turn' && game.lastRoundRolls.kind !== 'opening' && rules.marketMode !== 'off' ? ' · ' : ''}
+                  {rules.marketMode !== 'off' && (game.lastRoundRolls.marketDie === null ? `Market holds ${marketStatus.toLowerCase()}` : `Market die ${game.lastRoundRolls.marketDie} · ${marketStatus.toLowerCase()}`)}
                 </span>
               </div>}
               <div className="stock-list">
@@ -916,8 +937,8 @@ export default function GameView({
             <p><strong>Timer</strong> · {rules.turnTimerSeconds ? `${rules.turnTimerSeconds} seconds` : 'Off'}</p>
             <p><strong>Privacy</strong> · cash {hiddenCash ? 'hidden' : 'public'}; purchases {rules.anonymousBuying ? 'anonymous' : 'public'}</p>
             <p><strong>Dividends</strong> · {rules.dividends ? 'On' : 'Off'}; <strong>Trading</strong> · {rules.trading ? 'On' : 'Off'}</p>
-            <p><strong>Market</strong> · {rules.marketMode === 'off' ? 'Printed prices' : rules.marketMode === 'crazy' ? 'Crazy fluctuation' : 'Fluctuation'}{rules.marketMode !== 'off' ? ` · ${game.marketShift === 0 ? 'normal prices' : `${Math.abs(game.marketShift ?? 0)} row${Math.abs(game.marketShift ?? 0) === 1 ? '' : 's'} ${game.marketShift! < 0 ? 'lower' : 'higher'}`}` : ''}</p>
-            {game.lastRoundRolls && <p><strong>Last round</strong> · {game.lastRoundRolls.dividendDie !== null ? `dividend die ${game.lastRoundRolls.dividendDie}` : 'no dividend roll'}{game.lastRoundRolls.stockDie !== null ? `, stock die ${game.lastRoundRolls.stockDie}` : ''}{game.lastRoundRolls.marketDie !== null ? `, market die ${game.lastRoundRolls.marketDie}` : ''}</p>}
+            <p><strong>Market</strong> · {rules.marketMode === 'off' ? 'Printed prices' : rules.marketMode === 'crazy' ? 'Crazy fluctuation' : 'Fluctuation'}{rules.marketMode !== 'off' ? ` · ${marketStatus.toLowerCase()} · rolls ${marketFrequency}` : ''}</p>
+            {game.lastRoundRolls && <p><strong>Last dice event</strong> · {game.lastRoundRolls.dividendDie !== null ? `dividend die ${game.lastRoundRolls.dividendDie}` : 'no dividend die'}{game.lastRoundRolls.stockDie !== null ? `, hotel die ${game.lastRoundRolls.stockDie}` : ''}{game.lastRoundRolls.marketDie !== null ? `, market die ${game.lastRoundRolls.marketDie}` : ''}</p>}
           </div>}
         </aside>
       </div>

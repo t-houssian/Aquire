@@ -61,6 +61,7 @@ test('house-rule defaults live in preferences and can be changed for a new table
   await preferences.getByLabel('Tiles to remove per turn').fill('2');
   await preferences.getByLabel('Shares to buy per turn').fill('5');
   await preferences.getByLabel('Market fluctuation').selectOption('crazy');
+  await preferences.getByLabel('Market roll frequency').selectOption('three-rounds');
   await preferences.getByLabel('Anonymous buying, bank counts, and cash').check();
   await preferences.getByRole('button', { name: /Just right/ }).click();
   await page.getByRole('button', { name: /Let’s play/ }).first().click();
@@ -68,12 +69,14 @@ test('house-rule defaults live in preferences and can be changed for a new table
   await expect(setup.getByLabel('Starting cash')).toHaveValue('9000');
   await expect(setup.getByLabel('Tiles to place per turn')).toHaveValue('3');
   await expect(setup.getByLabel('Tiles to remove per turn')).toHaveValue('2');
+  await expect(setup.getByLabel('Market roll frequency')).toHaveValue('three-rounds');
+  await setup.getByLabel('Market roll frequency').selectOption('two-rounds');
   await setup.getByLabel('Starting tiles per player').fill('4');
   await setup.getByRole('button', { name: /Let’s build something/ }).click();
   const state = await page.evaluate(() => JSON.parse(localStorage.getItem('aquire.games.v2') || '[]')[0].game);
   expect(Object.keys(state.board)).toHaveLength(12);
   expect(state.players.every((player: { cash: number }) => player.cash === 9000)).toBe(true);
-  expect(state.houseRules).toMatchObject({ startingTilesPerPlayer: 4, placementsPerTurn: 3, removalsPerTurn: 2, buyLimit: 5, anonymousBuying: true, marketMode: 'crazy' });
+  expect(state.houseRules).toMatchObject({ startingTilesPerPlayer: 4, placementsPerTurn: 3, removalsPerTurn: 2, buyLimit: 5, anonymousBuying: true, marketMode: 'crazy', marketFrequency: 'two-rounds' });
   const stocksView = page.getByRole('button', { name: 'Stocks', exact: true });
   if (await stocksView.isVisible()) await stocksView.click();
   await page.getByRole('button', { name: 'House rules' }).click();
