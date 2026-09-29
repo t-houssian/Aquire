@@ -1,0 +1,666 @@
+/* Older embedded browsers keep the usable flowing layout. */
+@supports (container-type: size) and (width: 1cqw) {
+  /* Desktop tables use the available viewport; small windows retain the flowing layout. */
+  @media (min-width: 1060px) and (min-height: 650px) {
+    .playing-game .main-shell {
+      height: 100dvh;
+      display: flex;
+      flex-direction: column;
+    }
+    .playing-game .topbar {
+      height: 52px;
+      flex-shrink: 0;
+      padding: 0 22px;
+    }
+    .playing-game .main-shell main {
+      flex: 1;
+      min-height: 0;
+      width: 100%;
+      max-width: none;
+      padding-bottom: env(safe-area-inset-bottom);
+    }
+    .playing-game .sidebar-bottom {
+      padding-top: 12px;
+    }
+    .game-screen {
+      height: 100%;
+      min-height: 0;
+    }
+    .game-view {
+      height: 100%;
+      min-height: 0;
+      display: grid;
+      grid-template-columns: minmax(0, 1fr) auto;
+      grid-template-rows: 46px 42px minmax(0, 1fr);
+      gap: 10px 22px;
+      padding: 12px 20px;
+    }
+    .game-heading {
+      grid-column: 1;
+      grid-row: 1;
+      margin: 0;
+      gap: 25px;
+    }
+    .game-heading h1 {
+      font-size: 29px;
+      line-height: 1;
+      margin-top: 2px;
+    }
+    .game-heading .eyebrow {
+      font-size: 7px;
+    }
+    .personal-stats {
+      gap: 20px;
+    }
+    .personal-stats strong {
+      font-size: 20px;
+    }
+    .personal-stats span {
+      font-size: 7px;
+      letter-spacing: 1px;
+    }
+    .game-topline {
+      grid-column: 2;
+      grid-row: 1;
+      gap: 22px;
+    }
+    .game-toplinks {
+      gap: 13px;
+    }
+    .game-topline .text-button {
+      font-size: 10px;
+    }
+    .players-bar {
+      grid-column: 1 / -1;
+      grid-row: 2;
+      min-width: 0;
+      margin: 0;
+      padding: 0;
+      gap: 7px;
+      overflow: visible;
+    }
+    .player-chip {
+      min-width: 0;
+      padding: 6px 10px;
+      gap: 7px;
+    }
+    .player-chip > div:nth-child(2) {
+      min-width: 0;
+      gap: 2px;
+    }
+    .player-chip strong {
+      overflow: hidden;
+      text-overflow: ellipsis;
+      font-size: 10px;
+    }
+    .player-chip .avatar {
+      width: 25px;
+      height: 25px;
+      font-size: 10px;
+    }
+    .player-chip div > span {
+      font-size: 8px;
+    }
+    .player-cash {
+      font-size: 10px;
+      flex-shrink: 0;
+    }
+    .game-layout {
+      grid-column: 1 / -1;
+      grid-row: 3;
+      display: grid;
+      grid-template-columns: minmax(0, 1fr) 330px;
+      align-items: stretch;
+      gap: 14px;
+      min-height: 0;
+    }
+    .board-column {
+      min-height: 0;
+      display: grid;
+      grid-template-rows: minmax(0, 1fr) auto;
+      gap: 9px;
+    }
+    .board-column:has(.strategy-note) {
+      grid-template-rows: minmax(0, 1fr) auto auto;
+    }
+    .game-ended .board-column {
+      grid-template-rows: minmax(0, 1fr);
+    }
+    .board-card {
+      min-height: 0;
+      display: grid;
+      grid-template-rows: 32px minmax(0, 1fr) 25px;
+    }
+    .board-title {
+      height: auto;
+      padding: 0 13px;
+    }
+    .board-title strong {
+      font-size: 11px;
+    }
+    .board-stage {
+      container-type: size;
+      min-height: 0;
+      display: grid;
+      place-items: center;
+    }
+    .board-wrap {
+      /* The board is 4:3, plus 16px axes and 6px outer padding. */
+      width: min(100cqw, calc((100cqh - 22px) * 4 / 3 + 22px));
+      max-width: none;
+      padding: 0 6px 6px 0;
+      margin: 0;
+    }
+    .board-columns {
+      margin-left: 16px;
+      height: 16px;
+      font-size: 8px;
+    }
+    .board-with-rows {
+      display: grid;
+      grid-template-columns: 16px minmax(0, 1fr);
+    }
+    .board-rows {
+      width: 16px;
+      font-size: 8px;
+    }
+    .game-board {
+      aspect-ratio: 4 / 3;
+      grid-template-rows: repeat(9, minmax(0, 1fr));
+      gap: 3px;
+      padding: 3px;
+    }
+    .board-tile {
+      aspect-ratio: auto;
+      min-height: 0;
+      font-size: clamp(8px, 2.6cqh, 12px);
+      border-radius: 3px;
+    }
+    .board-tile.chain-tile > span {
+      font-size: clamp(6px, 1.9cqh, 9px);
+      top: 2px;
+      left: 3px;
+    }
+    .board-tile .tile-initial {
+      font-size: clamp(10px, 4.2cqh, 22px);
+      margin-top: 7px;
+    }
+    .independent-building {
+      width: clamp(6px, 2.5cqh, 12px);
+      height: clamp(5px, 2cqh, 10px);
+      top: 3px;
+    }
+    .board-tile.occupied:not(.chain-tile) > span:last-child {
+      padding-bottom: 2px;
+    }
+    .board-legend {
+      padding: 0 12px;
+      font-size: 8px;
+      gap: 12px;
+    }
+    .action-card {
+      margin: 0;
+      padding: 11px 13px;
+      min-width: 0;
+    }
+    .action-heading {
+      gap: 8px;
+    }
+    .action-heading .step-icon {
+      width: 27px;
+      height: 27px;
+      border-radius: 7px;
+    }
+    .action-heading .step-icon svg {
+      width: 17px;
+      height: 17px;
+    }
+    .action-heading .eyebrow {
+      display: none;
+    }
+    .action-heading h3 {
+      font-size: 13px;
+      margin: 0;
+    }
+    .action-description {
+      font-size: 11px;
+      line-height: 1.4;
+      margin-top: 6px;
+    }
+    .action-footer {
+      margin-top: 8px;
+      padding-top: 8px;
+    }
+    .action-footer .button,
+    .privacy-panel .button {
+      min-height: 33px;
+      font-size: 10px;
+      padding: 0 12px;
+    }
+    .action-card:has(.tile-rack) {
+      display: grid;
+      grid-template-columns: minmax(0, 1fr) auto;
+      column-gap: 12px;
+    }
+    .action-card:has(.tile-rack) .action-heading,
+    .action-card:has(.tile-rack) .action-description,
+    .action-card:has(.tile-rack) .declare-end,
+    .action-card:has(.tile-rack) .inline-note {
+      grid-column: 1 / -1;
+    }
+    .tile-rack {
+      grid-column: 1;
+      margin-top: 8px;
+      gap: 6px;
+      flex-wrap: nowrap;
+    }
+    .rack-tile {
+      width: 45px;
+      min-width: 0;
+      height: 42px;
+      flex-shrink: 1;
+      gap: 3px;
+    }
+    .rack-tile > span {
+      font-size: 15px;
+    }
+    .rack-tile > small {
+      font-size: 5px;
+    }
+    .action-card:has(.tile-rack) .action-footer {
+      grid-column: 2;
+      grid-row: 3;
+      border: 0;
+      padding: 0;
+      gap: 5px;
+      align-items: flex-end;
+      justify-content: flex-end;
+      flex-direction: column;
+    }
+    .action-card:has(.tile-rack) .action-footer .button {
+      min-height: 29px;
+    }
+    .chain-choices {
+      grid-template-columns: repeat(4, minmax(0, 1fr));
+      gap: 6px;
+      margin-top: 8px;
+    }
+    .chain-choices button {
+      min-width: 0;
+      min-height: 36px;
+      padding: 5px;
+      gap: 5px;
+    }
+    .chain-choices .chain-logo {
+      width: 22px;
+      height: 24px;
+      font-size: 14px;
+    }
+    .chain-choices button strong {
+      font-size: 9px;
+    }
+    .chain-choices button > svg {
+      display: none;
+    }
+    .merger-controls {
+      display: grid;
+      grid-template-columns: 1fr 1.25fr 0.8fr;
+      gap: 10px;
+      margin-top: 8px;
+    }
+    .merger-controls > div {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 7px;
+      border: 0;
+      padding: 7px 9px;
+      background: #f2f5ec;
+      border-radius: 7px;
+    }
+    .merger-controls > div > span {
+      width: 100%;
+      gap: 3px;
+    }
+    .merger-controls strong {
+      font-size: 11px;
+    }
+    .merger-controls small {
+      font-size: 8px;
+    }
+    .declare-end {
+      min-height: 27px;
+      padding: 5px 8px;
+      font-size: 9px;
+      margin-top: 8px;
+    }
+    .action-card .inline-note {
+      padding: 7px 9px;
+      margin: 8px 0 0;
+      font-size: 9px;
+    }
+    .game-view[data-phase='merger-shares'] .action-card:not(:has(.privacy-panel)) {
+      display: grid;
+      grid-template-columns: auto minmax(0, 1fr);
+      column-gap: 13px;
+      align-items: center;
+    }
+    .game-view[data-phase='merger-shares'] .action-description {
+      margin: 0;
+    }
+    .game-view[data-phase='merger-shares'] .merger-controls,
+    .game-view[data-phase='merger-shares'] .action-footer,
+    .game-view[data-phase='merger-shares'] .declare-end,
+    .game-view[data-phase='merger-shares'] .inline-note {
+      grid-column: 1 / -1;
+    }
+    .privacy-panel {
+      padding: 8px 0 0;
+      flex-direction: row;
+      text-align: left;
+      gap: 12px;
+    }
+    .privacy-panel > svg {
+      flex-shrink: 0;
+      width: 20px;
+    }
+    .privacy-panel p {
+      font-size: 11px;
+    }
+    .privacy-panel .button {
+      flex-shrink: 0;
+      margin-left: auto;
+    }
+    .order-summary {
+      margin-top: 8px;
+      padding: 8px 11px;
+      font-size: 10px;
+    }
+    .order-summary strong {
+      font-size: 14px;
+    }
+    .strategy-note {
+      padding: 0 3px;
+      font-size: 8px;
+      line-height: 1.3;
+      gap: 7px;
+    }
+    .strategy-note svg {
+      width: 13px;
+      height: 13px;
+    }
+    .market-panel {
+      min-width: 0;
+      min-height: 0;
+      display: flex;
+      flex-direction: column;
+    }
+    .market-tabs {
+      height: 37px;
+      min-height: 37px;
+      padding: 0 11px;
+      gap: 6px;
+    }
+    .market-tabs button {
+      padding: 0 8px;
+      font-size: 10px;
+    }
+    .market-heading {
+      padding: 12px 13px 10px;
+      flex-shrink: 0;
+    }
+    .market-heading h3 {
+      font-size: 12px;
+    }
+    .market-heading p {
+      font-size: 8px;
+      margin-top: 4px;
+    }
+    .stock-list {
+      flex: 1;
+      min-height: 0;
+      display: grid;
+      grid-template-rows: repeat(7, minmax(0, 1fr));
+    }
+    .stock-row {
+      min-width: 0;
+      min-height: 0;
+      padding: 6px 12px;
+      display: grid;
+      align-content: center;
+    }
+    .stock-main {
+      min-width: 0;
+      gap: 7px;
+    }
+    .stock-main .chain-logo {
+      width: 27px;
+      height: 29px;
+      font-size: 16px;
+    }
+    .stock-name {
+      min-width: 0;
+      gap: 3px;
+    }
+    .stock-name strong {
+      font-size: 11px;
+    }
+    .stock-name > span {
+      font-size: 8px;
+      white-space: nowrap;
+    }
+    .stock-price {
+      gap: 3px;
+      flex-shrink: 0;
+    }
+    .stock-price strong {
+      font-size: 12px;
+    }
+    .stock-price > span {
+      font-size: 8px;
+    }
+    .stock-row:has(.stock-purchase) {
+      grid-template-columns: minmax(0, 1fr) auto;
+      gap: 8px;
+    }
+    .stock-row:has(.stock-purchase) .stock-main {
+      display: grid;
+      grid-template-columns: 27px minmax(0, 1fr) auto;
+      gap: 6px;
+    }
+    .stock-row:has(.stock-purchase) .stock-name > span {
+      font-size: 7px;
+    }
+    .stock-purchase {
+      margin: 0;
+    }
+    .stock-purchase > span {
+      display: none;
+    }
+    .stock-purchase .stepper {
+      gap: 4px;
+    }
+    .stock-purchase .stepper button {
+      width: 23px;
+      height: 26px;
+    }
+    .stock-purchase .stepper b {
+      min-width: 8px;
+      font-size: 10px;
+    }
+    .market-footer {
+      padding: 9px 13px;
+      gap: 9px;
+      flex-shrink: 0;
+    }
+    .market-footer p {
+      font-size: 9px;
+      line-height: 1.5;
+    }
+    .market-footer p span {
+      font-size: 8px;
+    }
+    .investor-list,
+    .activity-list {
+      min-height: 0;
+      overflow: auto;
+      padding: 15px 13px;
+      overscroll-behavior: contain;
+    }
+    .activity-list ol {
+      max-height: none;
+      overflow: visible;
+    }
+    .end-card {
+      margin: 0;
+      border: 0;
+      border-radius: 0;
+      padding: 16px;
+      min-height: 0;
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+    }
+    .end-trophy {
+      width: 40px;
+      height: 40px;
+      margin: 0 auto 8px;
+      flex-shrink: 0;
+    }
+    .end-trophy svg {
+      width: 23px;
+      height: 23px;
+    }
+    .end-card .eyebrow {
+      font-size: 8px;
+    }
+    .end-card h2 {
+      font-size: 25px;
+      line-height: 1.05;
+      margin: 7px 0;
+      overflow-wrap: anywhere;
+    }
+    .end-card > p {
+      font-size: 9px;
+      line-height: 1.5;
+    }
+    .results-list {
+      width: 100%;
+      margin: 12px 0;
+    }
+    .results-list > div {
+      display: grid;
+      grid-template-columns: 20px minmax(0, 1fr) auto;
+      gap: 4px 6px;
+      padding: 7px 0;
+    }
+    .results-list strong {
+      font-size: 11px;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+    .result-rank {
+      grid-column: 1;
+      grid-row: 1 / 3;
+      align-self: center;
+      font-size: 12px;
+    }
+    .result-details {
+      grid-column: 2 / -1;
+      grid-row: 2;
+      margin: 0;
+      font-size: 8px;
+    }
+    .results-list b {
+      grid-column: 3;
+      grid-row: 1;
+      min-width: 0;
+      font-size: 13px;
+    }
+    .end-card > .button {
+      min-height: 33px;
+      font-size: 10px;
+      flex-shrink: 0;
+    }
+  }
+
+  @media (min-width: 1060px) and (min-height: 650px) and (max-height: 700px) {
+    .action-card {
+      padding: 8px 11px;
+    }
+    .action-description {
+      font-size: 10px;
+    }
+    .chain-choices {
+      gap: 4px;
+      margin-top: 6px;
+    }
+    .chain-choices button {
+      min-height: 30px;
+      padding: 3px 5px;
+    }
+    .chain-choices .chain-logo {
+      width: 20px;
+      height: 20px;
+      font-size: 13px;
+    }
+    .merger-controls {
+      gap: 6px;
+      margin-top: 6px;
+    }
+    .merger-controls > div {
+      display: grid;
+      grid-template-columns: minmax(0, 1fr) auto;
+      gap: 5px;
+      padding: 6px;
+    }
+    .merger-controls .stepper {
+      gap: 4px;
+    }
+    .merger-controls .stepper button {
+      width: 23px;
+      height: 25px;
+    }
+    .merger-controls small {
+      font-size: 7px;
+      line-height: 1.3;
+    }
+    .merger-controls > div > b {
+      padding-right: 0;
+    }
+    .action-footer {
+      padding-top: 6px;
+      margin-top: 6px;
+    }
+  }
+
+  @media (min-width: 1060px) and (min-height: 650px) and (max-height: 800px) {
+    .strategy-note {
+      display: none;
+    }
+    .board-column:has(.strategy-note) {
+      grid-template-rows: minmax(0, 1fr) auto;
+    }
+    .playing-game .sidebar-note {
+      padding: 10px 6px 16px;
+    }
+    .end-trophy {
+      display: none;
+    }
+    .end-card {
+      padding: 12px;
+    }
+    .end-card h2 {
+      font-size: 23px;
+    }
+  }
+}
+
+/* Put the closing result before the city on phones, while keeping the market tabs. */
+@media (max-width: 680px) {
+  .game-ended .market-panel {
+    order: 0;
+  }
+}

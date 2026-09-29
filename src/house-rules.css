@@ -1,0 +1,47 @@
+.house-rules-controls { margin-top: 18px; padding-top: 4px; border-top: 1px solid #dce4d5; }
+.hotel-roster-heading { display: flex; justify-content: space-between; align-items: center; gap: 12px; margin: 13px 0 10px; }
+.hotel-roster-heading strong, .hotel-roster-heading small { display: block; }
+.hotel-roster-heading strong { color: #294a37; font-size: 13px; }
+.hotel-roster-heading small { color: #6d7f71; font-size: 10px; margin-top: 2px; }
+.hotel-roster-heading button { border: 1px solid #cfddd0; border-radius: 7px; background: #f5f8f2; color: #3d664a; padding: 6px 9px; font-size: 10px; font-weight: 700; cursor: pointer; }
+.hotel-roster-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 7px; margin-bottom: 17px; }
+.hotel-choice { display: flex; align-items: center; gap: 7px; min-width: 0; min-height: 43px; padding: 6px 7px; border: 1px solid #e0e6dc; border-radius: 8px; background: #fff; }
+.hotel-choice.selected { border-color: color-mix(in srgb, var(--hotel-color) 38%, white); background: color-mix(in srgb, var(--hotel-light) 45%, white); }
+.hotel-choice-main { display: flex; align-items: center; gap: 7px; min-width: 0; flex: 1; cursor: pointer; }
+.hotel-choice input { width: 14px; height: 14px; min-width: 14px; margin: 0; accent-color: var(--hotel-color); }
+.hotel-choice-mark { width: 25px; height: 25px; flex: 0 0 25px; display: grid; place-items: center; border-radius: 6px; color: var(--hotel-color); background: var(--hotel-light); font-family: 'Instrument Serif', Georgia, serif; font-size: 17px; }
+.hotel-choice-copy { min-width: 0; }
+.hotel-choice-copy strong, .hotel-choice-copy small { display: block; overflow: hidden; white-space: nowrap; text-overflow: ellipsis; }
+.hotel-choice-copy strong { color: #2d4938; font-size: 11px; }
+.hotel-choice-copy small { color: #78897b; font-size: 9px; }
+.hotel-share-supply { display: flex; flex-direction: column; align-items: center; gap: 2px; flex: 0 0 43px; color: #657769; font-size: 9px; font-weight: 700; }
+.hotel-share-supply input { width: 43px; min-width: 0; padding: 3px 2px; text-align: center; border: 1px solid #cfddd0; border-radius: 5px; background: #fff; color: #294a37; font-size: 11px; font-weight: 700; }
+.house-rule-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; }
+.house-rule-grid label, .house-rule-timer { display: flex; flex-direction: column; gap: 5px; font-size: 12px; font-weight: 700; color: #274536; }
+.house-rule-grid input, .house-rule-grid select, .house-rule-timer input { width: 100%; }
+.house-rule-grid small, .house-rule-timer small { font-size: 10px; font-weight: 400; line-height: 1.4; color: #6d7f71; }
+.house-rule-switches { display: grid; gap: 9px; margin-top: 14px; }
+.house-rule-switches label, .house-rule-toggle { display: flex; align-items: center; gap: 9px; font-size: 12px; color: #274536; }
+.house-rule-toggle { margin-top: 16px; }
+.house-rule-switches input, .house-rule-toggle input { width: 16px; height: 16px; min-height: 16px; flex: 0 0 16px; margin: 0; accent-color: #477c59; }
+.house-rule-timer { margin-top: 9px; }
+.house-rules-summary { padding: 16px; display: grid; gap: 9px; overflow: auto; }
+.house-rules-summary h3 { margin: 0 0 3px; font-family: 'Instrument Serif', Georgia, serif; font-size: 24px; }
+.house-rules-summary p { margin: 0; color: #526858; font-size: 12px; line-height: 1.5; }
+.house-rules-summary strong { color: #294a37; }
+.hotel-roster-summary { display: flex; flex-wrap: wrap; gap: 5px; }
+.hotel-roster-summary span { padding: 4px 7px; border-radius: 6px; background: var(--hotel-light); color: var(--hotel-color); font-size: 10px; font-weight: 700; }
+.turn-timer { font-variant-numeric: tabular-nums; font-size: 12px; font-weight: 700; color: #446f53; }
+.turn-timer.urgent { color: #b65243; }
+.board-tile.removal-target { box-shadow: inset 0 0 0 2px #c77255; cursor: pointer; }
+.house-remove-toggle, .house-finish-placing { align-self: flex-start; border: 1px solid #cfddd0; background: #f4f8f1; color: #385c43; border-radius: 8px; padding: 7px 10px; font-size: 11px; font-weight: 700; }
+.house-remove-toggle.active { border-color: #c77255; background: #fff0ea; color: #9d533e; }
+.house-finish-placing { margin-top: 5px; }
+.stock-sale { border-top: 1px dashed #d9e1d7; background: #f9f6f1; }
+.round-report { display: flex; align-items: flex-start; gap: 9px; padding: 10px 13px; background: #f3f0e5; border-bottom: 1px solid #e3ddcb; color: #5b604b; font-size: 10px; line-height: 1.5; animation: round-rise .35s ease-out; }
+.round-report svg { flex: 0 0 auto; color: #a28749; }
+.round-report strong { color: #3b5240; }
+@keyframes round-rise { from { opacity: .3; transform: translateY(-4px); } to { opacity: 1; transform: translateY(0); } }
+@media (prefers-reduced-motion: reduce) { .round-report { animation: none; } }
+@media (max-width: 620px) { .hotel-roster-grid { grid-template-columns: 1fr; } }
+@media (max-width: 480px) { .house-rule-grid { grid-template-columns: 1fr; } }

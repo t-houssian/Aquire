@@ -1,0 +1,56 @@
+.exit-game-dialog > p {
+  color: #667b68;
+  font-size: 13px;
+  line-height: 1.65;
+}
+
+.exit-game-actions {
+  display: flex;
+  justify-content: flex-end;
+  flex-wrap: wrap;
+  gap: 9px;
+  margin-top: 24px;
+}
+
+.exit-game-actions .button {
+  min-height: 42px;
+  justify-content: center;
+}
+
+.exit-game-danger {
+  background: #8f4e3f;
+  border-color: #8f4e3f;
+}
+
+.exit-game-danger:hover {
+  background: #783f34;
+  border-color: #783f34;
+}
+
+.online-end-confirm {
+  margin-top: 18px;
+  padding: 14px;
+  border: 1px solid #e4d7ca;
+  border-radius: 10px;
+  background: #fbf7f2;
+}
+.online-end-confirm p {
+  color: #805e4d;
+  font-size: 12px;
+  line-height: 1.5;
+}
+.online-end-confirm > div {
+  display: flex;
+  justify-content: flex-end;
+  gap: 8px;
+  margin-top: 12px;
+}
+
+@media (max-width: 520px) {
+  .exit-game-actions {
+    flex-direction: column-reverse;
+  }
+  .exit-game-actions .button {
+    width: 100%;
+  }
+}

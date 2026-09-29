@@ -1,0 +1,7 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <color name="colorPrimary">#183f35</color>
+    <color name="colorPrimaryDark">#183f35</color>
+    <color name="colorAccent">#acc579</color>
+    <color name="aquire_canvas">#f7f8f2</color>
+</resources>

@@ -1,0 +1,5 @@
+{
+  "nodeModulesDir": "none",
+  "imports": { "@electric-sql/pglite": "npm:@electric-sql/pglite@0.5.8" },
+  "compilerOptions": { "strict": true }
+}

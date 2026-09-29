@@ -1,0 +1,239 @@
+/* A close-set, dark physical board with light hotel tiles. Map accent colors remain visible. */
+.map-themed .board-stage {
+  display: flex;
+  align-items: center;
+  justify-content: safe center;
+  overflow: auto;
+  background: color-mix(in srgb, var(--map-canvas) 87%, var(--map-ink));
+  scrollbar-width: thin;
+}
+.map-themed .board-wrap {
+  flex: 0 0 auto;
+  border-radius: 9px;
+  background: color-mix(in srgb, var(--map-ink) 84%, #17231e);
+  box-shadow: 0 8px 26px #14291c24;
+  padding: 5px 8px 8px 5px;
+}
+.map-themed .board-columns,
+.map-themed .board-rows {
+  color: #fff;
+  opacity: .82;
+}
+.map-themed .game-board {
+  gap: 1px;
+  padding: 2px;
+  border: 1px solid color-mix(in srgb, var(--map-accent) 32%, #1a2822);
+  border-radius: 4px;
+  background: color-mix(in srgb, var(--map-ink) 84%, #17231e);
+}
+.map-themed .board-tile {
+  border-radius: 1px;
+  box-shadow: none;
+  container-type: inline-size;
+  overflow: hidden;
+}
+.map-themed .board-tile:not(.chain-tile) {
+  background: var(--map-tile);
+  border-color: color-mix(in srgb, var(--map-ink) 13%, var(--map-tile));
+  color: color-mix(in srgb, var(--map-ink) 73%, var(--map-tile));
+}
+.map-themed .board-tile.occupied:not(.chain-tile) {
+  background: color-mix(in srgb, var(--map-tile) 83%, var(--map-accent));
+  border-color: color-mix(in srgb, var(--map-ink) 25%, var(--map-tile));
+}
+.map-themed .board-tile.map-void,
+.map-themed .board-tile.map-void:disabled {
+  background: color-mix(in srgb, var(--map-ink) 61%, #14211e);
+  border-color: transparent;
+}
+.map-themed .board-tile.chain-tile {
+  background: color-mix(in srgb, var(--chain-light) 84%, white);
+  border-color: color-mix(in srgb, var(--chain) 35%, white);
+  box-shadow: inset 0 -2px 0 color-mix(in srgb, var(--chain) 37%, transparent);
+}
+.map-themed .board-tile .tile-initial {
+  position: absolute;
+  inset: 0;
+  display: grid;
+  place-items: center;
+  width: 100%;
+  height: 100%;
+  margin: 0;
+  font-size: clamp(9px, 54cqi, 21px);
+  line-height: 1;
+  color: color-mix(in srgb, var(--chain) 70%, #12251d);
+  pointer-events: none;
+}
+.map-themed .board-tile.chain-tile > .tile-coordinate {
+  top: auto;
+  left: auto;
+  right: 1px;
+  bottom: 1px;
+  font-size: clamp(5px, 22cqi, 8px);
+  line-height: 1;
+  opacity: .78;
+}
+.map-themed .board-tile.tile-selected {
+  transform: none;
+  outline: 2px solid var(--map-accent);
+  outline-offset: -2px;
+}
+.map-miniature {
+  gap: 1px;
+  background: color-mix(in srgb, var(--map-ink) 84%, #17231e);
+}
+.map-miniature .excluded { background: color-mix(in srgb, var(--map-ink) 61%, #14211e); }
+.map-miniature .included { background: var(--map-tile); }
+.merger-rack {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 8px 15px;
+  border: 1px solid #dce6d5;
+  border-radius: 9px;
+  background: #fbfcf7;
+  padding: 8px 10px;
+  margin-top: 8px;
+}
+.merger-intro { min-width: 0; }
+.merger-rack > div:first-child { display: flex; align-items: baseline; gap: 8px; }
+.merger-rack strong { font-size: 11px; color: #284234; }
+.merger-rack span { font-size: 9px; color: #819076; }
+.merger-rack-tiles { display: flex; flex-wrap: wrap; gap: 5px; }
+.merger-rack-tiles .merger-rack-tile {
+  display: grid;
+  place-items: center;
+  min-width: 28px;
+  height: 26px;
+  padding: 0 4px;
+  border: 1px solid #b9cbaa;
+  border-radius: 5px;
+  background: #f0f4e8;
+  color: #3c6043;
+  font-size: 12px;
+  font-weight: 700;
+}
+.merger-rack em { font-size: 10px; color: #819076; }
+.dead-tile-replace {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  width: fit-content;
+  margin-top: 7px;
+  padding: 6px 8px;
+  border: 1px solid #dfcfb3;
+  border-radius: 6px;
+  background: #fff8ed;
+  color: #775634;
+  font-size: 10px;
+  cursor: pointer;
+}
+@media (min-width: 1060px) and (min-height: 650px) {
+  .action-card:has(.tile-rack) .dead-tile-replace { grid-column: 1 / -1; }
+  .game-view[data-phase='merger-shares'] .merger-intro {
+    grid-column: 2;
+    display: flex;
+    flex-direction: column;
+    align-items: stretch;
+    justify-content: center;
+    gap: 4px;
+  }
+  .game-view[data-phase='merger-shares'] .merger-rack { margin-top: 0; padding: 3px 5px; gap: 5px; }
+  .game-view[data-phase='merger-shares'] .merger-rack > div:first-child span { display: none; }
+  .game-view[data-phase='merger-shares'] .merger-rack-tiles .merger-rack-tile { min-width: 22px; height: 22px; font-size: 10px; }
+}
+@media (min-width: 1600px) and (min-height: 750px) {
+  .game-view:not(.game-ended) .board-column,
+  .game-view:not(.game-ended) .board-column:has(.strategy-note) {
+    grid-template-columns: minmax(0, 1fr) minmax(345px, 390px);
+    grid-template-rows: minmax(0, 1fr) auto;
+    gap: 10px;
+  }
+  .game-view:not(.game-ended) .board-card { grid-column: 1; grid-row: 1 / -1; }
+  .game-view:not(.game-ended) .action-card {
+    grid-column: 2;
+    grid-row: 1;
+    align-self: center;
+    display: block;
+    max-height: 100%;
+    overflow-y: auto;
+    scrollbar-width: thin;
+    padding: 16px;
+  }
+  .game-view:not(.game-ended) .strategy-note { grid-column: 2; grid-row: 2; }
+  .game-view:not(.game-ended) .action-card .tile-rack { display: flex; flex-wrap: wrap; }
+  .game-view:not(.game-ended) .action-card .action-footer {
+    display: flex;
+    flex-direction: row;
+    justify-content: space-between;
+    align-items: center;
+    margin-top: 12px;
+    padding-top: 10px;
+    border-top: 1px solid #edf0e9;
+  }
+  .game-view:not(.game-ended) .action-card .chain-choices { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .game-view[data-phase='merger-shares'] .merger-intro { display: block; }
+  .game-view[data-phase='merger-shares'] .merger-rack { margin-top: 9px; }
+  .game-view[data-phase='merger-shares'] .merger-rack > div:first-child span { display: block; }
+  .game-view[data-phase='merger-shares'] .merger-controls { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+  .game-view:not(.game-ended) .board-stage { padding: 8px; }
+}
+@media (max-width: 680px) {
+  .merger-rack > div:first-child { display: block; }
+  .merger-rack > div:first-child span { display: block; margin-top: 2px; }
+}
+
+/* Keep the final city beside the chain-by-chain closing payouts. */
+.finale { max-width: 1450px; }
+.finale-reveal {
+  display: grid;
+  grid-template-columns: minmax(310px, .72fr) minmax(0, 1fr);
+  gap: 20px;
+  align-items: start;
+}
+.finale-board-toggle { display: none; }
+.final-board-panel {
+  min-width: 0;
+  padding: 16px;
+  border: 1px solid color-mix(in srgb, var(--map-ink, #284234) 21%, white);
+  border-radius: 17px;
+  background: color-mix(in srgb, var(--map-canvas, #f1f4e9) 78%, white);
+  box-shadow: 0 16px 45px #284b3512;
+}
+.final-board-title { display: flex; align-items: baseline; gap: 6px 10px; flex-wrap: wrap; margin: 0 2px 12px; }
+.final-board-title .eyebrow { width: 100%; color: var(--map-accent); }
+.final-board-title strong { font-family: var(--serif); font-size: 25px; font-weight: 400; color: var(--map-ink); }
+.final-board-title small { margin-left: auto; font-size: 10px; color: var(--map-ink); opacity: .75; }
+.final-board-frame { padding: 7px; border-radius: 8px; background: color-mix(in srgb, var(--map-ink) 84%, #17231e); }
+.final-board-columns { display: grid; margin-left: 15px; height: 14px; color: #eff7ee; font-size: 8px; text-align: center; }
+.final-board-body { display: grid; grid-template-columns: 15px minmax(0, 1fr); }
+.final-board-rows { display: grid; align-items: center; color: #eff7ee; font-size: 8px; text-align: center; }
+.final-board-grid { display: grid; min-width: 0; gap: 1px; padding: 1px; background: color-mix(in srgb, var(--map-ink) 84%, #17231e); }
+.final-board-tile {
+  display: grid;
+  place-items: center;
+  min-width: 0;
+  min-height: 0;
+  border-radius: 1px;
+  background: var(--map-tile);
+  color: color-mix(in srgb, var(--map-ink) 65%, var(--map-tile));
+  font-size: clamp(7px, 1.05vw, 15px);
+  font-weight: 700;
+  line-height: 1;
+}
+.final-board-tile.void { background: color-mix(in srgb, var(--map-ink) 61%, #14211e); }
+.final-board-tile.chain { background: color-mix(in srgb, var(--final-chain-light) 85%, white); color: var(--final-chain); }
+.final-board-tile.featured { background: color-mix(in srgb, var(--final-chain-light) 42%, var(--final-chain)); color: #13241e; box-shadow: inset 0 0 0 2px var(--final-chain); z-index: 1; }
+.final-board-caption { margin: 12px 2px 0; font-size: 11px; color: var(--map-ink); opacity: .8; }
+.final-board-unavailable { min-height: 130px; }
+.final-board-unavailable p { margin-top: 14px; color: #788976; font-size: 12px; line-height: 1.5; }
+@media (max-width: 950px) {
+  .finale-reveal { display: flex; flex-direction: column; }
+  .finale-board-toggle { display: inline-flex; align-self: flex-end; }
+  .finale-reveal .final-board-panel { display: none; width: 100%; }
+  .finale-reveal .settlement-card { width: 100%; }
+  .finale-reveal.board-open .final-board-panel { display: block; }
+  .finale-reveal.board-open .settlement-card { display: none; }
+  .final-board-tile { font-size: clamp(7px, 2.4vw, 17px); }
+}

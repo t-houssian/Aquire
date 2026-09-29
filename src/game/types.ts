@@ -1,0 +1,209 @@
+export const CHAIN_IDS = [
+  'budgeton',
+  'worldwide',
+  'sackson',
+  'heritage',
+  'festival',
+  'imperial',
+  'american',
+  'riviera',
+  'continental',
+  'tower',
+  'monarch',
+  'goldspire',
+] as const;
+export type ChainId = (typeof CHAIN_IDS)[number];
+/** The printed 2008 table uses these seven chains; additions are opt-in. */
+export const DEFAULT_CHAIN_IDS: readonly ChainId[] = [
+  'worldwide', 'sackson', 'festival', 'imperial', 'american', 'continental', 'tower',
+];
+/** Board coordinates use the printed format, e.g. 1A through 12I; custom maps may extend the grid. */
+export type Tile = string;
+/** The 2008 edition has one ruleset: majority and minority shareholder bonuses. */
+export type GameMode = 'classic';
+export type MapId =
+  | 'classic' | 'corner-plazas' | 'riverwalk' | 'grand-avenue' | 'courtyard' | 'peninsulas'
+  | 'hourglass' | 'crossroads' | 'switchback' | 'atoll' | 'four-spires'
+  | 'twin-docks' | 'obelisk' | 'coral-crown' | 'lightning-run' | 'compass-rose' | 'pinwheel' | 'starfall-x' | 'twin-lagoons'
+  | 'big-rectangle' | 'big-crater' | 'big-harbors'
+  | 'big-aurora-gate' | 'big-trident-towers'
+  | 'mega-diamond' | 'mega-rivers' | 'mega-divide'
+  | 'mega-triple-arch' | 'mega-citadel-grid'
+  | 'max-metropolis' | 'max-archipelago' | 'max-cross'
+  | 'max-celestial-ring' | 'max-orion-star';
+export type BotDifficulty = 'casual' | 'standard' | 'strategist';
+export type MarketMode = 'off' | 'market' | 'crazy';
+export interface HouseRules {
+  hotelChains: ChainId[];
+  /** Only overrides are stored; every unspecified chain has 25 certificates. */
+  shareSupply: Partial<Stocks>;
+  startingTilesPerPlayer: number;
+  startingCash: number;
+  placementsPerTurn: number;
+  removalsPerTurn: number;
+  turnTimerSeconds: number;
+  hiddenMoney: boolean;
+  anonymousBuying: boolean;
+  buyLimit: number;
+  dividends: boolean;
+  trading: boolean;
+  marketMode: MarketMode;
+}
+export type Stocks = Record<ChainId, number>;
+export type Phase =
+  'place' | 'found' | 'merger-survivor' | 'merger-order' | 'merger-shares' | 'buy' | 'ended';
+export interface PlayerConfig {
+  id: string;
+  name: string;
+  isBot?: boolean;
+}
+export interface Player {
+  id: string;
+  name: string;
+  isBot: boolean;
+  cash: number;
+  hand: Tile[];
+  stocks: Stocks;
+  initialTile: Tile;
+}
+export interface GameConfig {
+  players: PlayerConfig[];
+  mode?: GameMode;
+  seed?: number;
+  id?: string;
+  mapId?: MapId;
+  botDifficulty?: BotDifficulty;
+  houseRules?: Partial<HouseRules>;
+}
+export interface PlayerMetrics {
+  tilesPlaced: number;
+  mergesCaused: number;
+  chainsFounded: number;
+  sharesBought: number;
+  mergerBonuses: number;
+  sharesSold: number;
+  cashSpent: number;
+}
+export interface FinalChainSettlement {
+  chain: ChainId;
+  size: number;
+  sharePrice: number;
+  majorityIds: string[];
+  minorityIds: string[];
+  players: { playerId: string; name: string; shares: number; bonus: number; stockValue: number; total: number }[];
+}
+export interface PlayerAward {
+  playerId: string;
+  title: string;
+  detail: string;
+  icon: 'crown' | 'building' | 'merge' | 'coins' | 'stocks' | 'tiles' | 'sparkles';
+}
+export interface GameLog {
+  id: number;
+  turn: number;
+  type:
+    'setup' | 'tile' | 'remove' | 'found' | 'merger' | 'bonus' | 'shares' | 'buy' | 'sell' | 'discard' | 'dividend' | 'market' | 'timeout' | 'turn' | 'end';
+  message: string;
+  playerId?: string;
+  chain?: ChainId;
+  tile?: Tile;
+}
+export interface MergerState {
+  tile: Tile;
+  chains: ChainId[];
+  sizes: Partial<Stocks>;
+  survivor: ChainId | null;
+  survivorOptions: ChainId[];
+  remaining: ChainId[];
+  orderOptions: ChainId[];
+  acquired: ChainId | null;
+  sharePrice: number;
+  shareholders: number[];
+  shareholderCursor: number;
+}
+export interface FinalResult {
+  playerId: string;
+  name: string;
+  cashBefore: number;
+  bonuses: number;
+  stocksValue: number;
+  total: number;
+  rank: number;
+}
+export interface GameState {
+  version: 2;
+  ruleset: '2008';
+  id: string;
+  mode: GameMode;
+  mapId?: MapId;
+  botDifficulty?: BotDifficulty;
+  houseRules?: HouseRules;
+  placementsThisTurn?: number;
+  removalsThisTurn?: number;
+  turnDeadlineAt?: number | null;
+  marketShift?: number;
+  lastRoundRolls?: { round: number; dividendDie: number | null; stockDie: number | null; chain: ChainId | null; marketDie: number | null; marketShift: number };
+  seed: number;
+  rng: number;
+  revision: number;
+  turn: number;
+  phase: Phase;
+  currentPlayer: number;
+  players: Player[];
+  board: Record<Tile, ChainId | 'independent'>;
+  bank: Stocks;
+  bag: Tile[];
+  discarded: Tile[];
+  logs: GameLog[];
+  logSequence?: number;
+  metrics?: Record<string, PlayerMetrics>;
+  finalSettlements?: FinalChainSettlement[];
+  /** One compact character per map square, captured at the closing bell. */
+  boardSnapshot?: string;
+  awards?: PlayerAward[];
+  lastPlacedTile: Tile | null;
+  /** In 2008, declaring the game over is allowed only after playing a tile this turn. */
+  tilePlacedThisTurn: boolean;
+  foundingTiles: Tile[];
+  merger: MergerState | null;
+  endDeclared: boolean;
+  endReason: string | null;
+  results: FinalResult[];
+  winnerIds: string[];
+}
+export type GameAction =
+  | { type: 'place'; tile: Tile }
+  | { type: 'remove'; tile: Tile }
+  | { type: 'finish-placing' }
+  /** Reveal and retire only tiles that would connect two safe chains, then refill. */
+  | { type: 'replace-dead-tiles' }
+  /** When none of the rack can be played, reveal and retire it all, then redraw. */
+  | { type: 'exchange-hand' }
+  | { type: 'pass' }
+  | { type: 'found'; chain: ChainId }
+  | { type: 'choose-survivor'; chain: ChainId }
+  | { type: 'choose-acquired'; chain: ChainId }
+  /** trade is the number of acquired shares surrendered: it must be even. Remainder is kept. */
+  | { type: 'resolve-shares'; sell: number; trade: number }
+  /** One atomic purchase, up to the configured share limit, then draw. */
+  | { type: 'buy'; stocks: Partial<Stocks>; sellStocks?: Partial<Stocks> }
+  /** Announces game end; the current turn must still be completed. */
+  | { type: 'declare-end' };
+export interface TileAnalysis {
+  tile: Tile;
+  legal: boolean;
+  kind: 'independent' | 'found' | 'grow' | 'merge' | 'blocked' | 'unavailable';
+  chains: ChainId[];
+  connectedTiles: Tile[];
+  reason: string | null;
+  permanent: boolean;
+}
+export interface ChainDefinition {
+  id: ChainId;
+  name: string;
+  tier: -1 | 0 | 1 | 2 | 3;
+  color: string;
+  light: string;
+  abbreviation: string;
+  description: string;
+}

@@ -1,0 +1,74 @@
+/* Sidebar controls are separate from the board's viewport layout. */
+.app-shell .sidebar-brand-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 6px;
+  margin-bottom: 53px;
+}
+
+.app-shell .sidebar-brand-row .brand {
+  margin: 0;
+  min-width: 0;
+}
+
+.app-shell .desktop-sidebar-toggle {
+  display: none;
+  flex-shrink: 0;
+  color: #6c7c68;
+}
+
+.app-shell .sidebar-hide {
+  width: 28px;
+  height: 34px;
+  padding: 0;
+}
+
+.app-shell .desktop-sidebar-toggle:hover {
+  background: #e3e9d9;
+  color: #254c3e;
+}
+
+@media (min-width: 681px) {
+  .app-shell .desktop-sidebar-toggle {
+    display: inline-flex;
+  }
+
+  .app-shell.sidebar-collapsed > .sidebar {
+    display: none;
+  }
+
+  .app-shell.sidebar-collapsed > .main-shell {
+    margin-left: 0;
+  }
+}
+
+@media (min-width: 1051px) and (max-width: 1220px) {
+  .app-shell .sidebar-brand-row .brand {
+    font-size: 24px;
+    gap: 8px;
+  }
+}
+
+@media (min-width: 681px) and (max-width: 1050px) {
+  .app-shell .sidebar-brand-row {
+    flex-direction: column;
+    gap: 10px;
+    margin-bottom: 24px;
+  }
+}
+
+@media (max-width: 680px) {
+  .app-shell .sidebar-brand-row {
+    margin-bottom: 45px;
+  }
+
+  /* A closed mobile drawer must also leave the keyboard focus order. */
+  .app-shell .sidebar:not(.nav-open) {
+    visibility: hidden;
+  }
+
+  .app-shell .sidebar.nav-open {
+    visibility: visible;
+  }
+}

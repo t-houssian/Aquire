@@ -1,0 +1,127 @@
+.map-choice-preview {
+  display: flex;
+  align-items: center;
+  gap: 15px;
+  padding: 12px;
+  border: 1px solid color-mix(in srgb, var(--map-accent) 25%, white);
+  border-radius: 11px;
+  background: var(--map-canvas);
+  color: var(--map-ink);
+}
+.map-miniature {
+  display: grid;
+  grid-template-columns: repeat(12, 1fr);
+  grid-template-rows: repeat(9, 1fr);
+  gap: 2px;
+  width: min(126px, calc(98px * var(--map-ratio)));
+  height: min(98px, calc(126px * var(--map-inverse-ratio)));
+  padding: 5px;
+  flex: 0 0 auto;
+  border-radius: 6px;
+  background: var(--map-frame);
+}
+.map-miniature span { border-radius: 1px; }
+.map-miniature .included { background: var(--map-tile); box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--map-accent) 16%, transparent); }
+.map-miniature .excluded { background: var(--map-void); }
+.map-preview-copy { min-width: 0; }
+.map-preview-copy .eyebrow { color: var(--map-accent); font-size: 8px; }
+.map-preview-copy strong { display: block; margin: 4px 0; font-size: 12px; }
+.map-preview-copy small { display: block; margin-bottom: 4px; color: var(--map-accent); font-size: 9px; font-weight: 700; }
+.map-preview-copy p { color: var(--map-ink); opacity: .82; font-size: 10px; line-height: 1.45; }
+.number-options.expanded { display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); }
+.number-options.expanded button { min-width: 0; }
+.map-themed .board-title { background: color-mix(in srgb, var(--map-canvas) 62%, white); }
+.map-themed .board-title .live-dot { background: var(--map-accent); }
+.map-themed .board-title strong { color: var(--map-ink); }
+.map-themed .board-title .small { color: var(--map-accent); }
+.map-themed .board-wrap { background: var(--map-canvas); }
+.map-themed .board-columns, .map-themed .game-board { grid-template-columns: repeat(var(--map-columns), minmax(0, 1fr)); }
+.map-themed .board-rows { grid-template-rows: repeat(var(--map-rows), minmax(0, 1fr)); }
+.map-themed .board-columns, .map-themed .board-rows, .map-themed .board-legend, .map-themed .tiles-count { color: var(--map-ink); opacity: .8; }
+.map-themed .game-board { background: var(--map-frame); border-color: color-mix(in srgb, var(--map-accent) 26%, var(--map-frame)); }
+.map-themed .board-tile:not(.chain-tile) {
+  background: var(--map-tile);
+  border-color: color-mix(in srgb, var(--map-accent) 18%, var(--map-frame));
+  color: color-mix(in srgb, var(--map-ink) 58%, var(--map-tile));
+}
+.map-themed .board-tile.occupied:not(.chain-tile) { background: color-mix(in srgb, var(--map-frame) 38%, var(--map-tile)); color: var(--map-ink); }
+.map-themed .board-tile.playable:not(.chain-tile) {
+  background: color-mix(in srgb, var(--map-accent) 17%, var(--map-tile));
+  border-color: var(--map-accent);
+  color: var(--map-ink);
+}
+.map-themed .board-tile.playable:hover, .map-themed .board-tile.tile-selected {
+  background: color-mix(in srgb, var(--map-accent) 33%, var(--map-tile));
+  border-color: var(--map-accent);
+  box-shadow: 0 0 0 2px var(--map-accent);
+  color: var(--map-ink);
+}
+.map-themed .board-tile.map-void, .map-themed .board-tile.map-void:disabled {
+  background: var(--map-void);
+  border-color: transparent;
+  box-shadow: none;
+  opacity: 1;
+}
+.map-themed .board-tile.map-void > * { visibility: hidden; }
+.map-themed .legend-empty { background: var(--map-tile); border-color: var(--map-frame); }
+.map-themed .legend-hand { background: color-mix(in srgb, var(--map-accent) 17%, var(--map-tile)); border-color: var(--map-accent) !important; }
+.expansion-game .players-bar { overflow-x: auto; overflow-y: hidden; }
+.expansion-game .player-chip { flex: 0 0 clamp(108px, 12vw, 154px); }
+.expansion-game .board-stage { overflow: auto; overscroll-behavior: contain; justify-items: start; }
+.expansion-board .board-wrap { min-width: calc(var(--map-columns) * 24px + 32px); }
+.expansion-board .board-tile .tile-initial { font-size: clamp(8px, 1.2vw, 16px); }
+.expansion-board .board-tile.chain-tile > span { font-size: 6px; left: 2px; top: 2px; }
+.expansion-board .board-tile small { font-size: 5px; right: 2px; bottom: 2px; }
+@supports (container-type: size) and (width: 1cqw) {
+  @media (min-width: 1060px) and (min-height: 650px) {
+    .map-themed .game-board { aspect-ratio: var(--map-ratio); grid-template-rows: repeat(var(--map-rows), minmax(0, 1fr)); }
+    .map-themed .board-wrap { width: min(100cqw, calc((100cqh - 22px) * var(--map-ratio) + 22px)); }
+    .map-themed.expansion-board .board-wrap { width: max(calc(var(--map-columns) * 24px + 32px), min(100cqw, calc((100cqh - 22px) * var(--map-ratio) + 22px))); }
+  }
+}
+@media (max-width: 1059px) {
+  .expansion-game .board-stage { max-height: 520px; }
+  .expansion-board .board-wrap { width: max(100%, calc(var(--map-columns) * 24px + 32px)); max-width: none; }
+  .map-themed:not(.expansion-board) .board-wrap { width: 100%; max-width: none; }
+}
+@media (max-width: 430px) {
+  .map-choice-preview { gap: 9px; padding: 9px; }
+  .map-miniature { width: min(102px, calc(82px * var(--map-ratio))); height: min(82px, calc(102px * var(--map-inverse-ratio))); gap: 1px; }
+  .map-preview-copy p { font-size: 9px; }
+}
+
+/* A placed independent tile has its own stone face and building mark. */
+.map-themed .board-tile.independent-tile.occupied:not(.chain-tile) {
+  background: color-mix(in srgb, #d5bd92 82%, var(--map-tile));
+  border-color: #776647;
+  color: #4e432e;
+  box-shadow: inset 0 0 0 1px #f4e6c7, inset 0 -3px 0 #9e8660;
+}
+.map-themed .board-tile.independent-tile .independent-building {
+  position: absolute;
+  top: 43%;
+  left: 50%;
+  width: 52%;
+  height: 52%;
+  transform: translate(-50%, -50%);
+  border-radius: 0;
+  background: none;
+  box-shadow: none;
+  color: #59492f;
+  pointer-events: none;
+}
+.map-themed .board-tile.independent-tile:not(.chain-tile) > .tile-coordinate {
+  position: absolute;
+  top: auto;
+  right: 2px;
+  bottom: 2px;
+  left: auto;
+  padding: 0;
+  font-size: clamp(5px, 18cqi, 9px);
+  font-weight: 700;
+  line-height: 1;
+}
+.map-themed .legend-independent {
+  background: #d5bd92;
+  border-color: #776647;
+}
