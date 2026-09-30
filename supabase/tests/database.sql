@@ -30,10 +30,24 @@ begin
     raise exception 'Edge service role cannot load rooms';
   end if;
   result := public.acquire_create_room(host, 'Host', 'TST234', 'classic');
+  perform set_config('request.jwt.claims', jsonb_build_object('sub', host::text)::text, true);
+  if not public.acquire_can_watch('acquire:' || (result->>'id')) then
+    raise exception 'Host cannot subscribe to room notifications';
+  end if;
+  perform set_config('request.jwt.claims', jsonb_build_object('sub', outsider::text)::text, true);
+  if public.acquire_can_watch('acquire:' || (result->>'id'))
+    or public.acquire_can_watch('acquire:not-a-room')
+    or has_function_privilege('anon', 'public.acquire_can_watch(text)', 'EXECUTE') then
+    raise exception 'Notification membership authorization is too permissive';
+  end if;
   if result->>'ruleset' <> '2008' or result->>'mode' <> 'classic' or result->>'version' <> '0' or jsonb_array_length(result->'players') <> 1 then
     raise exception 'Initial room state is incorrect';
   end if;
   result := public.acquire_join_room(guest, 'Guest', 'TST234');
+  perform set_config('request.jwt.claims', jsonb_build_object('sub', guest::text)::text, true);
+  if not public.acquire_can_watch('acquire:' || (result->>'id')) then
+    raise exception 'Seated guest cannot subscribe to room notifications';
+  end if;
   if result->>'version' <> '1' or jsonb_array_length(result->'players') <> 2 then
     raise exception 'Joining did not update membership/version';
   end if;
@@ -113,6 +127,9 @@ begin
   perform public.acquire_join_room(guest, 'Guest', 'TST235');
   perform public.acquire_leave_room(guest, 'TST235');
   result := public.acquire_get_room(host, 'TST235');
+  if public.acquire_can_watch('acquire:' || (result->>'id')) then
+    raise exception 'Departed guest can subscribe to lobby notifications';
+  end if;
   if jsonb_array_length(result->'players') <> 1 then raise exception 'Guest lobby leave failed'; end if;
   perform public.acquire_leave_room(host, 'TST235');
   begin
@@ -230,4 +247,53 @@ do $$ begin
   exception when insufficient_privilege then null; end;
 end $$;
 reset role;
+-- Optimized transport preserves authorization, due timers and bot decisions.
+do $$
+declare
+  host uuid := '00000000-0000-4000-8000-000000000011';
+  guest uuid := '00000000-0000-4000-8000-000000000012';
+  r jsonb; members jsonb; g jsonb; topic text; before_time timestamptz;
+begin
+  if has_function_privilege('authenticated', 'public.acquire_read_room(uuid,text,integer)', 'EXECUTE')
+    or has_function_privilege('anon', 'public.acquire_commit_room_small(uuid,text,integer,jsonb,jsonb,text)', 'EXECUTE') then
+    raise exception 'Optimized RPC is exposed to browsers';
+  end if;
+  r := public.acquire_create_room(host, 'Host', 'XPT234', 'classic');
+  r := public.acquire_join_room(guest, 'Guest', 'XPT234');
+  topic := 'acquire:' || (r->>'id');
+  perform set_config('request.jwt.claims', jsonb_build_object('sub', host::text)::text, true);
+  if not public.acquire_can_watch(topic || ':' || host::text)
+    or public.acquire_can_watch(topic || ':' || guest::text)
+    or public.acquire_can_watch(topic || ':' || host::text || ':extra') then
+    raise exception 'Personalized channel authorization failed';
+  end if;
+  members := r->'players' || '[{"id":"bot","name":"CPU","isBot":true}]'::jsonb;
+  g := jsonb_build_object('version', 2, 'ruleset', '2008', 'mode', 'classic', 'phase', 'place',
+    'currentPlayer', 0, 'players', members, 'board', jsonb_build_object('1A', null));
+  r := public.acquire_commit_room_small(host, 'XPT234', 1, g, members, 'playing');
+  if r ? 'game' or r->>'version' <> '2' then raise exception 'Compact commit returned game or wrong version'; end if;
+  if (select game from private.acquire_rooms where code = 'XPT234') <> g then raise exception 'Compact commit lost authoritative state'; end if;
+  select updated_at into before_time from private.acquire_rooms where code = 'XPT234';
+  r := public.acquire_read_room(guest, 'XPT234', 2);
+  if r <> '{"unchanged":true,"version":2}'::jsonb then raise exception 'Idle check returned full room'; end if;
+  if (select updated_at from private.acquire_rooms where code = 'XPT234') <> before_time then raise exception 'Read extended retention'; end if;
+  if not (public.acquire_read_room(guest, 'XPT234', 1) ? 'game') then raise exception 'Missed version cannot recover'; end if;
+  begin
+    perform public.acquire_read_room('00000000-0000-4000-8000-000000000099', 'XPT234', 2);
+    raise exception 'Nonmember read a room version';
+  exception when others then if sqlerrm <> 'ROOM_NOT_FOUND' then raise; end if; end;
+  g := g || jsonb_build_object('turnDeadlineAt', extract(epoch from now() - interval '1 minute') * 1000);
+  perform public.acquire_commit_room_small(host, 'XPT234', 2, g, members, 'playing');
+  if not (public.acquire_read_room(host, 'XPT234', 3) ? 'game') then raise exception 'Due timer was skipped'; end if;
+  g := (g - 'turnDeadlineAt') || '{"currentPlayer":2}'::jsonb;
+  perform public.acquire_commit_room_small(host, 'XPT234', 3, g, members, 'playing');
+  if not (public.acquire_read_room(host, 'XPT234', 4) ? 'game') then raise exception 'Bot turn was skipped'; end if;
+  g := g || '{"phase":"merger-shares","merger":{"shareholders":[0],"shareholderCursor":0}}'::jsonb;
+  perform public.acquire_commit_room_small(host, 'XPT234', 4, g, members, 'playing');
+  if public.acquire_read_room(host, 'XPT234', 5) ? 'game' then raise exception 'Human shareholder caused redundant full read'; end if;
+  g := g || '{"currentPlayer":0,"merger":{"shareholders":[2],"shareholderCursor":0}}'::jsonb;
+  perform public.acquire_commit_room_small(host, 'XPT234', 5, g, members, 'playing');
+  if not (public.acquire_read_room(host, 'XPT234', 6) ? 'game') then raise exception 'Bot shareholder was skipped'; end if;
+end $$;
+
 rollback;

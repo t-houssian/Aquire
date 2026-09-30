@@ -22,17 +22,9 @@ import {
   type StoredRoom,
 } from './protocol.ts';
 
-const cors = {
-  'Access-Control-Allow-Origin': '*',
-  'Access-Control-Allow-Headers':
-    'authorization, x-client-info, apikey, content-type, x-supabase-client-platform, x-supabase-client-platform-version, x-supabase-client-runtime, x-supabase-client-runtime-version',
-  'Access-Control-Allow-Methods': 'POST, OPTIONS',
-};
-const respond = (body: unknown, status = 200) =>
-  new Response(JSON.stringify(body), {
-    status,
-    headers: { ...cors, 'Content-Type': 'application/json', 'Cache-Control': 'no-store' },
-  });
+import { makeRoomUpdate } from '../_shared/room-wire.ts';
+import { jsonResponse } from './response.ts';
+
 const dbMessages: Record<string, [string, number]> = {
   ROOM_NOT_FOUND: [
     'This room is unavailable. Check the code or ask the host to create a new room.',
@@ -84,7 +76,8 @@ function roomCode(): string {
 }
 
 Deno.serve(async (request: Request) => {
-  if (request.method === 'OPTIONS') return new Response('ok', { headers: cors });
+  const respond = (body: unknown, status = 200) => jsonResponse(request, body, status);
+  if (request.method === 'OPTIONS') return respond({ ok: true });
   if (request.method !== 'POST')
     return respond({ error: 'Use POST for room requests.', code: 'METHOD_NOT_ALLOWED' }, 405);
   try {
@@ -128,6 +121,32 @@ Deno.serve(async (request: Request) => {
       if (error) dbError(error.message);
       return data as StoredRoom;
     };
+    const notifyRoom = async (room: StoredRoom, closed = false, before?: StoredRoom) => {
+      // One ephemeral HTTP batch, no database event rows. Never send private
+      // state on the legacy shared topic; personalized topics are receive-only.
+      const messages: { topic: string; event: string; private: boolean; payload: unknown }[] = [
+        { topic: `acquire:${room.id}`, event: 'changed', private: true, payload: { version: room.version, closed } },
+      ];
+      for (const player of room.players.filter((p) => !p.isBot)) {
+        const oldView = before?.players.some((p) => p.id === player.id && !p.isBot) ? publicRoom(before, player.id) : null;
+        messages.push({ topic: `acquire:${room.id}:${player.id}`, event: 'state', private: true,
+          payload: closed ? { kind: 'closed', id: room.id, viewerId: player.id } : makeRoomUpdate(oldView, publicRoom(room, player.id)) });
+      }
+      try {
+        const response = await fetch(`${url}/realtime/v1/api/broadcast`, {
+          method: 'POST',
+          headers: { apikey: serviceKey, Authorization: `Bearer ${serviceKey}`, 'Content-Type': 'application/json' },
+          body: JSON.stringify({ messages }), signal: AbortSignal.timeout(2500),
+        });
+        if (!response.ok) console.warn('Room notification unavailable:', response.status);
+        await response.body?.cancel();
+      } catch { console.warn('Room notification unavailable; clients will recover with GET.'); }
+    };
+    const roomResponse = (room: StoredRoom, before?: StoredRoom) => {
+      const view = publicRoom(room, userId);
+      return respond(body.sync === 'delta-v1' && before && body.knownVersion === before.version
+        ? makeRoomUpdate(publicRoom(before, userId), view) : view);
+    };
     if (body.operation === 'create') {
       // Retention still runs on projects without pg_cron. Failure is nonfatal for play.
       const prune = await admin.rpc('acquire_prune_data');
@@ -167,21 +186,40 @@ Deno.serve(async (request: Request) => {
         p_name: parseName(body.name),
         p_code: code,
       });
+      await notifyRoom(room);
       return respond(publicRoom(room, userId));
     }
     if (body.operation === 'leave') {
+      const before = await rpc('acquire_get_room', { p_user_id: userId, p_code: code });
       await rpc('acquire_leave_room', { p_user_id: userId, p_code: code });
+      if (before.status === 'lobby') {
+        if (before.host_id === userId) await notifyRoom(before, true);
+        else {
+          const remaining = await rpc('acquire_get_room', { p_user_id: before.host_id, p_code: code });
+          await notifyRoom(remaining, false, before);
+        }
+      }
       return respond({ ok: true });
     }
     if (body.operation === 'end') {
+      const before = await rpc('acquire_get_room', { p_user_id: userId, p_code: code });
       await rpc('acquire_end_room', { p_user_id: userId, p_code: code });
+      await notifyRoom(before, true);
       return respond({ ok: true });
     }
-    let room = await rpc('acquire_get_room', { p_user_id: userId, p_code: code });
+    const { data: loaded, error: readError } = await admin.rpc('acquire_read_room', {
+      p_user_id: userId, p_code: code,
+      p_known_version: body.operation === 'get' && Number.isInteger(body.knownVersion) ? body.knownVersion : null,
+    });
+    if (readError) dbError(readError.message);
+    if (loaded?.unchanged === true) return respond(loaded);
+    let room = loaded as StoredRoom;
     requireMember(room, userId);
     requireCurrentRules(room);
+    const before = room;
+    const initialVersion = room.version;
     const commit = async (state: GameState, players = room.players) => {
-      room = await rpc('acquire_commit_room', {
+      const committed = await rpc('acquire_commit_room_small', {
         p_user_id: userId,
         p_code: code,
         p_expected_version: room.version,
@@ -189,6 +227,7 @@ Deno.serve(async (request: Request) => {
         p_players: players,
         p_status: state.phase === 'ended' ? 'finished' : 'playing',
       });
+      room = { ...committed, game: state };
     };
     if (body.operation === 'start') {
       if (room.host_id !== userId)
@@ -235,7 +274,8 @@ Deno.serve(async (request: Request) => {
         const expired = expireTurn(room.game);
         if (expired !== room.game) {
           await commit(advanceBots(expired));
-          return respond(publicRoom(room, userId));
+          await notifyRoom(room, false, before);
+          return roomResponse(room, before);
         }
       }
       if (!Number.isInteger(body.expectedVersion) || body.expectedVersion !== room.version)
@@ -275,7 +315,10 @@ Deno.serve(async (request: Request) => {
         }
       }
     } else throw new RequestError('INVALID_OPERATION', 'Choose a supported room operation.');
-    return respond(publicRoom(room, userId));
+    if (room.version !== initialVersion) await notifyRoom(room, false, before);
+    if (body.operation === 'get' && body.knownVersion === room.version)
+      return respond({ unchanged: true, version: room.version });
+    return roomResponse(room, before);
   } catch (error) {
     if (error instanceof RequestError)
       return respond({ error: error.message, code: error.code }, error.status);

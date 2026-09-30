@@ -137,9 +137,10 @@ export default function App() {
     });
     return () => { cancelled = true; };
   }, []);
+  const viewingOnlineRoom = modal === 'online' || (page === 'play' && activeMode === 'online');
   useEffect(() => {
-    if (!room) return;
-    return watchRoom(room.code, updateRoom, (e) => {
+    if (!room || !viewingOnlineRoom) return;
+    return watchRoom(room, updateRoom, (e) => {
       setNotice(e.message);
       if (e.code === 'ROOM_NOT_FOUND' || e.code === 'OLD_RULESET') {
         forgottenRoomCodes.current.add(room.code);
@@ -148,7 +149,7 @@ export default function App() {
         if (activeMode === 'online') setPage('home');
       }
     });
-  }, [room?.code, updateRoom, activeMode]);
+  }, [room?.code, updateRoom, activeMode, viewingOnlineRoom]);
   useEffect(() => {
     const started =
       room &&

@@ -1,6 +1,9 @@
 import { createClient, FunctionsHttpError, type SupabaseClient } from '@supabase/supabase-js';
 import type { BotDifficulty, GameAction, GameMode, GameState, HouseRules, MapId } from '../game/types';
 import type { LeaderboardEntry, MatchSummary } from './matches';
+import publicProject from './supabase-public.json';
+import { watchOnlineRoom } from './online-watch';
+import { applyRoomUpdate } from './room-wire';
 
 export interface OnlinePlayer {
   id: string;
@@ -23,11 +26,14 @@ export interface OnlineRoom {
   features?: string[];
 }
 
-const url = import.meta.env.VITE_SUPABASE_URL?.trim() ?? '';
+// Public browser credentials. Explicit env overrides must supply their own key
+// so a fork/test project never receives the production project's key.
+const hasOverride = import.meta.env.VITE_SUPABASE_URL !== undefined;
+const url = hasOverride ? import.meta.env.VITE_SUPABASE_URL.trim() : publicProject.url;
 const key =
-  (
+  (hasOverride ? (
     import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY ?? import.meta.env.VITE_SUPABASE_ANON_KEY
-  )?.trim() ?? '';
+  )?.trim() ?? '' : publicProject.publishableKey);
 const configuredBaseUrl = (() => { try { const parsed = new URL(url); return /^https?:$/.test(parsed.protocol) && parsed.pathname === '/' && !parsed.search && !parsed.hash; } catch { return false; } })();
 export const onlineConfigured = configuredBaseUrl && key.length > 20 && !key.includes('your-');
 export const onlineSetupMessage = url.includes('/functions/')
@@ -36,6 +42,16 @@ export const onlineSetupMessage = url.includes('/functions/')
 
 let client: SupabaseClient | undefined;
 let sessionRequest: Promise<{ id: string }> | undefined;
+// Only the currently used room, in memory. Never persist private racks twice.
+let cachedRoom: OnlineRoom | undefined;
+const roomListeners = new Set<(room: OnlineRoom) => void>();
+function rememberRoom(room: OnlineRoom): OnlineRoom {
+  if (cachedRoom?.id === room.id && cachedRoom.viewerId === room.viewerId && cachedRoom.version > room.version)
+    return cachedRoom;
+  cachedRoom = room;
+  roomListeners.forEach((listener) => listener(room));
+  return room;
+}
 
 function getClient(): SupabaseClient {
   if (!onlineConfigured) throw new OnlineError(onlineSetupMessage, 'SETUP_REQUIRED');
@@ -89,8 +105,12 @@ export async function hasOnlineSession(): Promise<boolean> {
 }
 
 async function invoke<T>(body: Record<string, unknown>): Promise<T> {
-  await getOnlineUser();
-  const { data, error } = await getClient().functions.invoke('acquire-room', { body });
+  const user = await getOnlineUser();
+  const base = cachedRoom && cachedRoom.code === body.code && cachedRoom.viewerId === user.id ? cachedRoom : undefined;
+  const incremental = ['action', 'start'].includes(String(body.operation)) && base?.features?.includes('room-deltas-v1');
+  let { data, error } = await getClient().functions.invoke('acquire-room', {
+    body: incremental && base ? { ...body, sync: 'delta-v1', knownVersion: base.version } : body,
+  });
   if (error) {
     if (error instanceof FunctionsHttpError) {
       const response = (await error.context.json().catch(() => null)) as {
@@ -106,10 +126,16 @@ async function invoke<T>(body: Record<string, unknown>): Promise<T> {
   }
   if (!data) throw new OnlineError('The room server returned an empty response.', 'SERVER_ERROR');
   if (data.error) throw new OnlineError(data.error, data.code);
+  if (data.kind === 'patch' || data.kind === 'snapshot') {
+    data = base ? applyRoomUpdate(base, data) : data.kind === 'snapshot' ? data.room : null;
+    // The action was already accepted: recover without resubmitting it.
+    if (!data) return await invoke({ operation: 'get', code: body.code });
+  }
   // A web/native upgrade may precede deployment of its server. Never let the
   // 2008 UI interpret an earlier room or a different generation of game state.
   if (
     !['leave', 'end', 'history', 'leaderboard'].includes(String(body.operation)) &&
+    !(body.operation === 'get' && data.unchanged === true && Number.isInteger(data.version)) &&
     (data.ruleset !== '2008' ||
       data.mode !== 'classic' ||
       (data.game !== null &&
@@ -123,7 +149,7 @@ async function invoke<T>(body: Record<string, unknown>): Promise<T> {
       'OLD_RULESET',
     );
   }
-  return data as T;
+  return (data.viewerId === user.id && data.id && data.code ? rememberRoom(data as OnlineRoom) : data) as T;
 }
 
 export function createRoom(name: string, mode: GameMode = 'classic'): Promise<OnlineRoom> {
@@ -153,41 +179,47 @@ export function sendRoomAction(
 }
 export async function leaveRoom(code: string): Promise<void> {
   await invoke({ operation: 'leave', code });
+  if (cachedRoom?.code === code) cachedRoom = undefined;
 }
 export async function endRoom(code: string): Promise<void> {
   await invoke({ operation: 'end', code });
+  if (cachedRoom?.code === code) cachedRoom = undefined;
 }
 
-/** Authoritative polling avoids ever broadcasting private game state to a room channel. */
+/** Personalized state changes use a receive-only, member-specific channel. */
 export function watchRoom(
-  code: string,
+  initialRoom: OnlineRoom,
   onRoom: (room: OnlineRoom) => void,
   onError?: (error: OnlineError) => void,
 ): () => void {
-  let stopped = false;
-  let timer: ReturnType<typeof setTimeout> | undefined;
-  let latestVersion = -1;
-  let failures = 0;
-  const poll = async () => {
-    if (stopped) return;
-    try {
-      const room = await getRoom(code);
-      if (stopped) return;
-      failures = 0;
-      if (room.version > latestVersion) {
-        latestVersion = room.version;
-        onRoom(room);
-      }
-    } catch (error) {
-      if (stopped) return;
-      failures++;
-      onError?.(error instanceof OnlineError ? error : new OnlineError(String(error)));
-    }
-    if (!stopped) timer = setTimeout(poll, Math.min(15000, 2000 * Math.max(1, failures)));
-  };
-  void poll();
-  return () => {
-    stopped = true;
-    if (timer) clearTimeout(timer);
-  };
+  return watchOnlineRoom(initialRoom, {
+    read: (knownVersion) => invoke({ operation: 'get', code: initialRoom.code, knownVersion }),
+    subscribe: (room, onChange, onConnection, onUpdate) => {
+      const supabase = getClient();
+      let cancelled = false;
+      const deltas = room.features?.includes('room-deltas-v1');
+      const channel = supabase.channel(`acquire:${room.id}${deltas ? `:${room.viewerId}` : ''}`, { config: { private: true } });
+      void supabase.realtime.setAuth().then(() => {
+        if (cancelled) return;
+        channel.on('broadcast', { event: deltas ? 'state' : 'changed' }, ({ payload }) => {
+          if (cancelled) return;
+          if (deltas && payload && ['patch', 'snapshot', 'closed'].includes(payload.kind)) onUpdate(payload);
+          else if (payload && Number.isInteger(payload.version)) onChange(payload.version, payload.closed === true);
+        }).subscribe((status) => { if (!cancelled) onConnection(status === 'SUBSCRIBED'); });
+      }).catch(() => { if (!cancelled) onConnection(false); });
+      return () => { cancelled = true; void supabase.removeChannel(channel); };
+    },
+    listen: (accept) => {
+      const listener = (next: OnlineRoom) => { if (next.id === initialRoom.id && next.viewerId === initialRoom.viewerId) accept(next); };
+      roomListeners.add(listener);
+      if (cachedRoom) listener(cachedRoom);
+      return () => { roomListeners.delete(listener); };
+    },
+    onRoom: (next) => onRoom(rememberRoom(next)),
+    onError: (error) => {
+      const code = error && typeof error === 'object' && 'code' in error && typeof error.code === 'string' ? error.code : undefined;
+      if (code === 'ROOM_NOT_FOUND' && cachedRoom?.id === initialRoom.id) cachedRoom = undefined;
+      onError?.(error instanceof OnlineError ? error : new OnlineError(error instanceof Error ? error.message : String(error), code));
+    },
+  });
 }

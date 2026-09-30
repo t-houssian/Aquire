@@ -253,6 +253,10 @@ test.describe('online room UI — HTTP-mocked Supabase', () => {
     await expectBoard(page);
     await page.locator('.game-topline').getByRole('button', { name: 'The clubhouse' }).click();
     await page.getByRole('dialog', { name: 'Leave this online game?' }).getByRole('button', { name: 'Save & exit' }).click();
+    await page.clock.install();
+    const readsAfterExit = backend.operations.filter((operation) => operation.operation === 'get').length;
+    await page.clock.runFor(65000);
+    expect(backend.operations.filter((operation) => operation.operation === 'get')).toHaveLength(readsAfterExit);
     await page.reload();
     await page.locator('.sidebar nav').getByRole('button', { name: /My games/ }).click();
     const row = page.locator('.saved-game-row').filter({ hasText: CODE });
