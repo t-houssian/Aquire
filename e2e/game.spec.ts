@@ -130,6 +130,8 @@ test('ending a local game from the exit choice removes it without creating a res
 
 test('solo: start three seats, found a chain, buy shares, save and resume after a reload', async ({ page }) => {
   const { seed, tile } = soloOpening();
+  const clockStart = new Date('2026-09-29T12:00:00Z');
+  await page.clock.install({ time: clockStart });
   await page.addInitScript((seed) => {
     // A reproducible real deal exercises founding after the house takes its turns.
     Date.now = () => seed;
@@ -165,9 +167,14 @@ test('solo: start three seats, found a chain, buy shares, save and resume after 
   await add.click(); await add.click(); await add.click();
   await expect(add).toBeDisabled();
   await expect(page.getByText('3 shares in your order', { exact: true })).toBeVisible();
+  // Hold the next computer turn while checking persistence. Otherwise its market
+  // view or turn recap can hide the board before a slower CI runner inspects it.
+  await page.clock.pauseAt(new Date(clockStart.getTime() + 60 * 60 * 1000));
   await page.getByRole('button', { name: /^Invest \$/ }).click();
   await expect(page.getByTestId('turn-recap')).toHaveCount(0);
   await navigate(page, 'My games');
+  await page.getByRole('dialog', { name: 'Leave this game?' }).getByRole('button', { name: 'Save & exit' }).click();
+  await expect(page.locator('.saved-game-main').filter({ hasText: 'Avery' })).toBeVisible();
   const beforeReload = await savedGame(page);
   expect(beforeReload.players.find(player => player.name === 'Avery')?.stocks.sackson).toBe(4);
   expect(beforeReload.players.find(player => player.name === 'Avery')?.cash).toBe(6000 - sharePrice * 3);
@@ -176,7 +183,11 @@ test('solo: start three seats, found a chain, buy shares, save and resume after 
   await navigate(page, 'My games');
   await page.locator('.saved-game-main').filter({ hasText: 'Avery' }).click();
   await expect(page.getByRole('group', { name: 'Acquire game board' }).getByRole('button', { name: new RegExp(`^${tile}, Sackson`) })).toBeVisible();
-  expect((await savedGame(page)).id).toBe(beforeReload.id);
+  expect(await savedGame(page)).toEqual(beforeReload);
+  // Resuming must also restart computer play, not just display a saved board.
+  await page.clock.resume();
+  await expect.poll(async () => (await savedGame(page)).revision).toBeGreaterThan(beforeReload.revision);
+  await expect(page.getByTestId('turn-recap')).toBeVisible();
 });
 
 test('pass and play: the 2008 edition seats at least three and keeps racks private between turns', async ({ page }) => {
