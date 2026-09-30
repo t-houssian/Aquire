@@ -1,5 +1,5 @@
 import { test, expect, type Page } from '@playwright/test';
-import { applyAction, CHAINS, chooseBotAction, createGame, getChainSize, getCurrentActor, getLegalTiles, getSharePrice } from '../src/game/engine';
+import { analyzeTile, applyAction, CHAINS, chooseBotAction, createGame, getChainSize, getCurrentActor, getLegalTiles, getSharePrice } from '../src/game/engine';
 import type { GameState } from '../src/game/types';
 
 const players = ['Alex', 'Morgan', 'Riley'].map((name, index) => ({ id: `p${index}`, name }));
@@ -148,47 +148,120 @@ test('a 12-seat city fits fully, then zooms and pans without moving the whole pa
   }
 });
 
-test('iPhone notch insets are applied once across rotation and browser toolbar sizes', async ({ page, context, browserName }) => {
-  test.skip(browserName !== 'chromium', 'Safe-area emulation uses the Chromium device protocol; WebKit exercises layout separately.');
-  const game = createGame({ id: 'iphone-safe-area', seed: 52, players });
-  await openSavedTable(page, game);
-  const device = await context.newCDPSession(page);
-  for (const [width, height, left, right, bottom] of [
-    [852, 320, 59, 0, 21], [852, 393, 0, 59, 21],
-    [844, 320, 44, 44, 21], [393, 650, 0, 0, 0], [393, 852, 0, 0, 34],
-  ]) {
-    await page.setViewportSize({ width, height });
-    await device.send('Emulation.setSafeAreaInsetsOverride', { insets: { left, right, bottom, top: 0 } });
-    await assertScreenFit(page, width, height);
-    const layout = await page.evaluate(() => {
-      const box = (selector: string) => document.querySelector(selector)!.getBoundingClientRect();
-      const frame = box('.game-layout'), board = box('.board-wrap'), stage = box('.board-stage'), action = box('.action-card');
-      return { left: frame.left, right: frame.right, bottom: action.bottom, boardWidth: board.width, stageWidth: stage.width, boardHeight: board.height, stageHeight: stage.height };
-    });
-    expect(layout.left).toBeCloseTo(Math.max(width > height ? 6 : 9, left), 0);
-    expect(layout.right).toBeCloseTo(width - Math.max(width > height ? 6 : 9, right), 0);
-    expect(layout.bottom).toBeCloseTo(height - Math.max(width > height || height <= 700 ? 4 : 7, bottom), 0);
-    expect(layout.stageWidth - layout.boardWidth).toBeLessThanOrEqual(5);
-    expect(layout.stageHeight - layout.boardHeight).toBeLessThanOrEqual(5);
-    await expect(page.locator('.game-board button').last()).toBeInViewport({ ratio: 1 });
-    await expect(page.getByRole('button', { name: 'Place a tile', exact: true })).toBeInViewport({ ratio: 1 });
-  }
-});
+for (const viewport of ['browser', 'native'] as const) {
+  test(`${viewport} notch spacing stays correct across rotation and browser toolbar sizes`, async ({ page, context, browserName }) => {
+    test.skip(browserName !== 'chromium', 'Inset emulation uses Chromium; WebKit exercises board layout separately.');
+    if (viewport === 'native') {
+      await page.addInitScript(() => {
+        Object.assign(window, { CapacitorCustomPlatform: { name: 'ios' } });
+      });
+    }
+    const game = createGame({ id: 'iphone-safe-area', seed: 52, players });
+    await openSavedTable(page, game);
+    await expect(page.locator('meta[name="viewport"]')).toHaveAttribute('content', new RegExp(`viewport-fit=${viewport === 'native' ? 'cover' : 'contain'}`));
+    const device = await context.newCDPSession(page);
+    // The 725px case models Chrome's already narrowed landscape webview with
+    // a notch on the left and browser controls on the right. env() can still
+    // report the notch inset; adding it again created the large blank gutter.
+    for (const [width, height, left, right, bottom] of [
+      [852, 320, 59, 0, 21], [852, 393, 0, 59, 21], [725, 320, 59, 0, 21],
+      [844, 320, 44, 44, 21], [393, 650, 0, 0, 0], [393, 852, 0, 0, 34],
+    ]) {
+      await page.setViewportSize({ width, height });
+      await device.send('Emulation.setSafeAreaInsetsOverride', { insets: { left, right, bottom, top: 0 } });
+      await assertScreenFit(page, width, height);
+      const layout = await page.evaluate(() => {
+        const box = (selector: string) => document.querySelector(selector)!.getBoundingClientRect();
+        const frame = box('.game-layout'), board = box('.board-wrap'), stage = box('.board-stage'), action = box('.action-card');
+        return { left: frame.left, right: frame.right, bottom: action.bottom, boardWidth: board.width, stageWidth: stage.width, boardHeight: board.height, stageHeight: stage.height };
+      });
+      const gutter = width > height ? 6 : 9;
+      expect(layout.left).toBeCloseTo(Math.max(gutter, viewport === 'native' ? left : 0), 0);
+      expect(layout.right).toBeCloseTo(width - Math.max(gutter, viewport === 'native' ? right : 0), 0);
+      expect(layout.bottom).toBeCloseTo(height - Math.max(width > height || height <= 700 ? 4 : 7, bottom), 0);
+      expect(layout.stageWidth - layout.boardWidth).toBeLessThanOrEqual(5);
+      expect(layout.stageHeight - layout.boardHeight).toBeLessThanOrEqual(5);
+      await expect(page.locator('.game-board button').last()).toBeInViewport({ ratio: 1 });
+      await expect(page.getByRole('button', { name: 'Place a tile', exact: true })).toBeInViewport({ ratio: 1 });
+    }
+  });
+}
 
-test('the wide Twin Docks board uses the full mobile frame in both orientations', async ({ page }) => {
-  const game = createGame({ id: 'responsive-docks', mapId: 'twin-docks', seed: 52, players });
+for (const mapId of ['twin-docks', 'obelisk', 'max-metropolis'] as const) {
+  test(`${mapId} fits without stretching tiles and rotates without changing coordinates`, async ({ page }) => {
+    const game = createGame({ id: `responsive-${mapId}`, mapId, seed: 52, players });
+    await openSavedTable(page, game);
+    for (const [width, height] of [[393, 852], [393, 650], [852, 393], [725, 320]]) {
+      await page.setViewportSize({ width, height });
+      // Let orientation and ResizeObserver notifications reach the board before
+      // comparing its automatic orientation with a manual rotation.
+      await page.evaluate(() => new Promise<void>((resolve) => requestAnimationFrame(() => requestAnimationFrame(() => resolve()))));
+      await assertScreenFit(page, width, height);
+      const checkBoard = async () => {
+        const layout = await page.locator('.board-stage').evaluate((stage) => {
+          const frame = stage.getBoundingClientRect(), board = stage.querySelector('.board-wrap')!.getBoundingClientRect();
+          const tile = stage.querySelector('.board-tile')!.getBoundingClientRect();
+          return { fitGap: Math.min(frame.width - board.width, frame.height - board.height), centerX: frame.x + frame.width / 2 - board.x - board.width / 2, centerY: frame.y + frame.height / 2 - board.y - board.height / 2, tileRatio: tile.width / tile.height, overflowX: stage.scrollWidth - stage.clientWidth, overflowY: stage.scrollHeight - stage.clientHeight };
+        });
+        expect(layout.fitGap).toBeLessThanOrEqual(5);
+        expect(Math.abs(layout.centerX)).toBeLessThanOrEqual(1);
+        expect(Math.abs(layout.centerY)).toBeLessThanOrEqual(1);
+        expect(layout.tileRatio).toBeGreaterThan(.85);
+        expect(layout.tileRatio).toBeLessThan(1.15);
+        expect(layout.overflowX).toBeLessThanOrEqual(1);
+        expect(layout.overflowY).toBeLessThanOrEqual(1);
+      };
+      await expect(async () => { await checkBoard(); }).toPass();
+      const rotation = await page.locator('.board-card').getAttribute('data-board-rotated');
+      await page.getByRole('button', { name: 'Rotate board', exact: true }).click();
+      await expect(page.locator('.board-card')).toHaveAttribute('data-board-rotated', rotation === 'true' ? 'false' : 'true');
+      await checkBoard();
+      await expect(page.locator('.game-board button').first()).toBeInViewport({ ratio: 1 });
+      await expect(page.locator('.game-board button').last()).toBeInViewport({ ratio: 1 });
+    }
+    const tile = getLegalTiles(game)[0];
+    await page.locator(`.board-tile[data-tile="${tile}"]`).click();
+    await page.getByRole('button', { name: `Place ${tile}`, exact: true }).click();
+    const saved = await page.evaluate(() => JSON.parse(localStorage.getItem('aquire.games.v2')!)[0].game);
+    expect(saved.lastPlacedTile).toBe(tile);
+  });
+}
+
+test('board focus gives more room while keeping market status, the rack and purchase flow usable', async ({ page }) => {
+  const game = createGame({ id: 'board-focus', mapId: 'twin-docks', seed: 52, players, houseRules: { marketMode: 'crazy' } });
+  await page.setViewportSize({ width: 393, height: 650 });
   await openSavedTable(page, game);
-  for (const [width, height] of [[393, 852], [393, 650], [852, 393], [852, 320]]) {
-    await page.setViewportSize({ width, height });
-    await assertScreenFit(page, width, height);
-    const layout = await page.locator('.board-stage').evaluate((stage) => {
-      const frame = stage.getBoundingClientRect(), board = stage.querySelector('.board-wrap')!.getBoundingClientRect();
-      return { widthGap: frame.width - board.width, heightGap: frame.height - board.height, overflowX: stage.scrollWidth - stage.clientWidth, overflowY: stage.scrollHeight - stage.clientHeight };
-    });
-    expect(layout.widthGap).toBeLessThanOrEqual(5);
-    expect(layout.heightGap).toBeLessThanOrEqual(5);
-    expect(layout.overflowX).toBeLessThanOrEqual(1);
-    expect(layout.overflowY).toBeLessThanOrEqual(1);
-    await expect(page.locator('.game-board button').last()).toBeInViewport({ ratio: 1 });
-  }
+  const before = await page.locator('.board-stage').boundingBox();
+  await page.getByRole('button', { name: 'Focus on board' }).click();
+  await expect(page.getByRole('heading', { name: 'The boardroom.' })).toBeHidden();
+  const after = await page.locator('.board-stage').boundingBox();
+  expect(after!.height - before!.height).toBeGreaterThan(60);
+  await expect(page.locator('.compact-view-switcher .market-status-pill')).toBeVisible();
+  await expect(page.locator('.tile-rack button')).toHaveCount(6);
+  await assertScreenFit(page, 393, 650);
+  await page.getByRole('button', { name: 'Enlarge board tiles' }).click();
+  const tile = getLegalTiles(game)[0];
+  await page.locator('.tile-rack .rack-tile').filter({ hasText: new RegExp(`^${tile}`) }).click();
+  await expect(page.locator(`.board-tile[data-tile="${tile}"]`)).toBeInViewport({ ratio: 1 });
+  await page.getByRole('button', { name: 'Rotate board', exact: true }).click();
+  await expect(page.locator(`.board-tile[data-tile="${tile}"]`)).toBeInViewport({ ratio: 1 });
+  await page.getByRole('button', { name: 'Fit entire board' }).click();
+  const switcher = page.getByRole('group', { name: 'Game view' });
+  await switcher.getByRole('button', { name: 'Stocks' }).click();
+  await expect(page.locator('.stock-list')).toBeVisible();
+  await switcher.getByRole('button', { name: 'Board', exact: true }).click();
+  await expect(page.getByRole('button', { name: 'Show table details' })).toBeVisible();
+  await page.setViewportSize({ width: 725, height: 320 });
+  await assertScreenFit(page, 725, 320);
+  await expect(page.getByRole('button', { name: `Place ${tile}`, exact: true })).toBeInViewport({ ratio: 1 });
+  await page.getByRole('button', { name: 'Show table details' }).click();
+  await expect(page.getByRole('heading', { name: 'The boardroom.' })).toBeVisible();
+  await page.setViewportSize({ width: 393, height: 650 });
+  await page.getByRole('button', { name: 'Focus on board' }).click();
+  await page.getByRole('button', { name: `Place ${tile}`, exact: true }).click();
+  if (analyzeTile(game, tile).kind === 'found') await page.locator('.chain-choices button').first().click();
+  await expect(page.getByRole('heading', { name: 'Invest in the market' })).toBeVisible();
+  await expect(switcher.getByRole('button', { name: 'Stocks' })).toHaveAttribute('aria-pressed', 'true');
+  await expect(page.getByRole('button', { name: 'Skip buying', exact: true })).toBeInViewport({ ratio: 1 });
+  await assertScreenFit(page, 393, 650);
 });

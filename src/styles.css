@@ -13,9 +13,17 @@
   --line: #e3e7dc;
   --cream: #f7f8f2;
   --serif: 'Instrument Serif', Georgia, serif;
+  /* WebKit can report horizontal safe-area values even when the browser has
+     already inset a contained viewport. Do not add that gutter a second time. */
+  --safe-area-left: 0px;
+  --safe-area-right: 0px;
   /* iOS landscape text inflation can resize labels independently of their cells. */
   -webkit-text-size-adjust: 100%;
   text-size-adjust: 100%;
+}
+:root[data-viewport-fit='cover'] {
+  --safe-area-left: env(safe-area-inset-left, 0px);
+  --safe-area-right: env(safe-area-inset-right, 0px);
 }
 * {
   box-sizing: border-box;
@@ -3960,8 +3968,8 @@ h2 {
   color: color-mix(in srgb, var(--chain) 65%, #10251a);
 }
 .main-shell {
-  padding-left: env(safe-area-inset-left);
-  padding-right: env(safe-area-inset-right);
+  padding-left: var(--safe-area-left);
+  padding-right: var(--safe-area-right);
 }
 .main-shell main {
   padding-bottom: env(safe-area-inset-bottom);

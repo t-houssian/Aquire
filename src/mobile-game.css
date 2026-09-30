@@ -3,7 +3,9 @@
 .compact-turn-name,
 .compact-settings,
 .compact-menu,
-.board-scale-toggle {
+.board-scale-toggle,
+.board-rotate-toggle,
+.board-focus-toggle {
   display: none;
 }
 .game-navigation { display: flex; align-items: center; gap: 9px; }
@@ -105,7 +107,7 @@
     width: 100%;
     height: 100%;
     min-height: 0;
-    padding: max(7px, env(safe-area-inset-top)) max(9px, env(safe-area-inset-right)) max(7px, env(safe-area-inset-bottom)) max(9px, env(safe-area-inset-left));
+    padding: max(7px, env(safe-area-inset-top)) max(9px, var(--safe-area-right)) max(7px, env(safe-area-inset-bottom)) max(9px, var(--safe-area-left));
     overflow: hidden;
   }
   .playing-game .game-topline {
@@ -285,7 +287,9 @@
   .playing-game .board-title strong { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
   .playing-game .board-title .board-tools { flex: none; gap: 6px; }
   .playing-game .tiles-count { font-size: 8px; }
-  .playing-game .board-scale-toggle {
+  .playing-game .board-scale-toggle,
+  .playing-game .board-rotate-toggle,
+  .playing-game .board-focus-toggle {
     display: inline-flex;
     align-items: center;
     justify-content: center;
@@ -299,7 +303,10 @@
     font-size: 9px;
     font-weight: 600;
   }
-  .playing-game .board-card:not(.expansion-board) .board-scale-toggle { display: none; }
+  .playing-game .board-rotate-toggle,
+  .playing-game .board-focus-toggle { width: 28px; flex: none; }
+  .playing-game .board-card:not(.expansion-board) .board-scale-toggle,
+  .playing-game .board-card:not(.expansion-board) .board-rotate-toggle { display: none; }
   .playing-game .board-stage {
     display: grid;
     justify-items: safe center;
@@ -324,18 +331,21 @@
     padding: 3px 4px 4px 3px;
   }
   .playing-game .expansion-board .board-wrap {
-    width: 100cqw;
-    height: 100cqh;
+    /* Preserve each city's shape: filling both dimensions made long maps into
+       strips of stretched tiles. Axes, padding and board borders total 27px. */
+    width: min(100cqw, calc((100cqh - 27px) * var(--map-ratio) + 27px));
+    height: min(100cqh, calc((100cqw - 27px) * var(--map-inverse-ratio) + 27px));
     min-width: 0;
   }
   .playing-game .expansion-board[data-board-scale='detail'] .board-wrap {
-    width: max(calc(var(--map-columns) * 32px + 21px), 100cqw);
-    height: max(calc(var(--map-rows) * 32px + 21px), 100cqh);
-    min-width: calc(var(--map-columns) * 32px + 21px);
+    --detail-cell: max(36px, min(calc((100cqw - 27px) / var(--map-columns)), calc((100cqh - 27px) / var(--map-rows))));
+    width: calc(var(--map-columns) * var(--detail-cell) + 27px);
+    height: calc(var(--map-rows) * var(--detail-cell) + 27px);
+    min-width: 0;
   }
   .playing-game .board-columns { height: 14px; margin-left: 14px; font-size: 7px; }
-  .playing-game .board-with-rows { display: grid; grid-template-columns: 14px minmax(0, 1fr); min-height: 0; }
-  .playing-game .board-rows { width: 14px; font-size: 7px; }
+  .playing-game .board-with-rows { display: grid; grid-template-columns: 14px minmax(0, 1fr); grid-template-rows: minmax(0, 1fr); min-height: 0; }
+  .playing-game .board-rows { width: 14px; min-height: 0; font-size: 7px; line-height: 1; }
   .playing-game .game-board {
     aspect-ratio: auto;
     height: 100%;
@@ -544,7 +554,7 @@
     grid-template-columns: minmax(0, 1fr) var(--action-width);
     grid-template-rows: 26px 33px minmax(0, 1fr);
     gap: 4px 7px;
-    padding: max(4px, env(safe-area-inset-top)) max(6px, env(safe-area-inset-right)) max(4px, env(safe-area-inset-bottom)) max(6px, env(safe-area-inset-left));
+    padding: max(4px, env(safe-area-inset-top)) max(6px, var(--safe-area-right)) max(4px, env(safe-area-inset-bottom)) max(6px, var(--safe-area-left));
   }
   .app-shell.playing-game .game-view[data-phase='merger-shares'] { --action-width: clamp(270px, 38vw, 355px); }
   .playing-game .game-topline { grid-column: 1 / -1; grid-row: 1; }
@@ -582,4 +592,43 @@
   .playing-game .action-description { margin-top: 5px; }
   .playing-game .action-footer { margin-top: 7px; padding-top: 6px; }
   .playing-game .merger-controls { margin-top: 5px; }
+}
+
+/* Focus keeps the rack, action button and market status available while giving
+   the board the space normally used by the title and player summary. */
+@media (max-width: 1059px) {
+  .app-shell.playing-game .game-view[data-board-focused] { grid-template-rows: 27px 32px minmax(0, 1fr); }
+  .playing-game .game-view[data-board-focused] .game-heading,
+  .playing-game .game-view[data-board-focused] .players-bar { display: none; }
+  .playing-game .game-view[data-board-focused] .compact-view-switcher { grid-row: 2; }
+  .playing-game .game-view[data-board-focused] .game-layout { grid-row: 3; }
+}
+@media (min-width: 560px) and (max-width: 1059px) and (orientation: landscape) {
+  .app-shell.playing-game .game-view[data-board-focused] { grid-template-rows: 30px minmax(0, 1fr); }
+  .playing-game .game-view[data-board-focused] .game-topline { grid-column: 1; }
+  .playing-game .game-view[data-board-focused] .compact-view-switcher { grid-row: 1; }
+  .playing-game .game-view[data-board-focused] .game-layout { grid-row: 2; }
+}
+
+/* A long city uses the portrait height. Its rack sits alongside it instead of
+   taking height away and leaving empty strips on either side of a tiny map. */
+@media (min-width: 375px) and (max-width: 680px) and (min-height: 600px) and (orientation: portrait) {
+  .playing-game .game-view[data-portrait-rail] .game-layout {
+    grid-template-columns: minmax(0, 1fr) clamp(136px, 36vw, 160px);
+    grid-template-rows: minmax(0, 1fr);
+  }
+  .playing-game .game-view[data-portrait-rail] .action-card { grid-column: 2; grid-row: 1; height: 100%; max-height: none; padding: 8px; }
+  .playing-game .game-view[data-portrait-rail] .action-heading { gap: 5px; }
+  .playing-game .game-view[data-portrait-rail] .step-icon { width: 23px; height: 25px; }
+  .playing-game .game-view[data-portrait-rail] .action-heading h3 { font-size: 11px; }
+  .playing-game .game-view[data-portrait-rail] .tile-rack { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .playing-game .game-view[data-portrait-rail] .rack-tile { width: 100%; height: 44px; }
+  .playing-game .game-view[data-portrait-rail] .action-footer { flex-direction: column; align-items: stretch; gap: 8px; }
+  .playing-game .game-view[data-portrait-rail] .action-footer .button { justify-content: center; padding-inline: 5px; }
+  .playing-game .game-view[data-portrait-rail] .board-card { grid-template-rows: 53px minmax(0, 1fr) 0; }
+  .playing-game .game-view[data-portrait-rail] .board-title { flex-direction: column; align-items: stretch; justify-content: center; gap: 3px; padding: 3px 6px; }
+  .playing-game .game-view[data-portrait-rail] .board-tools { justify-content: space-between; gap: 3px; }
+  .playing-game .game-view[data-portrait-rail] .tiles-count { gap: 3px; font-size: 7px; }
+  .playing-game .game-view[data-portrait-rail] .board-stock-count,
+  .playing-game .game-view[data-portrait-rail] .board-legend { display: none; }
 }

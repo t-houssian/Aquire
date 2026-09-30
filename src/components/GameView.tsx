@@ -23,6 +23,9 @@ import {
   Users,
   ZoomIn,
   Scan,
+  RotateCw,
+  Maximize2,
+  Minimize2,
 } from 'lucide-react';
 import {
   CHAINS,
@@ -99,6 +102,9 @@ export default function GameView({
   const actor = getCurrentActor(game),
     player = game.players.find((p) => p.id === viewerId) || game.players[0];
   const controllable = actor.id === viewerId && !actor.isBot && !busy && !privateGate;
+  const cityMap = getMap(game.mapId);
+  const expansionBoard = cityMap.maxPlayers > 6 || cityMap.columns !== 12 || cityMap.rows !== 9;
+  const slenderBoard = Math.max(cityMap.columns / cityMap.rows, cityMap.rows / cityMap.columns) >= 2;
   const permanentlyBlocked = actor.hand.filter((tile) => analyzeTile(game, tile).permanent);
   const [selected, setSelected] = useState<Tile | null>(null),
     [cart, setCart] = useState<Stocks>(emptyCart),
@@ -109,13 +115,50 @@ export default function GameView({
     [sell, setSell] = useState(0),
     [trade, setTrade] = useState(0),
     [enlargedBoard, setEnlargedBoard] = useState(false),
+    [focusedBoard, setFocusedBoard] = useState(false),
+    [boardRotation, setBoardRotation] = useState<boolean | null>(null),
+    [boardFit, setBoardFit] = useState({ compact: false, rotated: false }),
     [compactView, setCompactView] = useState<'board' | 'market'>(game.phase === 'buy' ? 'market' : 'board'),
     [tab, setTab] = useState<'market' | 'investors' | 'activity' | 'results' | 'rules'>(
       game.phase === 'ended' ? 'results' : 'market',
     );
   const boardStage = useRef<HTMLDivElement>(null);
+  const rotatedBoard = boardFit.compact && (boardRotation ?? boardFit.rotated);
+  const boardColumns = rotatedBoard ? cityMap.rows : cityMap.columns;
+  const boardRows = rotatedBoard ? cityMap.columns : cityMap.rows;
+  const boardTiles = rotatedBoard ? Array.from({ length: cityMap.gridTiles.length }, (_, i) => {
+    const column = Math.floor(i / cityMap.rows);
+    const row = cityMap.rows - 1 - i % cityMap.rows;
+    return cityMap.gridTiles[row * cityMap.columns + column];
+  }) : cityMap.gridTiles;
+  useEffect(() => {
+    const stage = boardStage.current;
+    if (!stage) return;
+    const compact = window.matchMedia('(max-width: 1059px)');
+    const portrait = window.matchMedia('(orientation: portrait)');
+    const update = () => {
+      if (!stage.clientWidth || !stage.clientHeight) return;
+      const width = stage.clientWidth - 31, height = stage.clientHeight - 31;
+      const normalSize = Math.min(width / cityMap.columns, height / cityMap.rows);
+      const rotatedSize = Math.min(width / cityMap.rows, height / cityMap.columns);
+      const next = { compact: compact.matches, rotated: expansionBoard && rotatedSize > normalSize * 1.15 };
+      setBoardFit((prior) => prior.compact === next.compact && prior.rotated === next.rotated ? prior : next);
+    };
+    const observer = new ResizeObserver(update);
+    observer.observe(stage);
+    compact.addEventListener('change', update);
+    portrait.addEventListener('change', update);
+    update();
+    return () => {
+      observer.disconnect();
+      compact.removeEventListener('change', update);
+      portrait.removeEventListener('change', update);
+    };
+  }, [cityMap, expansionBoard]);
   useEffect(() => {
     setEnlargedBoard(false);
+    setFocusedBoard(false);
+    setBoardRotation(null);
   }, [game.id]);
   useEffect(() => {
     const stage = boardStage.current;
@@ -123,7 +166,7 @@ export default function GameView({
     const observer = new ResizeObserver(() => centerBoardTile(stage, selected));
     observer.observe(stage);
     return () => observer.disconnect();
-  }, [selected, enlargedBoard, compactView]);
+  }, [selected, enlargedBoard, compactView, rotatedBoard]);
   useEffect(() => {
     setTab(game.phase === 'ended' ? 'results' : 'market');
   }, [game.id, game.phase === 'ended']);
@@ -185,7 +228,6 @@ export default function GameView({
     0,
   );
   const active = hotels.filter((c) => getChainSize(game, c.id) > 0);
-  const cityMap = getMap(game.mapId);
   const playableSpaces = new Set(cityMap.tiles);
   const isEnded = game.phase === 'ended';
   const ownHoldingsVisible = !privateGate || isEnded;
@@ -218,7 +260,7 @@ export default function GameView({
   };
   if (isEnded) return <Finale match={summarizeMatch(game, onlineCode ? 'online' : 'local')} onHome={onHome} />;
   return (
-    <div className={`game-view ${cityMap.maxPlayers > 6 || cityMap.columns !== 12 || cityMap.rows !== 9 ? 'expansion-game' : ''} ${isEnded ? 'game-ended' : ''}`} data-phase={game.phase} data-compact-view={compactView}>
+    <div className={`game-view ${expansionBoard ? 'expansion-game' : ''} ${isEnded ? 'game-ended' : ''}`} data-phase={game.phase} data-compact-view={compactView} data-board-focused={focusedBoard && compactView === 'board' || undefined} data-portrait-rail={slenderBoard && game.phase === 'place' && compactView === 'board' || undefined}>
       <div className="game-topline">
         <div className="game-navigation">
           <button className="text-button compact-menu" onClick={onMenu} aria-label="Open navigation" aria-controls="sidebar-navigation">
@@ -314,7 +356,7 @@ export default function GameView({
       </div>
       <div className="game-layout">
         <div className="board-column">
-          <section id="game-board-panel" className={`board-card map-themed ${cityMap.maxPlayers > 6 || cityMap.columns !== 12 || cityMap.rows !== 9 ? 'expansion-board' : ''}`} style={mapThemeStyle(cityMap)} data-map={cityMap.id} data-board-scale={enlargedBoard ? 'detail' : 'fit'}>
+          <section id="game-board-panel" className={`board-card map-themed ${expansionBoard ? 'expansion-board' : ''}`} style={{ ...mapThemeStyle(cityMap), '--map-columns': boardColumns, '--map-rows': boardRows, '--map-ratio': boardColumns / boardRows, '--map-inverse-ratio': boardRows / boardColumns } as CSSProperties} data-map={cityMap.id} data-board-scale={enlargedBoard ? 'detail' : 'fit'} data-board-rotated={rotatedBoard}>
             <div className="board-title">
               <div>
                 <span className="live-dot" />
@@ -324,29 +366,35 @@ export default function GameView({
               <div className="board-tools">
                 <span className="tiles-count">
                   <Layers3 size={14} />
-                  {Object.keys(game.board).length} / {cityMap.tiles.length} · Rack {player.hand.length} · Bag {game.bag.length}
+                  <span>{Object.keys(game.board).length} / {cityMap.tiles.length}</span><span className="board-stock-count"> · Rack {player.hand.length} · Bag {game.bag.length}</span>
                 </span>
+                <button type="button" className="board-rotate-toggle" aria-label="Rotate board" title="Rotate board · tile coordinates stay the same" aria-pressed={rotatedBoard} onClick={() => setBoardRotation(!rotatedBoard)}>
+                  <RotateCw size={15} />
+                </button>
                 <button type="button" className="board-scale-toggle" aria-label={enlargedBoard ? 'Fit entire board' : 'Enlarge board tiles'} aria-pressed={enlargedBoard} onClick={() => setEnlargedBoard((value) => !value)}>
                   {enlargedBoard ? <Scan size={14} /> : <ZoomIn size={14} />}
                   {enlargedBoard ? 'Fit' : 'Zoom'}
+                </button>
+                <button type="button" className="board-focus-toggle" aria-label={focusedBoard ? 'Show table details' : 'Focus on board'} title={focusedBoard ? 'Show table details' : 'More room for the board'} aria-pressed={focusedBoard} onClick={() => setFocusedBoard((value) => !value)}>
+                  {focusedBoard ? <Minimize2 size={15} /> : <Maximize2 size={15} />}
                 </button>
               </div>
             </div>
             <div className="board-stage" ref={boardStage}>
               <div className="board-wrap">
                 <div className="board-columns">
-                  {Array.from({ length: cityMap.columns }, (_, i) => (
-                    <span key={i}>{i + 1}</span>
+                  {Array.from({ length: boardColumns }, (_, i) => (
+                    <span key={i}>{rotatedBoard ? String.fromCharCode(65 + cityMap.rows - 1 - i) : i + 1}</span>
                   ))}
                 </div>
                 <div className="board-with-rows">
                   <div className="board-rows">
-                    {Array.from({ length: cityMap.rows }, (_, i) => String.fromCharCode(65 + i)).map((l) => (
+                    {Array.from({ length: boardRows }, (_, i) => rotatedBoard ? String(i + 1) : String.fromCharCode(65 + i)).map((l) => (
                       <span key={l}>{l}</span>
                     ))}
                   </div>
                   <div className="game-board" role="group" aria-label="Acquire game board">
-                    {cityMap.gridTiles.map((tile) => {
+                    {boardTiles.map((tile) => {
                       const chain = game.board[tile];
                       const isPlayableSpace = playableSpaces.has(tile);
                       const def = CHAINS.find((c) => c.id === chain);
