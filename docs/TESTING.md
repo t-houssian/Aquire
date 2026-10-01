@@ -1,5 +1,15 @@
 # Validation record
 
+## Payouts, strategist decisions, and mobile trading — October 1, 2026
+
+Dividends select only active chains. Merger bonus snapshots show each investor’s payout, including sole ownership, ties, and zero payouts, before share decisions; consecutive acquisitions have separate reveals. Market-enabled finales store an independent die and price per chain and replay those saved results. All-safe declarations require a played tile and consider only active chains, with no expansion occupancy gate. Landscape cash uses the existing navigation row, and buying/selling controls have labeled, aligned rows.
+
+Production build, 115 unit tests, 144 browser checks (141 full-suite checks plus three added end-declaration checks), 15 HTTP-mocked online UI tests, and 12 backend/PostgreSQL/privacy checks passed. Browser coverage includes desktop, portrait and landscape Chromium, and mobile WebKit; these are emulated viewports, not a physical iPhone test. The full browser suite retains 23 platform/configuration skips. Local trace recording initially exhausted this Mac’s disk, so the completed browser runs used `--trace=off`. Visual samples are in ignored `artifacts/game-review/`.
+
+Strategist regression tests cover rival sole-owner windfalls, equal-size mergers, profitable own mergers, survivor choice, full three-share majority bids, and exchanges that destroy value. A rotating-seat benchmark against two Standard opponents improved from 17/120 wins with the prior strategist to 55/120 with the updated strategist on seeds 1–120; a separate validation set, seeds 701–820, won 44/120. Every simulated game finished. These samples establish improvement over the prior bot, not a guaranteed win rate against people.
+
+The updated authoritative Supabase function was deployed. A real desktop host, mobile guest, and Strategist computer completed a game with Crazy Market and dividends, verifying private Realtime updates, mergers, saved per-chain market rolls, final results, archive access, and reload recovery. No database migration or additional gameplay requests were needed: merger snapshots remain in the capped 512-entry log, and final roll metadata stays with the existing compact settlements. The website changes still need the normal GitHub push to trigger Cloudflare.
+
 ## iPhone board sizing and landscape gutters — September 29, 2026
 
 The active game now applies iPhone safe-area padding once, at the game view. The previous nested padding reproduced a 118px left gutter with a 59px emulated notch inset. Portrait boards fill the height remaining above the actual turn controls; landscape uses two compact header rows and a narrower action column. Cells adapt to the frame, including wide shaped maps. Expanded maps have Fit/Zoom controls, and choosing a rack tile recenters only the zoomed board. Text sizing is stable when iOS changes orientation.

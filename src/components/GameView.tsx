@@ -31,6 +31,7 @@ import {
   CHAINS,
   analyzeTile,
   canEndGame,
+  endConditionMet,
   getAvailableChains,
   getChainSize,
   getCurrentActor,
@@ -76,6 +77,7 @@ export default function GameView({
   onMenu,
   onRules,
   onSettings,
+  onShowMergerPayout,
   busy = false,
   hints = true,
   privateGate = false,
@@ -91,6 +93,7 @@ export default function GameView({
   onMenu: () => void;
   onRules: () => void;
   onSettings: () => void;
+  onShowMergerPayout?: (entry: GameState['logs'][number]) => void;
   busy?: boolean;
   hints?: boolean;
   privateGate?: boolean;
@@ -269,6 +272,9 @@ export default function GameView({
           <button className="text-button" onClick={onHome}>
             <ArrowLeft size={16} /> The clubhouse
           </button>
+        </div>
+        <div className="landscape-balances" role="group" aria-label="Investor cash" tabIndex={0}>
+          {game.players.map((p) => <span className={p.id === actor.id ? 'current' : ''} key={p.id}><span title={p.name}>{p.name}</span><strong>{hiddenCash && p.id !== viewerId ? 'Private' : money(p.cash)}</strong></span>)}
         </div>
         <div className="game-toplinks">
           {onlineCode && <span className="room-tag">ROOM {onlineCode}</span>}
@@ -671,7 +677,9 @@ export default function GameView({
                         {actorHoldingsVisible
                           ? `${actor.id === viewerId ? 'You own' : `${actor.name} owns`} ${owned} shares.`
                           : `${actor.name} decides how to settle shares.`}{' '}
-                        Bonuses paid.
+                        {onShowMergerPayout && game.logs.some((entry) => entry.payout?.chain === acquired && entry.turn === game.turn)
+                          ? <button className="text-button merger-bonus-link" onClick={() => onShowMergerPayout([...game.logs].reverse().find((entry) => entry.payout?.chain === acquired && entry.turn === game.turn)!)}>View bonuses</button>
+                          : 'Bonuses paid.'}
                       </p>
                       {actor.id === viewerId && !privateGate && <div className="merger-rack" aria-label="Your tile rack during merger">
                         <div><strong>Your tile rack</strong><span>Keep your next move in view.</span></div>
@@ -796,6 +804,7 @@ export default function GameView({
                   )}
                 </>
               )}
+              {controllable && game.phase === 'place' && endConditionMet(game) && <p className="end-ready-note">End conditions are met. Play a tile, then declare the final turn before finishing your stock order.</p>}
               {controllable && canEndGame(game) && !game.endDeclared && (
                 <div className="end-choice"><p>End conditions are met. You may declare the final turn, or finish investing to keep playing. {player.hand.length} tile{player.hand.length === 1 ? '' : 's'} remain in your rack.</p><button className="declare-end" onClick={() => action({ type: 'declare-end' })}><Trophy size={15} /> Declare the final turn</button></div>
               )}
@@ -903,7 +912,7 @@ export default function GameView({
                   {rules.marketMode !== 'off' && (game.lastRoundRolls.marketDie === null ? `Market holds ${marketStatus.toLowerCase()}` : `Market die ${game.lastRoundRolls.marketDie} · ${marketStatus.toLowerCase()}`)}
                 </span>
               </div>}
-              <div className="stock-list">
+              <div className={`stock-list ${rules.trading ? 'allows-trading' : ''}`}>
                 {hotels.map((c) => {
                   const size = getChainSize(game, c.id),
                     price = getSharePrice(game, c.id),
@@ -943,7 +952,7 @@ export default function GameView({
                       {canBuy && (
                         <div className="stock-purchase">
                           <span>
-                            {cart[c.id] ? `${cart[c.id]} in your order` : 'Add to your portfolio'}
+                            Buy
                           </span>
                           <div className="stepper">
                             <button
@@ -969,7 +978,7 @@ export default function GameView({
                         </div>
                       )}
                       {controllable && game.phase === 'buy' && rules.trading && player.stocks[c.id] > 0 && <div className="stock-purchase stock-sale">
-                        <span>{sellCart[c.id] ? `${sellCart[c.id]} to sell · ${money(price)} each` : `Sell held shares · ${money(price)} each`}</span>
+                        <span>Sell</span>
                         <div className="stepper">
                           <button aria-label={`Sell fewer ${c.name} shares`} disabled={!sellCart[c.id]}
                             onClick={() => setSellCart((prior) => ({ ...prior, [c.id]: Math.max(0, prior[c.id] - 1) }))}><Minus size={13} /></button>

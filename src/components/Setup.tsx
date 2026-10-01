@@ -141,7 +141,7 @@ export default function Setup({
             </optgroup>)}
           </select>
           <div ref={previewRef}><MapPreview map={selectedMap} /></div>
-          {selectedMap.maxPlayers > 6 && <p className="small muted">Expansion end: declare after {selectedMap.endSize} hotels in one chain, or once every active chain is safe and at least 38% of the city is built.</p>}
+          {selectedMap.maxPlayers > 6 && <p className="small muted">Expansion end: declare after {selectedMap.endSize} hotels in one chain, or once every active chain is safe, after playing a tile.</p>}
           {selectedMap.maxPlayers === 6 && selectedMap.endSize !== 41 && <p className="small muted">Custom-city end: declare after {selectedMap.endSize} hotels in one chain, or when every active chain is safe.</p>}
           {kind === 'solo' && <>
             <label className="field-label" htmlFor="setup-difficulty">Computer difficulty</label>

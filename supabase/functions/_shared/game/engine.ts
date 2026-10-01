@@ -239,11 +239,11 @@ export function getActiveChains(state: GameState): ChainId[] {
 export function getSharePrice(state: GameState, chain: ChainId): number {
   return getMarketPriceForSize(state, chain, getChainSize(state, chain));
 }
-export function getMarketPriceForSize(state: GameState, chain: ChainId, size: number): number {
+export function getMarketPriceForSize(state: GameState, chain: ChainId, size: number, shift = state.marketShift ?? 0): number {
   if (size < 2) return 0;
   const rows = [200, 300, 400, 500, 600, 700, 800, 900, 1000];
   const row = size <= 5 ? size - 2 : size <= 10 ? 4 : size <= 20 ? 5 : size <= 30 ? 6 : size <= 40 ? 7 : 8;
-  return rows[Math.max(0, Math.min(8, row + (state.marketShift ?? 0)))] + DEFINITIONS[chain].tier * 100;
+  return rows[Math.max(0, Math.min(8, row + shift))] + DEFINITIONS[chain].tier * 100;
 }
 export function getPriceForSize(chain: ChainId, size: number): number {
   if (size < 2) return 0;
@@ -425,15 +425,16 @@ export function getRemovableTiles(state: GameState): Tile[] {
   if (state.phase !== 'place' || (state.removalsThisTurn ?? 0) >= getHouseRules(state).removalsPerTurn) return [];
   return Object.keys(state.board).filter((tile) => canRemoveTile(state, tile));
 }
-export function canEndGame(state: GameState): boolean {
-  if (!state.tilePlacedThisTurn || state.phase !== 'buy' || state.merger) return false;
+export function endConditionMet(state: GameState): boolean {
   const map = getMap(state.mapId);
   const sizes = getActiveChains(state).map((chain) => getChainSize(state, chain));
   return (
     sizes.some((size) => size >= map.endSize) ||
-    (sizes.length > 0 && sizes.every((size) => size >= 11) &&
-      (map.maxPlayers <= 6 || Object.keys(state.board).length >= Math.ceil(map.tiles.length * 0.38)))
+    (sizes.length > 0 && sizes.every((size) => size >= 11))
   );
+}
+export function canEndGame(state: GameState): boolean {
+  return state.tilePlacedThisTurn && state.phase === 'buy' && !state.merger && endConditionMet(state);
 }
 export function createGame(config: GameConfig): GameState {
   assert(isMapId(config?.mapId ?? 'classic'), 'Choose an available city map.');
@@ -563,9 +564,9 @@ export function createGame(config: GameConfig): GameState {
   }
   return state;
 }
-function payBonuses(state: GameState, chain: ChainId, size: number): number[] {
+function payBonuses(state: GameState, chain: ChainId, size: number, price = getMarketPriceForSize(state, chain, size)): number[] {
   const holdings = state.players.map((player) => player.stocks[chain]);
-  const payouts = calculateBonuses(holdings, getMarketPriceForSize(state, chain, size), state.mode);
+  const payouts = calculateBonuses(holdings, price, state.mode);
   state.players.forEach((player, index) => {
     if (payouts[index]) {
       player.cash += payouts[index];
@@ -636,12 +637,14 @@ function finishGame(state: GameState, reason: string) {
   );
   state.finalSettlements = activeChains.map((chain) => {
     const size = getChainSize(state, chain);
-    const sharePrice = getMarketPriceForSize(state, chain, size);
+    const marketDie = getHouseRules(state).marketMode !== 'off' ? rollDie(state, 6) : undefined;
+    const marketShift = marketDie ? marketShiftForDie(getHouseRules(state).marketMode, marketDie) : undefined;
+    const sharePrice = getMarketPriceForSize(state, chain, size, marketShift ?? 0);
     const holdings = state.players.map((player) => player.stocks[chain]);
     const sorted = [...new Set(holdings.filter((count) => count > 0))].sort((a, b) => b - a);
     const bonuses = calculateBonuses(holdings, sharePrice, state.mode);
     return {
-      chain, size, sharePrice,
+      chain, size, sharePrice, marketDie, marketShift,
       majorityIds: state.players.filter((_, i) => holdings[i] === sorted[0] && sorted.length > 0).map((p) => p.id),
       minorityIds: sorted.length > 1 && holdings.filter((n) => n === sorted[0]).length === 1
         ? state.players.filter((_, i) => holdings[i] === sorted[1]).map((p) => p.id) : [],
@@ -653,14 +656,14 @@ function finishGame(state: GameState, reason: string) {
     };
   });
   // The 2008 scoring sequence pays every bonus first, then sells from smallest chain to largest.
-  for (const chain of activeChains) {
-    const payouts = payBonuses(state, chain, getChainSize(state, chain));
+  for (const settlement of state.finalSettlements) {
+    const payouts = payBonuses(state, settlement.chain, settlement.size, settlement.sharePrice);
     payouts.forEach((payout, index) => {
       state.results[index].bonuses += payout;
     });
   }
-  for (const chain of activeChains) {
-    const price = getSharePrice(state, chain);
+  for (const settlement of state.finalSettlements) {
+    const { chain, sharePrice: price } = settlement;
     state.players.forEach((player, index) => {
       const value = player.stocks[chain] * price;
       state.results[index].stocksValue += value;
@@ -694,6 +697,8 @@ function finishGame(state: GameState, reason: string) {
   );
 }
 const rollDie = (state: GameState, sides: number) => 1 + Math.floor(nextRandom(state) * sides);
+export const marketShiftForDie = (mode: HouseRules['marketMode'], die: number): number =>
+  mode === 'off' ? 0 : mode === 'crazy' ? [-2, -1, 0, 0, 1, 2][die - 1] : die <= 2 ? -1 : die <= 4 ? 0 : 1;
 const DICE_REVEAL_GRACE_MS = 6000;
 export function getInsideTiles(state: GameState, chain: ChainId): Tile[] {
   return Object.keys(state.board).filter((tile) => {
@@ -714,6 +719,7 @@ function settleDice(state: GameState, roundComplete: boolean, marketDue: boolean
   const round = Math.ceil(state.turn / state.players.length);
   let dividendDie: number | null = null;
   let stockDie: number | null = null;
+  const activeHotels = getActiveChains(state);
   let selectedChain: ChainId | null = null;
   let fullClusters = 0;
   let dividendPaid = 0;
@@ -724,9 +730,9 @@ function settleDice(state: GameState, roundComplete: boolean, marketDue: boolean
       .map((tier) => hotels.filter((chain) => DEFINITIONS[chain].tier === tier));
     fullClusters = clusters.filter((group) => group.every((chain) => getChainSize(state, chain) >= 2)).length;
     if (fullClusters) dividendDie = rollDie(state, 3);
-    if (dividendDie !== null && dividendDie <= fullClusters) {
-      stockDie = rollDie(state, hotels.length);
-      selectedChain = hotels[stockDie - 1];
+    if (dividendDie !== null && dividendDie <= fullClusters && activeHotels.length > 0) {
+      stockDie = rollDie(state, activeHotels.length);
+      selectedChain = activeHotels[stockDie - 1];
       const chain = selectedChain;
       const price = getSharePrice(state, chain);
       if (!price) {
@@ -761,9 +767,7 @@ function settleDice(state: GameState, roundComplete: boolean, marketDue: boolean
   let marketShift = state.marketShift ?? 0;
   if (marketDue && rules.marketMode !== 'off') {
     marketDie = rollDie(state, 6);
-    marketShift = rules.marketMode === 'crazy'
-      ? [-2, -1, 0, 0, 1, 2][marketDie - 1]
-      : marketDie <= 2 ? -1 : marketDie <= 4 ? 0 : 1;
+    marketShift = marketShiftForDie(rules.marketMode, marketDie);
     state.marketShift = marketShift;
     const timing = opening ? 'Before the opening turn' : rules.marketFrequency === 'turn'
       ? `Before ${state.players[(state.currentPlayer + 1) % state.players.length].name}'s turn`
@@ -775,7 +779,7 @@ function settleDice(state: GameState, roundComplete: boolean, marketDue: boolean
       round, dividendDie, stockDie, chain: selectedChain, marketDie, marketShift,
       atTurn: opening ? 0 : state.turn,
       kind: opening ? 'opening' as const : roundComplete ? 'round' as const : 'turn' as const,
-      fullClusters, dividendPaid, insideTilesReturned,
+      fullClusters, dividendPaid, insideTilesReturned, stockDieSides: activeHotels.length,
     };
     state.lastRoundRolls = report;
     state.recentDiceRolls = [...(state.recentDiceRolls ?? []), report].slice(-state.players.length);
@@ -866,11 +870,20 @@ function beginAcquisition(state: GameState, chain: ChainId) {
   merger.remaining = merger.remaining.filter((item) => item !== chain);
   merger.orderOptions = [];
   merger.sharePrice = getMarketPriceForSize(state, chain, merger.sizes[chain]!);
+  const holdings = state.players.map((player) => player.stocks[chain]);
+  const levels = [...new Set(holdings.filter((count) => count > 0))].sort((a, b) => b - a);
+  const bonuses = calculateBonuses(holdings, merger.sharePrice, state.mode);
   log(
     state,
     'merger',
     `${DEFINITIONS[merger.survivor!].name} acquires ${DEFINITIONS[chain].name} (${merger.sizes[chain]} buildings). Its shares settle at ${money(merger.sharePrice)}.`,
-    { chain },
+    { chain, payout: {
+      chain, survivor: merger.survivor!, size: merger.sizes[chain]!, sharePrice: merger.sharePrice,
+      majorityIds: state.players.filter((_, i) => levels.length > 0 && holdings[i] === levels[0]).map((p) => p.id),
+      minorityIds: levels.length > 1 && holdings.filter((count) => count === levels[0]).length === 1
+        ? state.players.filter((_, i) => holdings[i] === levels[1]).map((p) => p.id) : [],
+      players: state.players.map((player, i) => ({ playerId: player.id, shares: holdings[i], bonus: bonuses[i] })),
+    } },
   );
   payBonuses(state, chain, merger.sizes[chain]!);
   for (const tile of Object.keys(state.board))
@@ -1201,16 +1214,86 @@ export function applyAction(previous: GameState, action: GameAction): GameState 
   return state;
 }
 
+/** Evaluate every acquired chain, including a tied largest chain. Cash arriving
+ * now is more useful to a cash-starved player than the same eventual payout.
+ * Include survivor growth and the finite supply of two-for-one exchanges. */
+function strategistMergerValue(state: GameState, chains: ChainId[], survivor: ChainId, addedTiles: number): number {
+  const actor = getCurrentActor(state);
+  const actorIndex = state.players.findIndex((player) => player.id === actor.id);
+  const finalSize = chains.reduce((sum, chain) => sum + getChainSize(state, chain), addedTiles);
+  const priceBefore = getSharePrice(state, survivor);
+  const priceAfter = getMarketPriceForSize(state, survivor, finalSize);
+  const survivorHoldings = state.players.map((player) => player.stocks[survivor]);
+  const bonusesBefore = calculateBonuses(survivorHoldings, priceBefore);
+  const liquidity = state.players.map((player) => Math.max(0, 1 - player.cash / 2400));
+  const gains = state.players.map((player) => player.stocks[survivor] * (priceAfter - priceBefore));
+  let certificates = state.bank[survivor];
+  const acquired = chains.filter((chain) => chain !== survivor)
+    .sort((a, b) => getChainSize(state, b) - getChainSize(state, a));
+  for (const chain of acquired) {
+    const price = getSharePrice(state, chain);
+    const payouts = calculateBonuses(state.players.map((player) => player.stocks[chain]), price);
+    // Exchanges resolve in turn order; rivals do not all have access to the same stock.
+    for (let offset = 0; offset < state.players.length; offset++) {
+      const index = (state.currentPlayer + offset) % state.players.length;
+      const player = state.players[index];
+      const held = player.stocks[chain];
+      const reserve = Math.min(held, Math.ceil(Math.max(0, 1800 - player.cash - payouts[index]) / price));
+      const trade = Math.min(certificates, Math.floor((held - reserve) / 2));
+      certificates -= trade;
+      survivorHoldings[index] += trade;
+      gains[index] += payouts[index] * (1 + liquidity[index] * 0.75)
+        + held * price * liquidity[index] * 0.25
+        + trade * Math.max(0, priceAfter - 2 * price);
+    }
+  }
+  const bonusesAfter = calculateBonuses(survivorHoldings, priceAfter);
+  gains.forEach((_, index) => { gains[index] += (bonusesAfter[index] - bonusesBefore[index]) * 0.5; });
+  const ownWealth = getNetWorth(state, actor);
+  const rivalGains = gains.filter((_, index) => index !== actorIndex);
+  const strongestRivalGain = Math.max(0, ...gains.map((gain, index) => index === actorIndex ? 0
+    : gain * (getNetWorth(state, state.players[index]) >= ownWealth ? 1.15 : 0.95)));
+  return (gains[actorIndex] - strongestRivalGain - rivalGains.reduce((sum, value) => sum + value, 0) / rivalGains.length * 0.15) / 180;
+}
+
+/** Estimate contested bonus positions instead of treating today's single-share
+ * majority as guaranteed. A depleted bank makes present rankings more certain. */
+function contestedBonuses(state: GameState, chain: ChainId, holdings: number[], buyer: number, remaining: number): number[] {
+  const price = getSharePrice(state, chain);
+  if (!remaining || state.endDeclared) return calculateBonuses(holdings, price);
+  const largest = Math.max(...holdings);
+  const uncertainty = remaining > 8 ? 1.5 : 0.8;
+  const weights = holdings.map((held, i) => held > 0 ? Math.exp((held - largest) / uncertainty)
+    : i !== buyer && state.players[i].cash >= price ? 0.35 * Math.exp((1 - largest) / uncertainty) : 0);
+  const total = weights.reduce((sum, weight) => sum + weight, 0);
+  if (!total) return holdings.map(() => 0);
+  return weights.map((weight, i) => {
+    if (!weight) return 0;
+    const first = weight / total;
+    const second = total === weight ? 1 : weights.reduce((chance, rival, j) =>
+      i === j || !rival ? chance : chance + rival / total * weight / (total - rival), 0);
+    return price * (10 * first + 5 * second);
+  });
+}
+
 /** Bots use only the public table and their own rack; no future draw or opponent-hand access. */
 export function chooseBotAction(state: GameState): GameAction {
   assert(state.phase !== 'ended', 'This game is finished.');
   const actor = getCurrentActor(state);
   const difficulty = state.botDifficulty ?? 'standard';
   if (canEndGame(state) && !state.endDeclared) {
+    const marketMode = getHouseRules(state).marketMode;
+    const closingValues = getActiveChains(state).map((chain) => {
+      const prices = marketMode === 'off' ? [getSharePrice(state, chain)]
+        : [1, 2, 3, 4, 5, 6].map((die) => getMarketPriceForSize(state, chain, getChainSize(state, chain), marketShiftForDie(marketMode, die)));
+      const holdings = state.players.map((player) => player.stocks[chain]);
+      return prices.map((price) => calculateBonuses(holdings, price).map((bonus, i) => bonus + holdings[i] * price));
+    });
     const projected = state.players.map((player, index) => ({
       id: player.id,
-      total: getNetWorth(state, player) + getActiveChains(state).reduce((sum, chain) =>
-        sum + calculateBonuses(state.players.map((p) => p.stocks[chain]), getSharePrice(state, chain), state.mode)[index], 0),
+      // Closing markets are uncertain. Average the public die outcomes; never inspect RNG.
+      total: player.cash + closingValues.reduce((sum, outcomes) => sum
+        + outcomes.reduce((total, outcome) => total + outcome[index], 0) / outcomes.length, 0),
     }));
     const own = projected.find((p) => p.id === actor.id)!.total;
     const lead = Math.max(...projected.filter((p) => p.id !== actor.id).map((p) => p.total));
@@ -1239,25 +1322,28 @@ export function chooseBotAction(state: GameState): GameAction {
         if (analysis.kind === 'merge') {
           value += 8;
           const largest = Math.max(...analysis.chains.map((chain) => getChainSize(state, chain)));
-          for (const chain of analysis.chains) {
-            const size = getChainSize(state, chain);
-            if (size < largest) {
-              const payouts = calculateBonuses(
-                state.players.map((p) => p.stocks[chain]),
-                getSharePrice(state, chain),
-                state.mode,
-              );
-              const index = state.players.findIndex((p) => p.id === actor.id);
-              value += payouts[index] / (difficulty === 'casual' ? 300 : 250) + ownShares(chain) * (actor.cash < 1000 ? 1.7 : 0.5);
-              const worstRival = Math.max(...payouts.map((payout, i) => {
-                if (i === index) return 0;
-                const rival = state.players[i];
-                const liquidityFactor = difficulty === 'strategist' && rival.cash < 1500 ? 2.5 : 1;
-                const leaderFactor = difficulty === 'strategist' && getNetWorth(state, rival) >= getNetWorth(state, actor) ? 1.4 : 1;
-                const saleCash = rival.stocks[chain] * getSharePrice(state, chain);
-                return (payout + saleCash * (rival.cash < 1500 ? 0.6 : 0.15)) * liquidityFactor * leaderFactor;
-              }));
-              value -= worstRival / (difficulty === 'casual' ? 900 : difficulty === 'standard' ? 420 : 190);
+          if (difficulty === 'strategist') {
+            const survivors = analysis.chains.filter((chain) => getChainSize(state, chain) === largest);
+            value += Math.max(...survivors.map((survivor) => strategistMergerValue(state, analysis.chains, survivor, analysis.connectedTiles.length)));
+          } else {
+            for (const chain of analysis.chains) {
+              const size = getChainSize(state, chain);
+              if (size < largest) {
+                const payouts = calculateBonuses(
+                  state.players.map((p) => p.stocks[chain]),
+                  getSharePrice(state, chain),
+                  state.mode,
+                );
+                const index = state.players.findIndex((p) => p.id === actor.id);
+                value += payouts[index] / (difficulty === 'casual' ? 300 : 250) + ownShares(chain) * (actor.cash < 1000 ? 1.7 : 0.5);
+                const worstRival = Math.max(...payouts.map((payout, i) => {
+                  if (i === index) return 0;
+                  const rival = state.players[i];
+                  const saleCash = rival.stocks[chain] * getSharePrice(state, chain);
+                  return payout + saleCash * (rival.cash < 1500 ? 0.6 : 0.15);
+                }));
+                value -= worstRival / (difficulty === 'casual' ? 900 : 420);
+              }
             }
           }
         }
@@ -1279,6 +1365,12 @@ export function chooseBotAction(state: GameState): GameAction {
     }
     case 'merger-survivor': {
       const options = [...state.merger!.survivorOptions];
+      if (difficulty === 'strategist') {
+        const added = independentConnection(state, state.merger!.tile).tiles.length;
+        options.sort((a, b) => strategistMergerValue(state, state.merger!.chains, b, added)
+          - strategistMergerValue(state, state.merger!.chains, a, added));
+        return { type: 'choose-survivor', chain: options[0] };
+      }
       options.sort(
         (a, b) => ownShares(b) - rivalMaximum(b) * 0.5 - (ownShares(a) - rivalMaximum(a) * 0.5),
       );
@@ -1292,6 +1384,24 @@ export function chooseBotAction(state: GameState): GameAction {
     case 'merger-shares': {
       const merger = state.merger!;
       const held = actor.stocks[merger.acquired!];
+      if (difficulty === 'strategist') {
+        const survivor = merger.survivor!;
+        const finalSize = merger.chains.reduce((sum, chain) => sum + merger.sizes[chain]!, 0)
+          + independentConnection(state, merger.tile).tiles.length;
+        const finalPrice = getMarketPriceForSize(state, survivor, finalSize);
+        const index = state.players.findIndex((player) => player.id === actor.id);
+        let bestTrade = 0, bestValue = -Infinity;
+        for (let certificates = 0; certificates <= Math.min(Math.floor(held / 2), state.bank[survivor]); certificates++) {
+          const cash = actor.cash + (held - certificates * 2) * merger.sharePrice;
+          const holdings = state.players.map((player, i) => player.stocks[survivor] + (i === index ? certificates : 0));
+          const bonuses = calculateBonuses(holdings, finalPrice);
+          const rivalBonus = Math.max(...bonuses.filter((_, i) => i !== index));
+          const value = cash + certificates * finalPrice + (bonuses[index] - rivalBonus) * 0.5
+            - Math.max(0, 1800 - cash) * 0.75;
+          if (value > bestValue) { bestValue = value; bestTrade = certificates * 2; }
+        }
+        return { type: 'resolve-shares', sell: held - bestTrade, trade: bestTrade };
+      }
       const reserveNeeded = Math.max(0, 1800 - actor.cash);
       const reserveShares = Math.min(held, Math.ceil(reserveNeeded / merger.sharePrice));
       const trade =
@@ -1310,6 +1420,34 @@ export function chooseBotAction(state: GameState): GameAction {
       }
       const sold = Object.values(sellStocks).reduce((sum, n) => sum + (n ?? 0), 0);
       let cash = actor.cash;
+      if (difficulty === 'strategist') {
+        const index = state.players.findIndex((player) => player.id === actor.id);
+        let left = getHouseRules(state).buyLimit + sold;
+        while (left > 0) {
+          let best: { chain: ChainId; quantity: number; score: number } | undefined;
+          for (const chain of getActiveChains(state)) {
+            const price = getSharePrice(state, chain);
+            const remaining = state.bank[chain] - (stocks[chain] ?? 0);
+            const holdings = state.players.map((player, i) => player.stocks[chain] + (i === index ? stocks[chain] ?? 0 : 0));
+            const before = contestedBonuses(state, chain, holdings, index, remaining);
+            // Consider whole purchases so a two/three-share bid can overtake a
+            // rival even when its first certificate alone changes no bonus.
+            for (let count = 1; count <= Math.min(left, remaining, Math.floor(cash / price)); count++) {
+              const after = contestedBonuses(state, chain, holdings.map((held, i) => held + (i === index ? count : 0)), index, remaining - count);
+              const denial = Math.max(...before.filter((_, i) => i !== index)) - Math.max(...after.filter((_, i) => i !== index));
+              const reserveCost = state.endDeclared || state.bag.length < 15 ? 0
+                : Math.max(0, 600 - (cash - count * price)) * 0.5;
+              const score = (after[index] - before[index] + denial * 0.25 - reserveCost) / (count * price);
+              if (score > 0.2 && (!best || score > best.score)) best = { chain, quantity: count, score };
+            }
+          }
+          if (!best) break;
+          stocks[best.chain] = (stocks[best.chain] ?? 0) + best.quantity;
+          cash -= getSharePrice(state, best.chain) * best.quantity;
+          left -= best.quantity;
+        }
+        return { type: 'buy', stocks, sellStocks };
+      }
       for (let count = 0; count < getHouseRules(state).buyLimit + sold; count++) {
         const choices = getActiveChains(state).filter(
           (chain) =>
@@ -1330,17 +1468,12 @@ export function chooseBotAction(state: GameState): GameAction {
             held * 0.4
           );
           if (difficulty === 'casual') return base + DEFINITIONS[chain].tier * 2;
-          if (difficulty === 'strategist') return base
-            + (held >= rival && held > 0 ? 7 : 0)
-            + (state.bank[chain] <= 3 ? 4 : 0)
-            - (rival - held >= 4 ? 10 : 0)
-            + (size >= 11 && held > rival ? 3 : 0);
           return base;
         };
         choices.sort((a, b) => score(b) - score(a));
         const chain = choices[0];
         // Preserve a small founding reserve unless settlement is imminent.
-        if (cash - getSharePrice(state, chain) < (difficulty === 'strategist' ? 900 : 300) && state.bag.length > 20 && !state.endDeclared)
+        if (cash - getSharePrice(state, chain) < 300 && state.bag.length > 20 && !state.endDeclared)
           break;
         stocks[chain] = (stocks[chain] ?? 0) + 1;
         cash -= getSharePrice(state, chain);

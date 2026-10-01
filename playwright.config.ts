@@ -13,7 +13,7 @@ export default defineConfig({
   projects: [
     { name: 'chromium', use: { ...devices['Desktop Chrome'] } },
     { name: 'mobile', use: { ...devices['iPhone 13'], defaultBrowserType: 'chromium' } },
-    { name: 'mobile-webkit', testMatch: /responsive-game\.spec\.ts/, use: { ...devices['iPhone 13'], defaultBrowserType: 'webkit' } },
+    { name: 'mobile-webkit', testMatch: /(?:responsive-game|payouts)\.spec\.ts/, use: { ...devices['iPhone 13'], defaultBrowserType: 'webkit' } },
   ],
   webServer: { command: 'npm run dev', url: 'http://127.0.0.1:5173', reuseExistingServer: true },
 });

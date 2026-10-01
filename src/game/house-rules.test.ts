@@ -95,7 +95,7 @@ describe('optional house rules', () => {
     expect(() => applyAction({ ...state, houseRules: { ...state.houseRules!, trading: false } }, { type: 'buy', stocks: {}, sellStocks: { sackson: 1 } })).toThrow('not enabled');
   });
 
-  it('shifts every valuation row, including final sale and bonuses', () => {
+  it('uses the final chain roll for both sale and bonuses', () => {
     const state = game({ marketMode: 'crazy' });
     state.board = Object.fromEntries(ALL_TILES.slice(0, 41).map((tile) => [tile, 'worldwide']));
     state.marketShift = -2;
@@ -107,9 +107,11 @@ describe('optional house rules', () => {
     state.endDeclared = true;
     const ended = applyAction(state, { type: 'buy', stocks: {} });
     expect(ended.phase).toBe('ended');
-    expect(ended.finalSettlements?.[0].sharePrice).toBe(800);
-    expect(ended.finalSettlements?.[0].players[0].stockValue).toBe(2400);
-    expect(ended.finalSettlements?.[0].players[0].bonus).toBe(12000);
+    const settlement = ended.finalSettlements![0];
+    expect(settlement.marketDie).toBeGreaterThanOrEqual(1);
+    expect(settlement.sharePrice).toBe(getMarketPriceForSize(state, 'worldwide', 41, settlement.marketShift));
+    expect(settlement.players[0].stockValue).toBe(3 * settlement.sharePrice);
+    expect(settlement.players[0].bonus).toBe(15 * settlement.sharePrice);
   });
 
   it('pays round-end dividends, removes every fully surrounded tile, and rolls the next market', () => {

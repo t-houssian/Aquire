@@ -1,0 +1,31 @@
+.merger-reveal { padding: 20px; }
+.merger-payout-hero { display: flex; align-items: center; gap: 16px; padding: 20px; border-radius: 14px; background: linear-gradient(110deg, var(--payout-light), #fffdf8); }
+.merger-payout-emblem { flex: none; display: grid; place-items: center; width: 52px; height: 56px; border-radius: 12px; color: white; background: var(--payout-color); font: italic 30px var(--serif); }
+.merger-payout-hero h3 { margin: 6px 0; font: 32px/1.05 var(--serif); }
+.merger-payout-hero p, .merger-payout-intro, .merger-payout-footer > span { color: #72806b; font-size: 12px; line-height: 1.5; }
+.merger-payout-hero > svg { margin-left: auto; flex: none; color: var(--payout-color); }
+.merger-payout-intro { margin: 15px 0; }
+.merger-payout-row { display: grid; grid-template-columns: minmax(0, 1fr) 55px 95px; align-items: center; gap: 12px; padding: 13px 8px; border-bottom: 1px solid #e5eadf; font-size: 13px; }
+.merger-payout-row > :not(:first-child) { text-align: right; font-variant-numeric: tabular-nums; }
+.merger-payout-head { color: #75846c; text-transform: uppercase; letter-spacing: 1px; font-size: 9px; }
+.merger-payout-row small { display: flex; align-items: center; gap: 4px; color: #93712a; font-size: 10px; margin-top: 5px; }
+.merger-payout-row .paid { color: #245443; font-size: 18px; }
+.merger-payout-footer { display: flex; justify-content: space-between; align-items: center; gap: 15px; margin-top: 18px; }
+.merger-bonus-link { display: inline-flex; font-size: inherit; text-decoration: underline; }
+.end-ready-note { margin-top: 8px; font-size: 10px; line-height: 1.4; color: #796b3f; }
+@media (max-width: 480px) {
+  .merger-reveal { padding: 12px; }
+  .merger-payout-hero { padding: 12px; gap: 10px; }
+  .merger-payout-hero h3 { font-size: 25px; }
+  .merger-payout-hero > svg { display: none; }
+  .merger-payout-row { grid-template-columns: minmax(0, 1fr) 40px 78px; gap: 8px; padding: 12px 4px; }
+  .merger-payout-footer { align-items: stretch; flex-direction: column; gap: 10px; }
+}
+@media (max-height: 480px) and (orientation: landscape) {
+  .merger-reveal { padding: 10px 16px; }
+  .merger-payout-hero { padding: 10px 14px; }
+  .merger-payout-hero h3 { font-size: 24px; }
+  .merger-payout-emblem { width: 40px; height: 42px; }
+  .merger-payout-intro { margin: 8px 0; }
+  .merger-payout-row { padding-block: 8px; }
+}

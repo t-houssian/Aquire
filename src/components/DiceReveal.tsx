@@ -5,14 +5,14 @@ import { CHAINS } from '../game/engine';
 import Modal from './Modal';
 import '../dice-reveal.css';
 
-function MarketResult({ shift }: { shift: number }) {
+export function MarketResult({ shift }: { shift: number }) {
   return <span className={`dice-market-result ${shift < 0 ? 'low' : shift > 0 ? 'high' : 'normal'}`}>
     {shift < 0 ? <TrendingDown size={18} /> : shift > 0 ? <TrendingUp size={18} /> : <span className="dice-market-equal">=</span>}
     {shift === 0 ? 'Normal prices' : `${Math.abs(shift)} row${Math.abs(shift) === 1 ? '' : 's'} ${shift < 0 ? 'lower' : 'higher'}`}
   </span>;
 }
 
-function RollDie({ label, sides, value, revealed }: { label: string; sides: number; value: number | null; revealed: boolean }) {
+export function RollDie({ label, sides, value, revealed }: { label: string; sides: number; value: number | null; revealed: boolean }) {
   return <div className="dice-roll">
     <div className={`dice-face ${!revealed && value !== null ? 'rolling' : ''} ${value === null ? 'not-rolled' : ''}`} aria-hidden="true">
       {revealed ? value ?? '–' : value === null ? '–' : '?'}
@@ -48,7 +48,7 @@ export default function DiceReveal({ report, rules, onContinue }: {
         <h3>{revealed ? 'The dice have spoken.' : 'The dice are rolling…'}</h3>
         <div className="dice-rolls">
           {showDividend && <RollDie label="Dividend" sides={3} value={report.dividendDie} revealed={revealed} />}
-          {showDividend && report.stockDie !== null && <RollDie label="Hotel" sides={rules.hotelChains.length} value={report.stockDie} revealed={revealed} />}
+          {showDividend && report.stockDie !== null && <RollDie label="Hotel" sides={report.stockDieSides ?? rules.hotelChains.length} value={report.stockDie} revealed={revealed} />}
           {marketRolled && <RollDie label="Market" sides={6} value={report.marketDie} revealed={revealed} />}
           {!showDividend && !marketRolled && <span className="dice-no-roll">No dice were needed this turn.</span>}
         </div>
@@ -58,7 +58,8 @@ export default function DiceReveal({ report, rules, onContinue }: {
           <span className="dice-outcome-icon"><Coins size={19} /></span>
           <div>
             <span className="eyebrow">DIVIDENDS</span>
-            {fullClusters === 0 ? <><strong>No dividend roll</strong><p>No complete hotel cluster is on the board yet.</p></>
+            {report.stockDieSides === 0 ? <><strong>No hotels on the board</strong><p>No hotel is selected and no dividend is paid.</p></>
+              : fullClusters === 0 ? <><strong>No dividend roll</strong><p>No complete hotel cluster is on the board yet.</p></>
               : !dividendSuccess ? <><strong>No dividend this round</strong><p>Rolled {report.dividendDie}; {fullClusters} full cluster{fullClusters === 1 ? '' : 's'} needed a roll of {fullClusters === 1 ? '1' : `1–${Math.min(fullClusters, 3)}`}.</p></>
               : <><strong>{selected?.name ?? 'A hotel'} selected · {privatePayout ? 'private payout' : `$${dividendPaid.toLocaleString('en-US')} paid`}</strong><p>{privatePayout ? 'Dividend amounts stay private at this table.' : dividendPaid > 0 ? 'Eligible shareholders received their payout.' : 'No cash payout was due for this hotel.'}{report.insideTilesReturned ? ` ${report.insideTilesReturned} inside tile${report.insideTilesReturned === 1 ? '' : 's'} returned to the bag.` : ''}</p></>}
           </div>

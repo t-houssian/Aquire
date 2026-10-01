@@ -141,6 +141,11 @@ test('real guests create, join, play, reconnect and close a private table', asyn
     expect(JSON.stringify(unchanged.data).length).toBeLessThan(60);
 
     await host.getByLabel('Invite the house').selectOption('1');
+    if (fullMatch) {
+      await host.getByLabel('Computer difficulty').selectOption('strategist');
+      await host.getByLabel('Market fluctuation').selectOption('crazy');
+      await host.getByLabel('Round-end dividends').check();
+    }
     await host.getByRole('button', { name: 'Start the game' }).click();
     await expect.poll(() => latest.get(guest)?.status).toBe('playing');
     await expect.poll(() => notifications.get(guest)).toBeGreaterThan(0);
@@ -207,6 +212,16 @@ test('real guests create, join, play, reconnect and close a private table', asyn
       expect(merged).toBe(true);
       expect(room.game!.results).toHaveLength(3);
       expect(room.game!.finalSettlements!.length).toBeGreaterThan(0);
+      expect(room.game!.logs.some((entry) => entry.payout)).toBe(true);
+      for (const settlement of room.game!.finalSettlements!) {
+        expect(settlement.marketDie).toBeGreaterThanOrEqual(1);
+        expect(settlement.marketDie).toBeLessThanOrEqual(6);
+        expect(settlement.marketShift).toBe([-2, -1, 0, 0, 1, 2][settlement.marketDie! - 1]);
+      }
+      await guest.getByRole('button', { name: /^Roll for/ }).click();
+      const fastReveal = guest.getByRole('button', { name: 'Show result', exact: true });
+      if (await fastReveal.isVisible()) await fastReveal.click();
+      await expect(guest.locator('.final-market-result .dice-face')).toHaveText(String(room.game!.finalSettlements![0].marketDie));
       const history = (await call(guest, { operation: 'history' })).data;
       expect(history.some((match: { id: string }) => match.id === room.id)).toBe(true);
       expect(errors).toEqual([]);

@@ -89,7 +89,7 @@ export default function HouseRulesControls({ value, onChange, mapTiles, players,
           <option value="market">Market · one row up or down</option>
           <option value="crazy">Crazy market · up to two rows</option>
         </select>
-        <small>The current market applies to buying, selling, mergers, dividends, and final scores.</small>
+        <small>The current market applies to buying, selling, mergers, and dividends. Each chain rolls its own market at final scoring.</small>
       </label>
       {value.marketMode !== 'off' && marketFrequencyAvailable && <label>Market roll frequency
         <select aria-label="Market roll frequency" value={value.marketFrequency} onChange={(event) => change({ marketFrequency: event.target.value as HouseRules['marketFrequency'] })}>

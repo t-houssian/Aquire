@@ -242,3 +242,20 @@ Deno.test(
     assert(after.bag !== before.bag && after.players !== before.players, 'State aliased');
   },
 );
+
+Deno.test('merger payout snapshots respect private cash and holdings without mutating the stored report', () => {
+  const room = fixture();
+  const state = room.game!;
+  state.houseRules!.hiddenMoney = true;
+  state.houseRules!.anonymousBuying = true;
+  state.logs.push({ id: 50, turn: 1, type: 'merger', message: 'Festival acquires Worldwide.', chain: 'worldwide', payout: {
+    chain: 'worldwide', survivor: 'festival', size: 2, sharePrice: 200,
+    majorityIds: ['bob'], minorityIds: ['alice'],
+    players: [{ playerId: 'alice', shares: 2, bonus: 1000 }, { playerId: 'bob', shares: 5, bonus: 2000 }, { playerId: 'bot', shares: 0, bonus: 0 }],
+  } });
+  const report = publicRoom(room, 'alice').game!.logs.at(-1)!.payout!;
+  assert(report.players[0].bonus === 1000 && report.players[0].shares === 2, 'Own payout missing');
+  assert(report.players[1].bonus === null && report.players[1].shares === null, 'Opponent payout leaked');
+  assert(report.majorityIds.length === 0 && report.minorityIds.length === 0, 'Private shareholder rank leaked');
+  assert(state.logs.at(-1)!.payout!.players[1].bonus === 2000, 'Redaction mutated the original payout');
+});

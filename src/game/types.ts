@@ -90,9 +90,22 @@ export interface FinalChainSettlement {
   chain: ChainId;
   size: number;
   sharePrice: number;
+  /** Rolled once by the engine; replaying a finale never changes the settlement. */
+  marketDie?: number;
+  marketShift?: number;
   majorityIds: string[];
   minorityIds: string[];
   players: { playerId: string; name: string; shares: number; bonus: number; stockValue: number; total: number }[];
+}
+export interface MergerPayout {
+  chain: ChainId;
+  survivor: ChainId;
+  size: number;
+  sharePrice: number;
+  majorityIds: string[];
+  minorityIds: string[];
+  /** Null values are redacted by private online tables. */
+  players: { playerId: string; shares: number | null; bonus: number | null }[];
 }
 export interface PlayerAward {
   playerId: string;
@@ -109,6 +122,8 @@ export interface GameLog {
   playerId?: string;
   chain?: ChainId;
   tile?: Tile;
+  /** One snapshot per acquisition, kept within the existing bounded move log. */
+  payout?: MergerPayout;
 }
 export interface MergerState {
   tile: Tile;
@@ -136,6 +151,7 @@ export interface DiceRollReport {
   round: number;
   dividendDie: number | null;
   stockDie: number | null;
+  stockDieSides?: number;
   chain: ChainId | null;
   marketDie: number | null;
   marketShift: number;

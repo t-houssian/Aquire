@@ -98,7 +98,7 @@ describe('optional 2008 city maps', () => {
       if (map.maxPlayers > 6) {
         state.tilePlacedThisTurn = true;
         state.board = Object.fromEntries(map.tiles.slice(0, Math.ceil(map.tiles.length * 0.38) - 1).map((tile, index) => [tile, index < 11 ? 'worldwide' : 'independent']));
-        expect(canEndGame(state), `${map.id} all-safe before occupancy target`).toBe(false);
+        expect(canEndGame(state), `${map.id} all-safe without an occupancy requirement`).toBe(true);
         state.board[map.tiles[Math.ceil(map.tiles.length * 0.38) - 1]] = 'independent';
         expect(canEndGame(state), `${map.id} all-safe at occupancy target`).toBe(true);
       }

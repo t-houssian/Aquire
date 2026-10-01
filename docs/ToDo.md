@@ -1,4 +1,21 @@
 To do list
+
+1. Dividends should not select a hotel that is not on the board as the one to get paid. Only should select a hotel that is on the board. If there are no hotels on the board then it should not select any hotel to pay dividends to.
+
+2. On the mobile horizontal and verticle look way better now and fit the screen very good. The one thing is on the horizontal part on my mobile phone I cannot see how much money the others have but on vertical I can see it if you could somehow fix this but super carefully to maintin the look and feel of the horizontal view that would be great. 
+
+3. Mobile horizontal view is very good but also has a weird look in the stocks when selling is part of the game. The stocks are not aligned and look weird. Maybe make the stocks look more like the vertical view and have them aligned and stuff.
+
+4. When it says bonuses paid out it should show how much each player got and what hotel chain it was for. Right now it just says bonuses paid out but does not show how much each player got or what hotel chain it was for. Make every merge look kind of like the end of the game where it shows how much each player got and what hotel chain it was for. This is a very important part of the game and should be shown clearly and in a fun way.
+
+5. I was the sole owner of budgeton, so why did the computer merge it and give me super majority that is a terrible move and these are supposed to be the advanced computers. I understand that they owned festival and they grew their festival but to give me cash while they are running out of cash it’s probably not a good move unless I’m interpreting things wrong, but I think that was bad and we need to make the extra hard difficulty computers, actually good.
+
+6. For when the markets fluctuations are active at the end of the game when we do the final sell offs how it works is a dice is rolled separately for each hotel chain and when it is rolled that will be the determning facotr for the market on those hotel chains. You should make this dice roll kind of fun and suspenseful and do the sell offs and rolls like this one by one and show the results of each roll and what it means for the market and stuff. This is a very fun part of the game and should be shown in a fun way.
+
+7. There is an end game rule I am pretty sure that if all the hotels are safe on the board (11 or more) then the end game should be able to be declared. Right now it is not allowing me to declare end game when all the hotels are safe on the board. Please check this and make sure it is working right. Even if other hotels are not in play, if all the hotels are safe on the board then end game should be able to be declared I believe.
+
+
+
 1. Make sure you can hide the amount of stocks other have by default. It is not default right now I think
 
 2. After you hit let's play and the a new opportunity page comes up you should be able to change the rules here not just in the settings part. 

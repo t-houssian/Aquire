@@ -55,7 +55,7 @@ const sections = [
   {
     icon: Layers3,
     title: 'Custom city maps',
-    text: 'The printed 12×9 board remains the default. Thirty-three optional maps use different dimensions and shapes; eighteen seat up to six, five seat eight, five seat ten, and five seat twelve. Six-seat custom boards with more tiles may have a later one-chain end target, shown at setup. The larger tiers end at 61, 81, or 111 hotels in one chain; an all-safe declaration on those boards also needs at least 38% occupancy. These are house-made map rules. The seven printed chains, 25 shares each, and printed prices remain the default.',
+    text: 'The printed 12×9 board remains the default. Thirty-three optional maps use different dimensions and shapes; eighteen seat up to six, five seat eight, five seat ten, and five seat twelve. Six-seat custom boards with more tiles may have a later one-chain end target, shown at setup. The larger tiers end at 61, 81, or 111 hotels in one chain; on every board, all active chains being safe also permits ending after a tile is played. These are house-made map rules. The seven printed chains, 25 shares each, and printed prices remain the default.',
   },
   {
     icon: Landmark,
@@ -75,7 +75,7 @@ const sections = [
   {
     icon: Landmark,
     title: 'Dividends and moving markets',
-    text: 'A full cluster means every selected chain in one price group is active. The printed groups are Worldwide/Sackson, Festival/Imperial/American, and Continental/Tower; custom hotels join the matching tier, while Budgeton and Goldspire form their own tiers. After all players take a turn, a three-sided dividend roll succeeds on 1 with one full cluster, 1–2 with two, and always with three or more. A second roll selects one of the active roster’s hotel names, including inactive chains. Each complete three shares in an active selected chain earns one current share price. All fully surrounded inside tiles in that chain then return to the bag. Market rolls can happen after each full round, before every player’s turn, or after every second or third round. Market makes prices one chart row low, normal, or one row high; Crazy Market uses two low, one low, normal, one high, or two high. The current row applies to purchases, sales, merger settlements, dividends, and final scoring.',
+    text: 'A full cluster means every selected chain in one price group is active. The printed groups are Worldwide/Sackson, Festival/Imperial/American, and Continental/Tower; custom hotels join the matching tier, while Budgeton and Goldspire form their own tiers. After all players take a turn, a three-sided dividend roll succeeds on 1 with one full cluster, 1–2 with two, and always with three or more. A second roll selects only a hotel chain currently on the board; with no active chains, no hotel is selected. Each complete three shares in an active selected chain earns one current share price. All fully surrounded inside tiles in that chain then return to the bag. Market rolls can happen after each full round, before every player’s turn, or after every second or third round. Market makes prices one chart row low, normal, or one row high; Crazy Market uses two low, one low, normal, one high, or two high. The current row applies to purchases, sales, merger settlements, and dividends. At final scoring, roll independently for each active chain: that roll sets its bonus and sale price. Each roll and payout is revealed in order and saved for replay.',
   },
 ];
 export default function Rulebook({ compact = false }: { compact?: boolean }) {

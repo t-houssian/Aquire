@@ -188,6 +188,15 @@ export function publicRoom(room: StoredRoom, userId: string) {
       bag: state.bag.map(() => '?'),
       discarded: state.discarded,
       logs: state.logs.map((entry) => {
+        if (entry.payout && state.phase !== 'ended') return { ...entry, payout: {
+          ...entry.payout,
+          majorityIds: privateTrades ? [] : entry.payout.majorityIds,
+          minorityIds: privateTrades ? [] : entry.payout.minorityIds,
+          players: entry.payout.players.map((player) => ({ ...player,
+            shares: privateTrades && player.playerId !== userId ? null : player.shares,
+            bonus: privateMoney && player.playerId !== userId ? null : player.bonus,
+          })),
+        } };
         if (entry.playerId === userId || state.phase === 'ended') return entry;
         if (privateTrades && (entry.type === 'buy' || entry.type === 'sell'))
           return { ...entry, message: `${state.players.find((player) => player.id === entry.playerId)?.name ?? 'An investor'} completed a private investment decision.` };

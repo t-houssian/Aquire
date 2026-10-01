@@ -37,7 +37,7 @@ test('a full round reveals dividend and market dice, then keeps the market visib
   await finishBuyAndSeeDice(page);
   const reveal = page.getByTestId('dice-reveal');
   await expect(page.getByRole('dialog', { name: 'Round 1 closes' })).toBeVisible();
-  await expect(reveal).toContainText('No complete hotel cluster');
+  await expect(reveal).toContainText('No hotels on the board');
   await expect(reveal).toContainText('A new market is set');
   await expect(reveal.locator('.dice-roll')).toHaveCount(2);
   await reveal.getByRole('button', { name: 'Continue to the table' }).click();

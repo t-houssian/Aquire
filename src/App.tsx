@@ -55,6 +55,7 @@ import Modal from './components/Modal';
 import OnlinePanel from './components/OnlinePanel';
 import TurnRecap from './components/TurnRecap';
 import DiceReveal from './components/DiceReveal';
+import MergerReveal from './components/MergerReveal';
 import HouseRulesControls from './components/HouseRulesControls';
 import { collectTurnRecaps, type TurnRecapData } from './lib/turnRecaps';
 import './sidebar.css';
@@ -87,6 +88,15 @@ export default function App() {
   const [legacyGameCount] = useState(readLegacyGameCount);
   const [turnRecaps, setTurnRecaps] = useState<TurnRecapData[]>([]);
   const [diceRecaps, setDiceRecaps] = useState<DiceRollReport[]>([]);
+  const [mergerRecaps, setMergerRecaps] = useState<GameState['logs']>([]);
+  const continueAfterMerger = useCallback(() => {
+    setMergerRecaps((pending) => pending.slice(1));
+    if (activeMode === 'local') setLocalGame((current) => {
+      if (!current || current.phase === 'ended') return current;
+      const seconds = getHouseRules(current).turnTimerSeconds;
+      return seconds ? { ...current, turnDeadlineAt: Date.now() + seconds * 1000 } : current;
+    });
+  }, [activeMode]);
   const previousGame = useRef<GameState | null>(null);
   const newlyStartedGameId = useRef<string | null>(null);
   const forgottenRoomCodes = useRef(new Set<string>());
@@ -211,11 +221,14 @@ export default function App() {
     previousGame.current = game;
     if (page !== 'play' || !game || previous?.id !== game.id) {
       setTurnRecaps([]);
+      setMergerRecaps([]);
       setDiceRecaps(page === 'play' && game?.id === newlyStartedGameId.current
         ? game.recentDiceRolls ?? (game.lastRoundRolls?.kind === 'opening' ? [game.lastRoundRolls] : []) : []);
       newlyStartedGameId.current = null;
       return;
     }
+    const payouts = game.logs.filter((entry) => entry.payout && entry.id > (previous.logs.at(-1)?.id ?? 0));
+    if (payouts.length) setMergerRecaps((pending) => [...pending, ...payouts]);
     const recaps = collectTurnRecaps(
       previous,
       game,
@@ -234,7 +247,7 @@ export default function App() {
       activeMode === 'online' ||
       page !== 'play' ||
       modal ||
-      turnRecaps.length > 0 || diceRecaps.length > 0 ||
+      turnRecaps.length > 0 || diceRecaps.length > 0 || mergerRecaps.length > 0 ||
       game.phase === 'ended' ||
       !actor?.isBot
     )
@@ -251,14 +264,14 @@ export default function App() {
       }
     }, settings.speed);
     return () => clearTimeout(timer);
-  }, [game, actor?.isBot, activeMode, page, modal, settings, turnRecaps.length, diceRecaps.length]);
+  }, [game, actor?.isBot, activeMode, page, modal, settings, turnRecaps.length, diceRecaps.length, mergerRecaps.length]);
   useEffect(() => {
-    if (activeMode !== 'local' || !localGame?.turnDeadlineAt || localGame.phase === 'ended' || turnRecaps.length || diceRecaps.length) return;
+    if (activeMode !== 'local' || !localGame?.turnDeadlineAt || localGame.phase === 'ended' || turnRecaps.length || diceRecaps.length || mergerRecaps.length) return;
     const check = () => setLocalGame((current) => current ? expireTurn(current) : current);
     const timer = setInterval(check, 500);
     check();
     return () => clearInterval(timer);
-  }, [activeMode, localGame?.turnDeadlineAt, localGame?.phase, turnRecaps.length, diceRecaps.length]);
+  }, [activeMode, localGame?.turnDeadlineAt, localGame?.phase, turnRecaps.length, diceRecaps.length, mergerRecaps.length]);
   const setSidebarCollapsed = (collapsed: boolean) => {
     setSettings((previous) => ({ ...previous, sidebarCollapsed: collapsed }));
     requestAnimationFrame(() =>
@@ -286,6 +299,7 @@ export default function App() {
       setSaves(readGames());
       setLocalGame(null);
       setTurnRecaps([]);
+      setMergerRecaps([]);
       setDiceRecaps([]);
       goTo(exitDestination);
       setExitDestination(null);
@@ -304,6 +318,7 @@ export default function App() {
       setRoom(null);
       setActiveMode('local');
       setTurnRecaps([]);
+      setMergerRecaps([]);
       setDiceRecaps([]);
       if (exitDestination) goTo(exitDestination);
       setExitDestination(null);
@@ -329,6 +344,7 @@ export default function App() {
     try {
       previousGame.current = null;
       setTurnRecaps([]);
+      setMergerRecaps([]);
       setDiceRecaps([]);
       const nextGame = createGame(config);
       newlyStartedGameId.current = nextGame.id;
@@ -354,7 +370,7 @@ export default function App() {
     navigate('play');
   };
   const perform = (action: GameAction) => {
-    if (!game || busy || turnRecaps.length || diceRecaps.length) return;
+    if (!game || busy || turnRecaps.length || diceRecaps.length || mergerRecaps.length) return;
     if (settings.sound) playTone(action.type === 'found');
     if (Capacitor.isNativePlatform())
       void Haptics.impact({ style: ImpactStyle.Light }).catch(() => {});
@@ -706,8 +722,8 @@ export default function App() {
           {page === 'play' && game && (
             <div
               className="game-screen"
-              inert={turnRecaps.length > 0 || diceRecaps.length > 0}
-              aria-hidden={turnRecaps.length || diceRecaps.length ? true : undefined}
+              inert={turnRecaps.length > 0 || diceRecaps.length > 0 || mergerRecaps.length > 0}
+              aria-hidden={turnRecaps.length || diceRecaps.length || mergerRecaps.length ? true : undefined}
             >
               <GameView
                 game={game}
@@ -717,6 +733,7 @@ export default function App() {
                 onMenu={() => setMobileNav(true)}
                 onRules={() => setModal('rules')}
                 onSettings={() => setModal('settings')}
+                onShowMergerPayout={(entry) => setMergerRecaps([entry])}
                 hints={settings.hints}
                 hideOpponentHoldings={settings.hideOpponentHoldings}
                 hideStockAvailability={settings.hideStockAvailability}
@@ -988,7 +1005,8 @@ export default function App() {
           </div>
         </Modal>
       )}
-      {page === 'play' && !modal && turnRecaps[0] && (
+      {page === 'play' && !modal && game && mergerRecaps[0]?.payout && <MergerReveal key={mergerRecaps[0].id} payout={mergerRecaps[0].payout} game={game} viewerId={privateGate ? '' : viewerId} onContinue={continueAfterMerger} remaining={mergerRecaps.length - 1} />}
+      {page === 'play' && !modal && !mergerRecaps[0] && turnRecaps[0] && (
         <TurnRecap
           key={turnRecaps[0].id}
           recap={turnRecaps[0]}
@@ -996,7 +1014,7 @@ export default function App() {
           remaining={turnRecaps.length - 1}
         />
       )}
-      {page === 'play' && !modal && !turnRecaps[0] && diceRecaps[0] && game && (
+      {page === 'play' && !modal && !mergerRecaps[0] && !turnRecaps[0] && diceRecaps[0] && game && (
         <DiceReveal
           key={`${game.id}:${diceRecaps[0].atTurn}`}
           report={diceRecaps[0]}

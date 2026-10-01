@@ -632,3 +632,38 @@
   .playing-game .game-view[data-portrait-rail] .board-stock-count,
   .playing-game .game-view[data-portrait-rail] .board-legend { display: none; }
 }
+
+/* Cash fits between navigation and table tools, preserving the board height. */
+.landscape-balances { display: none; }
+@media (min-width: 560px) and (max-width: 1059px) and (orientation: landscape) {
+  .playing-game .game-topline { gap: 8px; }
+  .playing-game .game-navigation, .playing-game .game-toplinks { flex: none; }
+  .playing-game .landscape-balances { display: flex; flex: 1; min-width: 0; gap: 5px; overflow-x: auto; scrollbar-width: none; overscroll-behavior-x: contain; }
+  .landscape-balances > span { display: inline-flex; align-items: center; justify-content: space-between; gap: 7px; flex: 0 0 auto; padding: 4px 7px; background: #f2f5eb; border: 1px solid #e0e6d7; border-radius: 6px; font-size: 10px; white-space: nowrap; }
+  .landscape-balances > .current { background: #e9f0df; border-color: #b3c695; }
+  .landscape-balances > span > span { max-width: 70px; overflow: hidden; text-overflow: ellipsis; }
+  .landscape-balances strong { font-weight: 600; font-variant-numeric: tabular-nums; }
+}
+/* Never divide a scrolling list into seven fixed rows: custom rosters and
+   buy/sell controls need their natural height. */
+.playing-game .stock-list { grid-template-rows: none; grid-auto-rows: minmax(min-content, auto); }
+.playing-game .stock-list.allows-trading { display: grid; grid-template-columns: minmax(0, 1fr); align-content: start; overflow-y: auto; }
+.playing-game .allows-trading .stock-row,
+.playing-game .allows-trading .stock-row:has(.stock-purchase) { display: grid; grid-template-columns: minmax(0, 1fr) auto auto; align-items: center; gap: 8px; min-height: 58px; }
+.playing-game .allows-trading .stock-main,
+.playing-game .allows-trading .stock-row:has(.stock-purchase) .stock-main { grid-column: 1; grid-row: 1; display: grid; grid-template-columns: 25px minmax(0, 1fr); gap: 3px 7px; }
+.playing-game .allows-trading .stock-main .chain-logo { grid-row: 1 / 3; width: 25px; height: 29px; }
+.playing-game .allows-trading .stock-name { grid-column: 2; min-width: 0; }
+.playing-game .allows-trading .stock-name strong { overflow-wrap: anywhere; }
+.playing-game .allows-trading .stock-name > span { white-space: normal; }
+.playing-game .allows-trading .stock-price { grid-column: 2; margin: 0; flex-direction: row; align-items: baseline; gap: 5px; text-align: left; }
+.playing-game .allows-trading .stock-purchase { grid-column: 2; grid-row: 1; display: flex; flex-direction: column; margin: 0; gap: 3px; padding: 0; border: 0; background: transparent; }
+.playing-game .allows-trading .stock-sale { grid-column: 3; }
+.playing-game .stock-purchase > span { display: block; font-size: 9px; color: #687b58; }
+.playing-game .round-report { flex-shrink: 0; }
+@media (max-width: 1059px) {
+  .playing-game .allows-trading .stock-row { padding: 6px 8px; }
+  .playing-game .allows-trading .stock-purchase .stepper { gap: 4px; }
+  .playing-game .allows-trading .stock-purchase .stepper button { width: 27px; height: 29px; }
+  .playing-game .allows-trading .stock-purchase .stepper b { min-width: 10px; font-size: 11px; }
+}
