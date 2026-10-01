@@ -31,7 +31,11 @@ export type MapId =
   | 'mega-diamond' | 'mega-rivers' | 'mega-divide'
   | 'mega-triple-arch' | 'mega-citadel-grid'
   | 'max-metropolis' | 'max-archipelago' | 'max-cross'
-  | 'max-celestial-ring' | 'max-orion-star';
+  | 'max-celestial-ring' | 'max-orion-star'
+  | 'lunar-moth' | 'ember-gear' | 'jade-infinity' | 'clockwork-keys' | 'crystal-cascade' | 'cloud-palace' | 'comet-arcade' | 'saffron-labyrinth' | 'biolume-reef' | 'lotus-gardens'
+  | 'big-dragon-spine' | 'big-moon-mosaic'
+  | 'mega-thunderbird' | 'mega-mirage-steps'
+  | 'max-world-tree' | 'max-astral-loom';
 export type BotDifficulty = 'casual' | 'standard' | 'strategist';
 export type MarketMode = 'off' | 'market' | 'crazy';
 export type MarketFrequency = 'round' | 'turn' | 'two-rounds' | 'three-rounds';

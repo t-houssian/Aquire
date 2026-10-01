@@ -1,30 +1,36 @@
 import { describe, expect, it } from 'vitest';
 import { ALL_TILES, MAPS, analyzeTile, applyAction, canEndGame, chooseBotAction, createGame, getLegalTiles, getNeighbors } from './engine';
+import { CREATIVE_MAP_IDS } from './maps';
 import type { BotDifficulty, GameState, MapId } from './types';
 
 const players = Array.from({ length: 3 }, (_, i) => ({ id: `p${i}`, name: `Player ${i}`, isBot: true }));
 const game = (mapId: MapId = 'classic', botDifficulty: BotDifficulty = 'standard', seed = 11) => createGame({ players, mapId, botDifficulty, seed });
 
 describe('optional 2008 city maps', () => {
-  it('keeps earlier maps and adds fourteen connected, rotationally balanced cities', () => {
+  it('keeps all fifty cities connected, distinct and rotationally balanced', () => {
     expect(MAPS.map((map) => map.id)).toEqual([
       'classic', 'corner-plazas', 'riverwalk', 'grand-avenue', 'courtyard', 'peninsulas',
       'hourglass', 'crossroads', 'switchback', 'atoll', 'four-spires',
       'twin-docks', 'obelisk', 'coral-crown', 'lightning-run', 'compass-rose', 'pinwheel', 'starfall-x', 'twin-lagoons',
+      'lunar-moth', 'ember-gear', 'jade-infinity', 'clockwork-keys', 'crystal-cascade', 'cloud-palace', 'comet-arcade', 'saffron-labyrinth', 'biolume-reef', 'lotus-gardens',
       'big-rectangle', 'big-crater', 'big-harbors',
       'big-aurora-gate', 'big-trident-towers',
+      'big-dragon-spine', 'big-moon-mosaic',
       'mega-diamond', 'mega-rivers', 'mega-divide',
       'mega-triple-arch', 'mega-citadel-grid',
+      'mega-thunderbird', 'mega-mirage-steps',
       'max-metropolis', 'max-archipelago', 'max-cross',
       'max-celestial-ring', 'max-orion-star',
+      'max-world-tree', 'max-astral-loom',
     ]);
     expect(MAPS[0].tiles).toEqual(ALL_TILES);
     expect(MAPS.map((map) => map.tiles.length)).toEqual([
       108, 92, 96, 100, 102, 96, 84, 80, 84, 86, 80,
       108, 139, 136, 118, 127, 136, 115, 144,
-      192, 168, 160, 185, 206,
-      240, 240, 232, 255, 262,
-      384, 292, 312, 366, 409,
+      157, 156, 121, 126, 117, 153, 122, 140, 148, 107,
+      192, 168, 160, 185, 206, 231, 264,
+      240, 240, 232, 255, 262, 325, 315,
+      384, 292, 312, 366, 409, 453, 421,
     ]);
     expect(new Set(MAPS.map((map) => map.palette.name)).size).toBe(MAPS.length);
     expect(new Set(MAPS.map((map) => map.palette.accent)).size).toBe(MAPS.length);
@@ -63,6 +69,23 @@ describe('optional 2008 city maps', () => {
       expect(Object.keys(state.board)).toHaveLength(60);
       expect(state.players.every((player) => player.hand.length === 6)).toBe(true);
       expect(state.bag.length).toBe(map.tiles.length - 96);
+    }
+  });
+  it('adds ten creative six-seat cities and two at each larger tier with full custom openings', () => {
+    const expansion = MAPS.filter((map) => CREATIVE_MAP_IDS.has(map.id));
+    expect(expansion).toHaveLength(16);
+    for (const seats of [6, 8, 10, 12]) {
+      expect(expansion.filter((map) => map.maxPlayers === seats)).toHaveLength(seats === 6 ? 10 : 2);
+    }
+    for (const map of expansion) {
+      expect(`${map.columns}×${map.rows}`).not.toBe('12×9');
+      expect(map.tiles.length).toBeLessThan(map.gridTiles.length);
+      const seats = Array.from({ length: map.maxPlayers }, (_, i) => ({ id: `seat-${i}`, name: `Seat ${i}` }));
+      const state = createGame({ players: seats, mapId: map.id, seed: 842, houseRules: { startingTilesPerPlayer: 10 } });
+      expect(Object.keys(state.board), map.id).toHaveLength(map.maxPlayers * 10);
+      expect(state.players.every((player) => player.hand.length === 6), map.id).toBe(true);
+      expect(state.bag.length, map.id).toBe(map.tiles.length - map.maxPlayers * 16);
+      expect(state.bag.length, map.id).toBeGreaterThan(0);
     }
   });
   it('keeps enough unique tiles for a six-seat opening on every shape', () => {

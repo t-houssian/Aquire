@@ -1,5 +1,6 @@
 import { test, expect, type Page } from '@playwright/test';
 import { analyzeTile, applyAction, CHAINS, chooseBotAction, createGame, getChainSize, getCurrentActor, getLegalTiles, getSharePrice } from '../src/game/engine';
+import { getMap } from '../src/game/maps';
 import type { GameState } from '../src/game/types';
 
 const players = ['Alex', 'Morgan', 'Riley'].map((name, index) => ({ id: `p${index}`, name }));
@@ -265,3 +266,36 @@ test('board focus gives more room while keeping market status, the rack and purc
   await expect(page.getByRole('button', { name: 'Skip buying', exact: true })).toBeInViewport({ ratio: 1 });
   await assertScreenFit(page, 393, 650);
 });
+
+
+for (const mapId of ['clockwork-keys', 'crystal-cascade', 'max-world-tree', 'max-astral-loom'] as const) {
+  test(`${mapId} fits portrait and landscape with working rotation, zoom and tile selection`, async ({ page }) => {
+    const map = getMap(mapId);
+    const game = createGame({ id: `creative-${mapId}`, seed: 42, mapId,
+      players: Array.from({ length: map.maxPlayers }, (_, i) => ({ id: `p${i}`, name: `Investor ${i + 1}` })) });
+    await openSavedTable(page, game);
+    const legal = getLegalTiles(game)[0];
+    for (const [width, height] of [[393, 700], [852, 330]]) {
+      await page.setViewportSize({ width, height });
+      await assertScreenFit(page, width, height);
+      await expect(page.locator('.board-card')).toHaveAttribute('data-map', mapId);
+      const stage = page.locator('.board-stage');
+      await expect.poll(() => stage.evaluate((element) => Math.max(element.scrollWidth - element.clientWidth, element.scrollHeight - element.clientHeight))).toBeLessThanOrEqual(1);
+      const rotation = page.getByRole('button', { name: 'Rotate board', exact: true });
+      if (await rotation.isVisible()) {
+        await rotation.click();
+        await assertScreenFit(page, width, height);
+        await rotation.click();
+      }
+      await page.getByRole('button', { name: 'Enlarge board tiles' }).click();
+      await page.locator('.tile-rack .rack-tile').filter({ hasText: new RegExp(`^${legal}`) }).click();
+      await expect(page.locator(`.board-tile[aria-label^="${legal},"]`)).toBeInViewport({ ratio: 1 });
+      await page.getByRole('button', { name: 'Fit entire board' }).click();
+      if (process.env.AQUIRE_CAPTURE_MAPS === '1') await page.screenshot({ path: `artifacts/map-expansion/${mapId}-${width}.png` });
+    }
+    await page.getByRole('button', { name: new RegExp(`^Place ${legal}$`) }).click();
+    const saved = await page.evaluate(() => JSON.parse(localStorage.getItem('aquire.games.v2') || '[]')[0].game);
+    expect(saved.board[legal]).toBeTruthy();
+    expect(saved.mapId).toBe(mapId);
+  });
+}

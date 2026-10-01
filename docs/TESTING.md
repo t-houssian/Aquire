@@ -1,5 +1,16 @@
 # Validation record
 
+## Sixteen creative cities — October 1, 2026
+
+Added ten six-seat maps and two each at the eight-, ten-, and twelve-seat tiers. The roster now contains fifty maps including Classic. The new shapes include lunar wings, infinity loops, clockwork keys, stacked crystals, reef branches, a nested maze, dragon ribs, a terraced city, a world tree, and a woven celestial lattice. Each has its own palette and setup preview; the largest dimensions are 31×21 and 25×25.
+
+Production TypeScript/Vite and Edge Function typechecks passed. All 116 unit/rendering tests passed, including connected and rotationally balanced footprints, full custom openings, seat limits, tile conservation, and complete seeded games on every map. Fourteen focused browser checks passed across desktop/mobile Chromium and mobile WebKit: all sixteen setup previews, plus portrait/landscape fit, rotation, zoom, rack selection and placement on Clockwork Keys, Crystal Cascade, World Tree and Astral Loom. The sixteen HTTP-mocked online tests and twelve backend/PostgreSQL tests passed. This update ran focused map browser coverage rather than repeating the entire unrelated browser suite.
+
+Migration `20261001010000_creative_city_maps.sql` and the updated room function were deployed to the linked Supabase project. Two temporary guests started full six-, eight-, ten-, and twelve-seat rooms on Crystal Cascade, Dragon Spine, Thunderbird and Astral Loom. Each accepted a real tile placement and retained private opponent racks and the complete tile count. All four test rooms and both test guests were removed afterward. The `shaped-maps-v3` capability prevents older servers from offering unsupported maps. Map footprints stay in the shared app/server code; there are no new tables or additional writes per turn.
+
+The website changes are ready for the normal GitHub-to-Cloudflare deployment; this task did not push GitHub or package native releases. The overview and reviewed phone screenshots are in `artifacts/map-expansion/`.
+
+
 ## Payouts, strategist decisions, and mobile trading — October 1, 2026
 
 Dividends select only active chains. Merger bonus snapshots show each investor’s payout, including sole ownership, ties, and zero payouts, before share decisions; consecutive acquisitions have separate reveals. Market-enabled finales store an independent die and price per chain and replay those saved results. All-safe declarations require a played tile and consider only active chains, with no expansion occupancy gate. Landscape cash uses the existing navigation row, and buying/selling controls have labeled, aligned rows.

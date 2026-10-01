@@ -43,7 +43,7 @@ class MockSupabase {
       game: null,
       viewerId,
       updatedAt: new Date().toISOString(),
-      features: ['maps-v1', 'large-maps-v1', 'shaped-maps-v2', 'difficulty-v1', 'match-history-v1', 'house-rules-v1', 'hotel-roster-v1', 'hotel-stock-v1', 'market-frequency-v1'],
+      features: ['maps-v1', 'large-maps-v1', 'shaped-maps-v2', 'shaped-maps-v3', 'difficulty-v1', 'match-history-v1', 'house-rules-v1', 'hotel-roster-v1', 'hotel-stock-v1', 'market-frequency-v1'],
     };
   }
   snapshot(): OnlineRoom {
@@ -341,6 +341,30 @@ test.describe('online room UI — HTTP-mocked Supabase', () => {
     await expect(page.getByLabel('City map').locator('option[value="obelisk"]')).toBeDisabled();
     await expect(page.getByLabel('City map').locator('option[value="big-trident-towers"]')).toBeDisabled();
     await expect(page.getByLabel('City map').locator('option[value="big-rectangle"]')).toBeEnabled();
+  });
+
+  test('creative maps require their own server capability and start once supported', async ({ page }) => {
+    const backend = new MockSupabase();
+    backend.room.features = backend.room.features?.filter((feature) => feature !== 'shaped-maps-v3');
+    await backend.install(page);
+    await page.goto('/');
+    await openOnline(page);
+    await page.getByLabel('Your name', { exact: true }).fill('Alex');
+    await page.getByRole('button', { name: 'Open your table' }).click();
+    const city = page.getByLabel('City map');
+    for (const id of ['lunar-moth', 'big-dragon-spine', 'mega-thunderbird', 'max-astral-loom']) {
+      await expect(city.locator(`option[value="${id}"]`)).toBeDisabled();
+    }
+    await expect(city.locator('option[value="obelisk"]')).toBeEnabled();
+    backend.room.features!.push('shaped-maps-v3');
+    await page.reload();
+    await openOnline(page);
+    await city.selectOption('max-astral-loom');
+    await expect(page.locator('.map-miniature .included')).toHaveCount(421);
+    await page.getByRole('button', { name: 'Start the game' }).click();
+    await expectBoard(page);
+    await expect(page.locator('.board-tile')).toHaveCount(625);
+    expect(backend.operations.find((operation) => operation.operation === 'start')).toMatchObject({ mapId: 'max-astral-loom' });
   });
 
   test('host sends optional house rules into a playable online room', async ({ page }) => {

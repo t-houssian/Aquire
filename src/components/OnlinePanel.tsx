@@ -2,7 +2,7 @@ import { useRef, useState } from 'react';
 import { ArrowRight, Check, Copy, Globe2, LoaderCircle, Users, WifiOff } from 'lucide-react';
 import Modal from './Modal';
 import MapPreview from './MapPreview';
-import { MAPS, NEW_MAP_IDS, getMap } from '../game/maps';
+import { MAPS, NEW_MAP_IDS, CREATIVE_MAP_IDS, getMap } from '../game/maps';
 import { DEFAULT_HOUSE_RULES } from '../game/engine';
 import type { BotDifficulty, MapId } from '../game/types';
 import type { Settings } from '../lib/storage';
@@ -153,7 +153,7 @@ export default function OnlinePanel({
                       setHouseRules((rules) => ({ ...rules, startingTilesPerPlayer: Math.min(rules.startingTilesPerPlayer, maximumOpeningTiles(next.tiles.length, Math.max(1, room.players.length + Math.min(bots, Math.max(0, next.maxPlayers - room.players.length))))) }));
                       requestAnimationFrame(() => previewRef.current?.scrollIntoView({ behavior: 'smooth', block: 'nearest' }));
                     }}>{[6, 8, 10, 12].map((seats) => <optgroup key={seats} label={`Up to ${seats} players`}>
-                      {MAPS.filter((map) => map.maxPlayers === seats).map((map) => <option key={map.id} value={map.id} disabled={(map.maxPlayers > 6 && !room.features?.includes('large-maps-v1')) || (NEW_MAP_IDS.has(map.id) && !room.features?.includes('shaped-maps-v2'))}>{map.name} · {map.tiles.length} tiles · {map.columns}×{map.rows}</option>)}
+                      {MAPS.filter((map) => map.maxPlayers === seats).map((map) => <option key={map.id} value={map.id} disabled={(map.maxPlayers > 6 && !room.features?.includes('large-maps-v1')) || (NEW_MAP_IDS.has(map.id) && !room.features?.includes('shaped-maps-v2')) || (CREATIVE_MAP_IDS.has(map.id) && !room.features?.includes('shaped-maps-v3'))}>{map.name} · {map.tiles.length} tiles · {map.columns}×{map.rows}</option>)}
                     </optgroup>)}</select>
                     <div ref={previewRef}><MapPreview map={selectedMap} /></div>
                     {room.players.length > selectedMap.maxPlayers && <p className="small muted">This map has {selectedMap.maxPlayers} seats, but {room.players.length} people joined. Choose a larger map.</p>}

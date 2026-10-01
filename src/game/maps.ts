@@ -48,11 +48,12 @@ const makeMap = (
 /** Each # is one physical tile. Dots are absent from both the bag and the board. */
 const shaped = (
   id: MapId, name: string, description: string, feature: string, palette: MapPalette,
-  rows: readonly string[],
+  rows: readonly string[], maxPlayers = 6, endSize = 41,
 ) => {
-  if (rows.length !== 9 || rows.some((row) => row.length !== 12 || /[^#.]/.test(row)))
+  const columns = rows[0]?.length ?? 0;
+  if (!columns || !rows.length || rows.some((row) => row.length !== columns || /[^#.]/.test(row)))
     throw new Error(`Invalid footprint for ${id}`);
-  return makeMap(id, name, description, feature, palette, (c, r) => rows[r][c] === '#');
+  return makeSizedMap(id, name, description, feature, palette, columns, rows.length, maxPlayers, endSize, (c, r) => rows[r][c] === '#');
 };
 
 /** Printed rules remain the default; larger custom tables extend the tile grid and seat limit. */
@@ -131,6 +132,82 @@ export const MAPS: MapDefinition[] = [
     { name: 'Emerald shallows', canvas: '#e2f4e9', frame: '#b4dfc6', tile: '#fafffb', accent: '#2e9364', ink: '#285c47', void: '#8ed0b0' },
     16, 12, 6, 55, (c, r) => !((c >= 3 && c <= 6 || c >= 9 && c <= 12) && r >= 4 && r <= 7)
       && !((c <= 1 || c >= 14) && (r <= 1 || r >= 10))),
+  shaped('lunar-moth', 'Lunar Moth', 'Moonlit wings fan out from a slender body. Race along the edges or bring rival chains together at the waist.', 'Four moonlit wings',
+    { name: 'Moonstone silver', canvas: '#eef0fa', frame: '#ccd3e8', tile: '#fcfdff', accent: '#747ead', ink: '#414969', void: '#a8b3d5' }, [
+      '#######.###.#######', '#######.###.#######', '.######.###.######.',
+      '..#####.###.#####..', '....###########....', '....###########....',
+      '....###########....', '..#####.###.#####..', '.######.###.######.',
+      '#######.###.#######', '#######.###.#######',
+    ], 6, 55),
+  shaped('ember-gear', 'Ember Gear', 'A furnace glows at the heart of an eight-toothed city. Build around the hollow hub and claim the outer cogs.', 'Eight teeth, a hollow hub',
+    { name: 'Molten copper', canvas: '#fff0df', frame: '#edcba6', tile: '#fffaf1', accent: '#b95e28', ink: '#703f29', void: '#e2a76c' }, [
+      '......###......', '.###..###..###.', '.#############.',
+      '.#############.', '..###########..', '..###########..',
+      '######...######', '######...######', '######...######',
+      '..###########..', '..###########..', '.#############.',
+      '.#############.', '.###..###..###.', '......###......',
+    ], 6, 55),
+  shaped('jade-infinity', 'Jade Infinity', 'Two jade loops cross at one busy knot. Each shore offers a different path into the next merger.', 'Interlocking infinity loops',
+    { name: 'Jade silk', canvas: '#e5f6ed', frame: '#b8ddc6', tile: '#f8fffb', accent: '#287b59', ink: '#28543f', void: '#86c5a5' }, [
+      '...#####.....#####...', '..#######...#######..', '.####.####.####.####.',
+      '####...#######...####', '###.....#####.....###', '####...#######...####',
+      '.####.####.####.####.', '..#######...#######..', '...#####.....#####...',
+    ], 6, 45),
+  shaped('clockwork-keys', 'Clockwork Keys', 'Two ornate keys share a long shaft, with offset teeth opening side districts. Timing a merger can unlock the whole city.', 'Twin keys and offset teeth',
+    { name: 'Brass workshop', canvas: '#f8efdd', frame: '#e6d1a4', tile: '#fffaf0', accent: '#977024', ink: '#5e4927', void: '#ceb578' }, [
+      '######..###.......######', '######..###.......######', '#...##..###.......##...#',
+      '########################', '########################', '#...##.......###..##...#',
+      '######.......###..######', '######.......###..######',
+    ], 6, 46),
+  shaped('crystal-cascade', 'Crystal Cascade', 'Three crystal chambers climb a narrow spine. Small connecting passages put a premium on the right tile.', 'Three stacked crystal chambers',
+    { name: 'Glacial quartz', canvas: '#e8f6fb', frame: '#bfdeec', tile: '#faffff', accent: '#447cba', ink: '#34516f', void: '#92c7e2' }, [
+      '...###...', '..#####..', '.#######.',
+      '#########', '.#######.', '..#####..',
+      '...###...', '...###...', '..#####..',
+      '.#######.', '#########', '.#######.',
+      '..#####..', '...###...', '...###...',
+      '..#####..', '.#######.', '#########',
+      '.#######.', '..#####..', '...###...',
+    ], 6, 44),
+  shaped('cloud-palace', 'Cloud Palace', 'Four pointed sky palaces meet above a broad central promenade. Build in the towers before the clouds converge.', 'Four floating palaces',
+    { name: 'Peach sunrise', canvas: '#fff0ec', frame: '#edccc4', tile: '#fffaf7', accent: '#be7580', ink: '#714954', void: '#e4abb2' }, [
+      '...#.........#...', '..###.......###..', '.#####.###.#####.',
+      '#################', '.#####.###.#####.', '#################',
+      '#################', '#################', '.#####.###.#####.',
+      '#################', '.#####.###.#####.', '..###.......###..',
+      '...#.........#...',
+    ], 6, 54),
+  shaped('comet-arcade', 'Comet Arcade', 'A stepped comet trail joins two deep pockets of space. Follow the diagonal or grow across its bright middle.', 'Stepped comet trail',
+    { name: 'Solar tangerine', canvas: '#fff1de', frame: '#f0d5a8', tile: '#fffaf2', accent: '#c98121', ink: '#755325', void: '#e8b66e' }, [
+      '#####..................', '#########.........#####', '##############....#####',
+      '#######################', '#######################', '#####....##############',
+      '#####.........#########', '..................#####',
+    ], 6, 45),
+  shaped('saffron-labyrinth', 'Saffron Labyrinth', 'Two open outer walks lead into a sheltered inner ring. Winding approaches turn the timing of a crossing into a decision.', 'Nested maze and opposite gates',
+    { name: 'Saffron lanterns', canvas: '#faf0df', frame: '#e9d0aa', tile: '#fffaf3', accent: '#b88739', ink: '#6d542f', void: '#d9b67e' }, [
+      '#####...#######', '#####...#######', '##...........##',
+      '##...........##', '##..#######..##', '##..#######..##',
+      '######...##..##', '######...######', '##..##...######',
+      '##..#######..##', '##..#######..##', '##...........##',
+      '##...........##', '#######...#####', '#######...#####',
+    ], 6, 51),
+  shaped('biolume-reef', 'Biolume Reef', 'Glowing reef branches reach out from a narrow central channel. Parallel fronds create several separate merger fronts.', 'Branching luminous reef',
+    { name: 'Bioluminescent mint', canvas: '#e1f6f3', frame: '#a6ddd6', tile: '#f7fffd', accent: '#168d78', ink: '#285a52', void: '#70c7bd' }, [
+      '...##.######.##...', '...##.######.##...', '#####...##...#####',
+      '#####...##...#####', '...##...##...##...', '...##...##...##...',
+      '##################', '##################', '...##...##...##...',
+      '...##...##...##...', '#####...##...#####', '#####...##...#####',
+      '...##.######.##...', '...##.######.##...',
+    ], 6, 53),
+  shaped('lotus-gardens', 'Lotus Gardens', 'Pointed lotus petals unfold above and below a small garden court. Compact chambers keep six investors close to the action.', 'Stacked lotus petals',
+    { name: 'Lotus blush', canvas: '#faeaf3', frame: '#e5c1d8', tile: '#fff9fd', accent: '#aa5484', ink: '#69405b', void: '#d49dbf' }, [
+      '......#......', '.....###.....', '....#####....',
+      '...#######...', '....#####....', '...#######...',
+      '..#########..', '.#####.#####.', '#############',
+      '.#####.#####.', '..#########..', '...#######...',
+      '....#####....', '...#######...', '....#####....',
+      '.....###.....', '......#......',
+    ], 6, 41),
   makeSizedMap('big-rectangle', 'Grand Rectangle', 'A wider classic rectangle gives eight investors room to build on every side.', 'Expanded classic grid',
     { name: 'Emerald city', canvas: '#e9f0e6', frame: '#c5d7c1', tile: '#f8fcf6', accent: '#498161', ink: '#315749', void: '#a7c8ae' },
     16, 12, 8, 61, () => true),
@@ -150,6 +227,24 @@ export const MAPS: MapDefinition[] = [
     { name: 'Stormglass blue', canvas: '#e9f1f8', frame: '#bdd0e2', tile: '#fbfdff', accent: '#426e9f', ink: '#2e4b6a', void: '#91b4d4' },
     15, 18, 8, 61, (c, r) => !((r < 6 || r >= 12) && [4, 5, 9, 10].includes(c))
       && !((c < 2 || c >= 13) && (r < 2 || r >= 16))),
+  shaped('big-dragon-spine', 'Dragon Spine', 'A long dragon spine connects ribbed trading districts and raised twin crests. Eight investors compete to control its crossings.', 'Ribs, crests and a long spine',
+    { name: 'Dragon jade', canvas: '#e9f3df', frame: '#c6d9a7', tile: '#fbfdf5', accent: '#678d2f', ink: '#465b2b', void: '#a7c77c' }, [
+      '.........#########.........', '...###...#########...###...', '...###...#########...###...',
+      '######....###.###....######', '######....###.###....######', '###########################',
+      '###########################', '###########################', '######....###.###....######',
+      '######....###.###....######', '...###...#########...###...', '...###...#########...###...',
+      '.........#########.........',
+    ], 8, 61),
+  shaped('big-moon-mosaic', 'Moon Mosaic', 'Five moon courts puncture a tiled observatory with four projecting gates. Take a circuit around the courts or cut between them.', 'Five observatory courts',
+    { name: 'Moonlit lapis', canvas: '#eceffc', frame: '#c9d1ee', tile: '#fcfcff', accent: '#596eaa', ink: '#3c4972', void: '#9eaedb' }, [
+      '.......#####.......', '.#################.', '.#################.',
+      '.#################.', '.###...#####...###.', '.###...#####...###.',
+      '.###...#####...###.', '###################', '########...########',
+      '########...########', '########...########', '###################',
+      '.###...#####...###.', '.###...#####...###.', '.###...#####...###.',
+      '.#################.', '.#################.', '.#################.',
+      '.......#####.......',
+    ], 8, 61),
   makeSizedMap('mega-diamond', 'Diamond Dominion', 'Ten seats share a sweeping diamond with long diagonal approaches and a broad heart.', 'Clipped diamond',
     { name: 'Amethyst dusk', canvas: '#eeeaf6', frame: '#d2c9e9', tile: '#fbf9ff', accent: '#8068a8', ink: '#51466c', void: '#b7a4d4' },
     20, 14, 10, 81, (c, r) => { const inset = Math.max(0, 4 - Math.min(r, 13 - r)); return c >= inset && c < 20 - inset; }),
@@ -168,6 +263,26 @@ export const MAPS: MapDefinition[] = [
     18, 19, 10, 81, (c, r) => !(((c >= 3 && c <= 6 || c >= 11 && c <= 14)
       && (r >= 4 && r <= 7 || r >= 11 && r <= 14)))
       && !((c < 2 || c >= 16) && (r < 2 || r >= 17))),
+  shaped('mega-thunderbird', 'Thunderbird', 'Ten investors spread across a great feathered silhouette. Deep notches separate the wingtips before their routes meet at the body.', 'Notched thunderbird wings',
+    { name: 'Storm violet', canvas: '#f0eafa', frame: '#d5c3e8', tile: '#fefbff', accent: '#8253a2', ink: '#583d6d', void: '#b598ce' }, [
+      '###..##..##.#####.##..##..###', '###..##..##.#####.##..##..###', '..#########.#####.#########..',
+      '....#######.#####.#######....', '......#####.#####.#####......', '.......####.#####.####.......',
+      '........###.#####.###........', '#############################', '#############################',
+      '#############################', '........###.#####.###........', '.......####.#####.####.......',
+      '......#####.#####.#####......', '....#######.#####.#######....', '..#########.#####.#########..',
+      '###..##..##.#####.##..##..###', '###..##..##.#####.##..##..###',
+    ], 10, 81),
+  shaped('mega-mirage-steps', 'Mirage Steps', 'A tall desert city rises through shifting terraces and four hidden courtyards. Broad chambers alternate with narrow approaches.', 'Terraced mirage city',
+    { name: 'Desert rose', canvas: '#fbeee7', frame: '#e9c9b8', tile: '#fffaf5', accent: '#a76b58', ink: '#674639', void: '#d5a38e' }, [
+      '.......#######.......', '.......#######.......', '....#############....',
+      '....#############....', '.###################.', '.#####..#####..#####.',
+      '######..#####..######', '######..#####..######', '..####..#####..####..',
+      '..#################..', '....#############....', '....#############....',
+      '....#############....', '..#################..', '..####..#####..####..',
+      '######..#####..######', '######..#####..######', '.#####..#####..#####.',
+      '.###################.', '....#############....', '....#############....',
+      '.......#######.......', '.......#######.......',
+    ], 10, 81),
   makeSizedMap('max-metropolis', 'Metropolis Max', 'A full 24-by-16 skyline stretches the classic rectangular fight to twelve investors.', 'Full megacity grid',
     { name: 'Night market', canvas: '#e6e9ee', frame: '#2d415b', tile: '#f7f8f5', accent: '#be9850', ink: '#30455d', void: '#1d334c' },
     24, 16, 12, 111, () => true),
@@ -189,11 +304,41 @@ export const MAPS: MapDefinition[] = [
     { name: 'Violet cosmos', canvas: '#eeeaf9', frame: '#d3cbee', tile: '#fdfcff', accent: '#7162bc', ink: '#493e77', void: '#aaa1dd' },
     23, 23, 12, 111, (c, r) => Math.min(Math.abs(c - 11), Math.abs(r - 11)) <= 3
       || Math.abs(Math.abs(c - 11) - Math.abs(r - 11)) <= 2),
+  shaped('max-world-tree', 'World Tree', 'An enormous trunk links diamond canopies, spreading boughs and mirrored roots. Twelve investors build a city among the branches.', 'Canopies, boughs and mirrored roots',
+    { name: 'Ancient forest', canvas: '#e7efde', frame: '#bfd0a3', tile: '#fafcf4', accent: '#567b38', ink: '#3c5430', void: '#99b77b' }, [
+      '....#....#########........#....', '...###..##########.......###...', '..################......#####..',
+      '.#################.....#######.', '##################....#########', '.#######..########.....#######.',
+      '..###########################..', '...#########################...', '....#........#####........#....',
+      '###############################', '###############################', '###############################',
+      '....#........#####........#....', '...#########################...', '..###########################..',
+      '.#######.....########..#######.', '#########....##################', '.#######.....#################.',
+      '..#####......################..', '...###.......##########..###...', '....#........#########....#....',
+    ], 12, 111),
+  shaped('max-astral-loom', 'Astral Loom', 'Crossing celestial ribbons weave through a lattice of open sky. Diagonal approaches and layered crossings give twelve investors many routes to meet.', 'Woven celestial lattice',
+    { name: 'Astral turquoise', canvas: '#e5f5f8', frame: '#b5dbe6', tile: '#f9feff', accent: '#337f95', ink: '#315965', void: '#83bfce' }, [
+      '##.....................##', '###...................###', '.#######################.',
+      '..#####################..', '..#####################..', '..#####.###...###.#####..',
+      '..#########...#########..', '..###.#####...#####.###..', '..#####################..',
+      '..#####################..', '..#####################..', '..###...#########...###..',
+      '..###...#########...###..', '..###...#########...###..', '..#####################..',
+      '..#####################..', '..#####################..', '..###.#####...#####.###..',
+      '..#########...#########..', '..#####.###...###.#####..', '..#####################..',
+      '..#####################..', '.#######################.', '###...................###',
+      '##.....................##',
+    ], 12, 111),
 ];
 /** New map IDs are feature-gated online so an older room function cannot accept a selection it does not know. */
 export const NEW_MAP_IDS: ReadonlySet<MapId> = new Set([
   'twin-docks', 'obelisk', 'coral-crown', 'lightning-run', 'compass-rose', 'pinwheel', 'starfall-x', 'twin-lagoons',
   'big-aurora-gate', 'big-trident-towers', 'mega-triple-arch', 'mega-citadel-grid', 'max-celestial-ring', 'max-orion-star',
+]);
+
+/** Creative expansion: requires the matching server engine and SQL map whitelist. */
+export const CREATIVE_MAP_IDS: ReadonlySet<MapId> = new Set([
+  'lunar-moth', 'ember-gear', 'jade-infinity', 'clockwork-keys', 'crystal-cascade', 'cloud-palace', 'comet-arcade', 'saffron-labyrinth', 'biolume-reef', 'lotus-gardens',
+  'big-dragon-spine', 'big-moon-mosaic',
+  'mega-thunderbird', 'mega-mirage-steps',
+  'max-world-tree', 'max-astral-loom',
 ]);
 export const getMap = (id: MapId | undefined): MapDefinition => MAPS.find((map) => map.id === id) ?? MAPS[0];
 export const isMapId = (value: unknown): value is MapId => typeof value === 'string' && MAPS.some((map) => map.id === value);

@@ -234,7 +234,7 @@ export function publicRoom(room: StoredRoom, userId: string) {
     game,
     viewerId: userId,
     updatedAt: room.updated_at,
-    features: ['maps-v1', 'large-maps-v1', 'shaped-maps-v2', 'difficulty-v1', 'match-history-v1', 'house-rules-v1', 'hotel-roster-v1', 'hotel-stock-v1', 'market-frequency-v1', 'room-notifications-v1', 'room-deltas-v1'],
+    features: ['maps-v1', 'large-maps-v1', 'shaped-maps-v2', 'shaped-maps-v3', 'difficulty-v1', 'match-history-v1', 'house-rules-v1', 'hotel-roster-v1', 'hotel-stock-v1', 'market-frequency-v1', 'room-notifications-v1', 'room-deltas-v1'],
   };
 }
 

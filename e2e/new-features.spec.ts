@@ -1,4 +1,5 @@
 import { test, expect } from '@playwright/test';
+import { MAPS, CREATIVE_MAP_IDS } from '../src/game/maps';
 import { applyAction, chooseBotAction, createGame } from '../src/game/engine';
 
 test('new table choices apply a variant map, strategic computers, and private holdings', async ({ page }) => {
@@ -278,4 +279,23 @@ test('completed saves become compact match history with final sell-offs and trop
   }
   await page.getByRole('button', { name: 'Replay the sell-offs' }).click();
   await expect(page.locator('.settlement-card')).toBeVisible();
+});
+
+
+test('all sixteen creative city previews expose their shapes, themes and seat limits', async ({ page }) => {
+  await page.goto('/');
+  await page.getByRole('button', { name: /Let’s play/ }).first().click();
+  const dialog = page.getByRole('dialog', { name: 'A new opportunity' });
+  const cities = dialog.getByLabel('City map');
+  await expect(cities.locator('option')).toHaveCount(50);
+  const accents = new Set<string>();
+  for (const map of MAPS.filter((map) => CREATIVE_MAP_IDS.has(map.id))) {
+    await cities.selectOption(map.id);
+    await expect(dialog.locator('.map-miniature .included')).toHaveCount(map.tiles.length);
+    await expect(dialog.locator('.map-miniature .excluded')).toHaveCount(map.gridTiles.length - map.tiles.length);
+    await expect(dialog.locator('.map-miniature')).toHaveAccessibleName(new RegExp(`${map.columns} by ${map.rows}.*up to ${map.maxPlayers} players`));
+    await expect(dialog.getByRole('button', { name: `${map.maxPlayers} players`, exact: true })).toBeVisible();
+    accents.add(await dialog.locator('.map-choice-preview').evaluate((element) => getComputedStyle(element).getPropertyValue('--map-accent').trim()));
+  }
+  expect(accents.size).toBe(16);
 });

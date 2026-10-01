@@ -1,4 +1,5 @@
 import { createGame, getMap } from '../functions/_shared/game/engine.ts';
+import { MAPS } from '../functions/_shared/game/maps.ts';
 import { CHAIN_IDS } from '../functions/_shared/game/types.ts';
 import {
   parseAction,
@@ -46,6 +47,7 @@ function fixture(): StoredRoom {
 Deno.test('room views preserve only the viewer hand and reveal no bag/seed/rng', () => {
   const room = fixture();
   const view = publicRoom(room, 'alice');
+  assert(view.features.includes('shaped-maps-v3'), 'Creative maps capability was not advertised');
   assert(view.features.includes('market-frequency-v1'), 'Market timing capability was not advertised');
   assert(view.game?.seed === 0 && view.game.rng === 0, 'RNG leaked');
   assert(
@@ -75,13 +77,11 @@ Deno.test('room views preserve only the viewer hand and reveal no bag/seed/rng',
 });
 
 Deno.test('new map tile sets survive server dealing and member-safe room views', () => {
-  for (const [mapId, count] of [
-    ['hourglass', 84], ['crossroads', 80], ['switchback', 84], ['atoll', 86], ['four-spires', 80],
-    ['big-rectangle', 192], ['big-crater', 168], ['big-harbors', 160],
-    ['mega-diamond', 240], ['mega-rivers', 240], ['mega-divide', 232],
-    ['max-metropolis', 384], ['max-archipelago', 292], ['max-cross', 312],
-  ] as const) {
+  for (const map of MAPS) {
+    const { id: mapId, tiles, maxPlayers } = map;
+    const count = tiles.length;
     const room = fixture();
+    room.players.push(...Array.from({ length: maxPlayers - room.players.length }, (_, i) => ({ id: `bot-${i}`, name: `Bot ${i}`, isBot: true })));
     room.game = createGame({ players: room.players, mapId, seed: 81 });
     room.game = secureDeal(room.game);
     const dealt = [...Object.keys(room.game.board), ...room.game.bag, ...room.game.players.flatMap((player) => player.hand)];

@@ -55,7 +55,7 @@ const sections = [
   {
     icon: Layers3,
     title: 'Custom city maps',
-    text: 'The printed 12×9 board remains the default. Thirty-three optional maps use different dimensions and shapes; eighteen seat up to six, five seat eight, five seat ten, and five seat twelve. Six-seat custom boards with more tiles may have a later one-chain end target, shown at setup. The larger tiers end at 61, 81, or 111 hotels in one chain; on every board, all active chains being safe also permits ending after a tile is played. These are house-made map rules. The seven printed chains, 25 shares each, and printed prices remain the default.',
+    text: 'The printed 12×9 board remains the default. Forty-nine optional maps use different dimensions and shapes; twenty-eight seat up to six, seven seat eight, seven seat ten, and seven seat twelve. Six-seat custom boards with more tiles may have a later one-chain end target, shown at setup. The larger tiers end at 61, 81, or 111 hotels in one chain; on every board, all active chains being safe also permits ending after a tile is played. These are house-made map rules. The seven printed chains, 25 shares each, and printed prices remain the default.',
   },
   {
     icon: Landmark,

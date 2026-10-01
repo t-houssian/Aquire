@@ -172,7 +172,8 @@ do $$
 declare
   map_ids text[] := array[
     'twin-docks', 'obelisk', 'coral-crown', 'lightning-run', 'compass-rose', 'pinwheel', 'starfall-x', 'twin-lagoons',
-    'big-aurora-gate', 'big-trident-towers', 'mega-triple-arch', 'mega-citadel-grid', 'max-celestial-ring', 'max-orion-star'
+    'big-aurora-gate', 'big-trident-towers', 'mega-triple-arch', 'mega-citadel-grid', 'max-celestial-ring', 'max-orion-star',
+    'lunar-moth', 'ember-gear', 'jade-infinity', 'clockwork-keys', 'crystal-cascade', 'cloud-palace', 'comet-arcade', 'saffron-labyrinth', 'biolume-reef', 'lotus-gardens', 'big-dragon-spine', 'big-moon-mosaic', 'mega-thunderbird', 'mega-mirage-steps', 'max-world-tree', 'max-astral-loom'
   ];
   host uuid;
   code text;
@@ -183,8 +184,8 @@ declare
 begin
   for i in 1..array_length(map_ids, 1) loop
     host := ('00000000-0000-4000-8000-' || lpad((300 + i)::text, 12, '0'))::uuid;
-    code := 'MAP' || substr('ABCDEFGHJKLMNPQRSTUVWXYZ', i, 1) || 'XX';
-    maximum := case when i <= 8 then 6 when i <= 10 then 8 when i <= 12 then 10 else 12 end;
+    code := 'MAP' || substr('ABCDEFGHJKLMNPQRSTUVWXYZ', (i - 1) / 23 + 1, 1) || substr('ABCDEFGHJKLMNPQRSTUVWXYZ', (i - 1) % 23 + 1, 1) || 'X';
+    maximum := case when map_ids[i] like 'big-%' then 8 when map_ids[i] like 'mega-%' then 10 when map_ids[i] like 'max-%' then 12 else 6 end;
     game := jsonb_build_object('version', 2, 'ruleset', '2008', 'mode', 'classic', 'mapId', map_ids[i]);
     result := public.acquire_create_room(host, 'Host', code, 'classic');
     seats := result->'players';
