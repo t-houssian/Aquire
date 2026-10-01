@@ -48,6 +48,11 @@ import { makeLeaderboard, type MatchSummary } from './lib/matches';
 import { endRoom, getOnlineHistory, getOnlineLeaderboard, getRoom, hasOnlineSession, leaveRoom, onlineConfigured, sendRoomAction, watchRoom, type OnlineRoom } from './lib/online';
 import CityScene from './components/CityScene';
 import Setup from './components/Setup';
+import StoryMode from './components/StoryMode';
+import CharacterAvatar from './components/CharacterAvatar';
+import { storyGameConfig, getStoryChapter } from './game/campaign';
+import { readStoryProgress, storyChapterUnlocked } from './lib/campaign';
+import './story.css';
 import GameView from './components/GameView';
 import Finale from './components/Finale';
 import Rulebook, { RULEBOOK_URL } from './components/Rulebook';
@@ -62,7 +67,7 @@ import './sidebar.css';
 import './map-themes.css';
 import './house-rules.css';
 import './exit-game.css';
-type Page = 'home' | 'play' | 'learn' | 'history' | 'replay';
+type Page = 'story' | 'home' | 'play' | 'learn' | 'history' | 'replay';
 export default function App() {
   const [page, setPage] = useState<Page>('home');
   const [modal, setModal] = useState<'solo' | 'local' | 'online' | 'rules' | 'settings' | null>(
@@ -85,6 +90,7 @@ export default function App() {
   const [exitDestination, setExitDestination] = useState<Page | null>(null);
   const [endingSaveId, setEndingSaveId] = useState<string | null>(null);
   const [endingOnlineRoom, setEndingOnlineRoom] = useState(false);
+  const [storyProgress, setStoryProgress] = useState(readStoryProgress);
   const [legacyGameCount] = useState(readLegacyGameCount);
   const [turnRecaps, setTurnRecaps] = useState<TurnRecapData[]>([]);
   const [diceRecaps, setDiceRecaps] = useState<DiceRollReport[]>([]);
@@ -179,7 +185,7 @@ export default function App() {
     try {
       saveGame(localGame, kind);
       setSaves(readGames());
-      if (localGame.phase === 'ended') setMatches(readMatches());
+      if (localGame.phase === 'ended') { setMatches(readMatches()); setStoryProgress(readStoryProgress()); }
     } catch {
       setNotice('Your browser could not save this game. Keep this tab open to continue playing.');
     }
@@ -369,6 +375,13 @@ export default function App() {
     setRevealed('');
     navigate('play');
   };
+  const beginStory = (chapterId: string, name: string) => {
+    const progress = readStoryProgress();
+    if (!storyChapterUnlocked(progress, chapterId)) { setNotice('Win the previous chapter to open this one.'); return; }
+    const saved = readGames().find((save) => save.game.campaign?.chapterId === chapterId);
+    if (saved) { resume(saved); return; }
+    start(storyGameConfig(chapterId, name, crypto.getRandomValues(new Uint32Array(1))[0]), 'solo');
+  };
   const perform = (action: GameAction) => {
     if (!game || busy || turnRecaps.length || diceRecaps.length || mergerRecaps.length) return;
     if (settings.sound) playTone(action.type === 'found');
@@ -445,6 +458,7 @@ export default function App() {
           >
             <Layers3 size={19} /> Play a game <span className="nav-live" />
           </button>
+          <button className={page === 'story' ? 'active' : ''} onClick={() => navigate('story')}><BookOpen size={19} /> The Long Game <span className="nav-live" /></button>
           <button
             className={page === 'history' ? 'active' : ''}
             onClick={() => navigate('history')}
@@ -509,6 +523,7 @@ export default function App() {
                 ? 'Overview'
                 : page === 'play'
                   ? 'The boardroom'
+                  : page === 'story' ? 'The Long Game'
                   : page === 'learn'
                     ? 'How to play'
                     : 'My games'}
@@ -557,7 +572,7 @@ export default function App() {
                       <i>M</i>
                       <i>J</i>
                     </span>
-                    <span>3–12 investors across classic and expansion cities.</span>
+                    <span>2–12 investors across classic and expansion cities.</span>
                   </div>
                 </div>
                 <div className="hero-art">
@@ -590,6 +605,10 @@ export default function App() {
                   </div>
                 ))}
               </div>
+              <button className="story-entry" onClick={() => navigate('story')}>
+                <div className="story-entry-faces"><CharacterAvatar characterId="cast-01" /><CharacterAvatar characterId="cast-27" /><CharacterAvatar characterId="cast-56" /></div>
+                <div className="story-entry-copy"><span className="eyebrow">NEW · SOLO STORY</span><strong>The Long Game</strong><p>Twelve chapters. Fifty-six rivals. Build your way from a corner café to the city summit.</p></div><ArrowRight size={21} />
+              </button>
               <section className="play-section">
                 <div className="section-heading">
                   <div>
@@ -611,7 +630,7 @@ export default function App() {
                     <h3>Against the house</h3>
                     <p>Sharpen your instincts against thoughtful computer opponents.</p>
                     <div className="card-bottom">
-                      <span>Solo · 2–11 opponents</span>
+                      <span>Solo · 1–11 opponents</span>
                       <span className="round-arrow">
                         <ArrowUpRight size={20} />
                       </span>
@@ -627,7 +646,7 @@ export default function App() {
                     <h3>Around the table</h3>
                     <p>One device. Your favorite people. A little friendly competition.</p>
                     <div className="card-bottom">
-                      <span>Pass & play · 3–12 players</span>
+                      <span>Pass & play · 2–12 players</span>
                       <span className="round-arrow">
                         <ArrowUpRight size={20} />
                       </span>
@@ -729,7 +748,7 @@ export default function App() {
                 game={game}
                 viewerId={viewerId}
                 onAction={perform}
-                onHome={() => navigate('home')}
+                onHome={() => navigate(game.campaign ? 'story' : 'home')}
                 onMenu={() => setMobileNav(true)}
                 onRules={() => setModal('rules')}
                 onSettings={() => setModal('settings')}
@@ -744,7 +763,8 @@ export default function App() {
               />
             </div>
           )}
-          {page === 'replay' && replayMatch && <Finale match={replayMatch} onHome={() => navigate('history')} />}
+          {page === 'replay' && replayMatch && <Finale match={replayMatch} onHome={() => navigate(replayMatch.campaign ? 'story' : 'history')} />}
+          {page === 'story' && <StoryMode progress={storyProgress} saves={saves} onStart={beginStory} />}
           {page === 'learn' && <Rulebook />}
           {page === 'history' && (
             <div className="history-page">
@@ -814,7 +834,7 @@ export default function App() {
                                 .filter((r) => r.rank === 1)
                                 .map((r) => r.name)
                                 .join(' & ')} won the city`
-                            : `${s.game.players.map((p) => p.name).join(', ')}’s table`}
+                            : s.game.campaign ? `The Long Game · ${getStoryChapter(s.game.campaign.chapterId)?.title ?? 'Chapter'}` : `${s.game.players.map((p) => p.name).join(', ')}’s table`}
                         </h3>
                         <p>
                           2008 edition · {s.game.players.length} investors · Turn {s.game.turn} ·{' '}

@@ -35,7 +35,13 @@ export type MapId =
   | 'lunar-moth' | 'ember-gear' | 'jade-infinity' | 'clockwork-keys' | 'crystal-cascade' | 'cloud-palace' | 'comet-arcade' | 'saffron-labyrinth' | 'biolume-reef' | 'lotus-gardens'
   | 'big-dragon-spine' | 'big-moon-mosaic'
   | 'mega-thunderbird' | 'mega-mirage-steps'
-  | 'max-world-tree' | 'max-astral-loom';
+  | 'max-world-tree' | 'max-astral-loom'
+  | 'duo-pocket-square' | 'duo-teacup-court' | 'duo-button-bay' | 'duo-sugar-steps' | 'duo-moon-lock'
+  | 'duo-matchbox' | 'duo-fern-path' | 'duo-biscuit-ring' | 'duo-koi-crossing' | 'duo-starlight-kite'
+  | 'duo-coral-comb' | 'duo-lemon-bow' | 'duo-velvet-rail' | 'duo-pebble-isle' | 'duo-jellybean'
+  | 'four-market-square' | 'four-amber-court' | 'four-sailmakers' | 'four-paper-lantern' | 'four-crescent-pier'
+  | 'four-foxglove' | 'four-copper-coil' | 'four-blue-hour' | 'four-honey-arcade' | 'four-pistachio-park'
+  | 'four-vinyl-club' | 'four-tulip-terminal' | 'four-kite-festival' | 'four-snowglobe' | 'four-rooftop-radio';
 export type BotDifficulty = 'casual' | 'standard' | 'strategist';
 export type MarketMode = 'off' | 'market' | 'crazy';
 export type MarketFrequency = 'round' | 'turn' | 'two-rounds' | 'three-rounds';
@@ -63,16 +69,19 @@ export interface PlayerConfig {
   id: string;
   name: string;
   isBot?: boolean;
+  characterId?: string;
 }
 export interface Player {
   id: string;
   name: string;
   isBot: boolean;
+  characterId?: string;
   cash: number;
   hand: Tile[];
   stocks: Stocks;
   initialTile: Tile;
 }
+export interface CampaignRun { version: 1; chapterId: string; playerId: string }
 export interface GameConfig {
   players: PlayerConfig[];
   mode?: GameMode;
@@ -80,6 +89,7 @@ export interface GameConfig {
   id?: string;
   mapId?: MapId;
   botDifficulty?: BotDifficulty;
+  campaign?: CampaignRun;
   houseRules?: Partial<HouseRules>;
 }
 export interface PlayerMetrics {
@@ -174,6 +184,7 @@ export interface GameState {
   mode: GameMode;
   mapId?: MapId;
   botDifficulty?: BotDifficulty;
+  campaign?: CampaignRun;
   houseRules?: HouseRules;
   placementsThisTurn?: number;
   removalsThisTurn?: number;

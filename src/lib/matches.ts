@@ -7,10 +7,11 @@ export interface MatchSummary {
   source: 'local' | 'online';
   mapId: MapId;
   botDifficulty: BotDifficulty;
+  campaign?: GameState['campaign'];
   turn: number;
   playerCount: number;
   placedTiles: number;
-  players: { id: string; name: string; isBot: boolean }[];
+  players: { id: string; name: string; isBot: boolean; characterId?: string }[];
   results: FinalResult[];
   finalSettlements: FinalChainSettlement[];
   awards: PlayerAward[];
@@ -26,8 +27,9 @@ export function summarizeMatch(game: GameState, source: MatchSummary['source']):
   return {
     id: game.id, endedAt: new Date().toISOString(), source,
     mapId: game.mapId ?? 'classic', botDifficulty: game.botDifficulty ?? 'standard',
+    ...(game.campaign ? { campaign: game.campaign } : {}),
     turn: game.turn, playerCount: game.players.length, placedTiles: Object.keys(game.board).length,
-    players: game.players.map(({ id, name, isBot }) => ({ id, name, isBot })),
+    players: game.players.map(({ id, name, isBot, characterId }) => ({ id, name, isBot, ...(characterId ? { characterId } : {}) })),
     results: game.results, finalSettlements: game.finalSettlements ?? [],
     awards: game.awards ?? [], metrics: game.metrics ?? {},
     winnerIds: game.winnerIds, endReason: game.endReason ?? 'The game ended.',

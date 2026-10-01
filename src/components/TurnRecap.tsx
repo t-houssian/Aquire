@@ -2,6 +2,8 @@ import { ArrowRight, Check, MapPin, ShoppingBag } from 'lucide-react';
 import { CHAINS, getMap, type ChainId } from '../game/engine';
 import type { TurnRecapData } from '../lib/turnRecaps';
 import Modal from './Modal';
+import CharacterAvatar from './CharacterAvatar';
+import { getCharacter } from '../game/characters';
 
 const chainById = Object.fromEntries(CHAINS.map((chain) => [chain.id, chain])) as Record<
   ChainId,
@@ -18,12 +20,14 @@ export default function TurnRecap({
   /** Number of additional recaps waiting after this one. */
   remaining?: number;
 }) {
+  const character = getCharacter(recap.characterId);
   const placedChain = recap.chain && recap.chain !== 'independent' ? chainById[recap.chain] : null;
   const map = getMap(recap.mapId);
   const spaces = new Set(map.tiles);
   return (
     <Modal title={`${recap.playerName}’s turn`} onClose={onContinue}>
       <div className="turn-recap" data-testid="turn-recap">
+        {character && <div className="recap-character"><CharacterAvatar characterId={character.id} /><div><strong>{character.title}</strong><p>“{character.quote}”</p></div></div>}
         <div className="recap-kicker">
           TURN {recap.turn} · {recap.isBot ? 'COMPUTER' : 'INVESTOR'}
         </div>

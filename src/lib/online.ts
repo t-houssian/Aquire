@@ -9,6 +9,7 @@ export interface OnlinePlayer {
   id: string;
   name: string;
   isBot: boolean;
+  characterId?: string;
 }
 export interface OnlineRoom {
   id: string;

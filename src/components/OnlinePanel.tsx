@@ -2,7 +2,8 @@ import { useRef, useState } from 'react';
 import { ArrowRight, Check, Copy, Globe2, LoaderCircle, Users, WifiOff } from 'lucide-react';
 import Modal from './Modal';
 import MapPreview from './MapPreview';
-import { MAPS, NEW_MAP_IDS, CREATIVE_MAP_IDS, getMap } from '../game/maps';
+import CharacterAvatar from './CharacterAvatar';
+import { MAPS, NEW_MAP_IDS, CREATIVE_MAP_IDS, SMALL_MAP_IDS, MAP_SEAT_TIERS, getMap } from '../game/maps';
 import { DEFAULT_HOUSE_RULES } from '../game/engine';
 import type { BotDifficulty, MapId } from '../game/types';
 import type { Settings } from '../lib/storage';
@@ -113,7 +114,7 @@ export default function OnlinePanel({
             <div className="lobby-players">
               {room.players.map((p, i) => (
                 <div key={p.id}>
-                  <span className="avatar">{p.name[0]}</span>
+                  <span className="avatar"><CharacterAvatar characterId={p.characterId} name={p.name} /></span>
                   <strong>{p.name}</strong>
                   <small>{p.id === room.hostId ? 'Host' : `Seat ${i + 1}`}</small>
                   <span className="live-dot" />
@@ -152,8 +153,8 @@ export default function OnlinePanel({
                       setMapId(next.id);
                       setHouseRules((rules) => ({ ...rules, startingTilesPerPlayer: Math.min(rules.startingTilesPerPlayer, maximumOpeningTiles(next.tiles.length, Math.max(1, room.players.length + Math.min(bots, Math.max(0, next.maxPlayers - room.players.length))))) }));
                       requestAnimationFrame(() => previewRef.current?.scrollIntoView({ behavior: 'smooth', block: 'nearest' }));
-                    }}>{[6, 8, 10, 12].map((seats) => <optgroup key={seats} label={`Up to ${seats} players`}>
-                      {MAPS.filter((map) => map.maxPlayers === seats).map((map) => <option key={map.id} value={map.id} disabled={(map.maxPlayers > 6 && !room.features?.includes('large-maps-v1')) || (NEW_MAP_IDS.has(map.id) && !room.features?.includes('shaped-maps-v2')) || (CREATIVE_MAP_IDS.has(map.id) && !room.features?.includes('shaped-maps-v3'))}>{map.name} · {map.tiles.length} tiles · {map.columns}×{map.rows}</option>)}
+                    }}>{MAP_SEAT_TIERS.map((seats) => <optgroup key={seats} label={`Up to ${seats} players`}>
+                      {MAPS.filter((map) => map.maxPlayers === seats).map((map) => <option key={map.id} value={map.id} disabled={(map.maxPlayers > 6 && !room.features?.includes('large-maps-v1')) || (NEW_MAP_IDS.has(map.id) && !room.features?.includes('shaped-maps-v2')) || (CREATIVE_MAP_IDS.has(map.id) && !room.features?.includes('shaped-maps-v3')) || (SMALL_MAP_IDS.has(map.id) && !room.features?.includes('small-tables-v1'))}>{map.name} · {map.tiles.length} tiles · {map.columns}×{map.rows}</option>)}
                     </optgroup>)}</select>
                     <div ref={previewRef}><MapPreview map={selectedMap} /></div>
                     {room.players.length > selectedMap.maxPlayers && <p className="small muted">This map has {selectedMap.maxPlayers} seats, but {room.players.length} people joined. Choose a larger map.</p>}
@@ -168,7 +169,7 @@ export default function OnlinePanel({
                   </div>
                   <button
                     disabled={
-                      busy || room.players.length > selectedMap.maxPlayers || room.players.length + selectedBots < 3
+                      busy || room.players.length > selectedMap.maxPlayers || room.players.length + selectedBots < (room.features?.includes('small-tables-v1') ? 2 : 3)
                     }
                     className="button primary full"
                     onClick={() =>
@@ -289,7 +290,7 @@ export default function OnlinePanel({
                   <Globe2 size={23} />
                   <div>
                     <span className="eyebrow">2008 EDITION</span>
-                    <strong>3–12 investors. One unforgettable table.</strong>
+                    <strong>2–12 investors. One unforgettable table.</strong>
                     <p>The map determines the seat limit. Computer opponents can fill empty seats.</p>
                   </div>
                 </div>

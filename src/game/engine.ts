@@ -16,6 +16,7 @@ import {
   type Tile,
   type TileAnalysis,
 } from './types.ts';
+import { getCharacter, botPersonality } from './characters.ts';
 import { getMap, isMapId, mapHasTile } from './maps.ts';
 export * from './types.ts';
 export { MAPS, getMap } from './maps.ts';
@@ -441,11 +442,10 @@ export function createGame(config: GameConfig): GameState {
   assert(
     config &&
       Array.isArray(config.players) &&
-      config.players.length >= 3 &&
+      config.players.length >= 2 &&
       config.players.length <= map.maxPlayers,
-    map.maxPlayers === 6
-      ? 'Choose between three and six players for the 2008 edition.'
-      : `Choose between three and ${map.maxPlayers} players for this custom map.`,
+    map.maxPlayers === 2 ? 'Choose two players for this pocket city.'
+      : `Choose between two and ${map.maxPlayers} players for this map.`,
   );
   assert(
     config.players.every(
@@ -477,6 +477,7 @@ export function createGame(config: GameConfig): GameState {
     mode: 'classic',
     mapId: config.mapId ?? 'classic',
     botDifficulty: config.botDifficulty ?? 'standard',
+    ...(config.campaign ? { campaign: { ...config.campaign } } : {}),
     houseRules,
     placementsThisTurn: 0,
     removalsThisTurn: 0,
@@ -515,6 +516,7 @@ export function createGame(config: GameConfig): GameState {
       id: p.id,
       name: p.name.trim().slice(0, 30),
       isBot: Boolean(p.isBot),
+      ...(p.isBot && getCharacter(p.characterId) ? { characterId: p.characterId } : {}),
       cash: houseRules.startingCash,
       stocks: stockMap(0),
       hand: [],
@@ -1280,6 +1282,7 @@ export function chooseBotAction(state: GameState): GameAction {
   assert(state.phase !== 'ended', 'This game is finished.');
   const actor = getCurrentActor(state);
   const difficulty = state.botDifficulty ?? 'standard';
+  const personality = botPersonality(actor.characterId);
   if (canEndGame(state) && !state.endDeclared) {
     const marketMode = getHouseRules(state).marketMode;
     const closingValues = getActiveChains(state).map((chain) => {
@@ -1315,9 +1318,9 @@ export function chooseBotAction(state: GameState): GameAction {
         const coords = tileCoordinates(tile);
         const map = getMap(state.mapId);
         let value = 4 - (Math.abs(coords.column - (map.columns - 1) / 2) + Math.abs(coords.row - (map.rows - 1) / 2)) * 0.13;
-        if (analysis.kind === 'found') value += 14 + (actor.cash > 600 ? 5 : 0);
+        if (analysis.kind === 'found') value += (14 + (actor.cash > 600 ? 5 : 0)) * personality.founding;
         if (analysis.kind === 'grow')
-          value += 5 + ownShares(analysis.chains[0]) * 1.3 - rivalMaximum(analysis.chains[0]) * 0.5;
+          value += (5 + ownShares(analysis.chains[0]) * 1.3 - rivalMaximum(analysis.chains[0]) * 0.5) * personality.growth;
         if (analysis.kind === 'merge') {
           value += 8;
           const largest = Math.max(...analysis.chains.map((chain) => getChainSize(state, chain)));
@@ -1347,7 +1350,7 @@ export function chooseBotAction(state: GameState): GameAction {
           }
         }
         const handNeighbors = getNeighbors(tile, state.mapId).filter((t) => actor.hand.includes(t)).length;
-        return value + handNeighbors * 2;
+        return value + handNeighbors * 2 * personality.network;
       };
       tiles.sort((a, b) => score(b) - score(a));
       return { type: 'place', tile: tiles[0] };
@@ -1396,7 +1399,7 @@ export function chooseBotAction(state: GameState): GameAction {
           const bonuses = calculateBonuses(holdings, finalPrice);
           const rivalBonus = Math.max(...bonuses.filter((_, i) => i !== index));
           const value = cash + certificates * finalPrice + (bonuses[index] - rivalBonus) * 0.5
-            - Math.max(0, 1800 - cash) * 0.75;
+            - Math.max(0, personality.tradeReserve - cash) * 0.75;
           if (value > bestValue) { bestValue = value; bestTrade = certificates * 2; }
         }
         return { type: 'resolve-shares', sell: held - bestTrade, trade: bestTrade };
@@ -1435,8 +1438,8 @@ export function chooseBotAction(state: GameState): GameAction {
               const after = contestedBonuses(state, chain, holdings.map((held, i) => held + (i === index ? count : 0)), index, remaining - count);
               const denial = Math.max(...before.filter((_, i) => i !== index)) - Math.max(...after.filter((_, i) => i !== index));
               const reserveCost = state.endDeclared || state.bag.length < 15 ? 0
-                : Math.max(0, 600 - (cash - count * price)) * 0.5;
-              const score = (after[index] - before[index] + denial * 0.25 - reserveCost) / (count * price);
+                : Math.max(0, personality.reserve - (cash - count * price)) * 0.5;
+              const score = (after[index] - before[index] + denial * 0.25 * personality.denial - reserveCost) / (count * price);
               if (score > 0.2 && (!best || score > best.score)) best = { chain, quantity: count, score };
             }
           }

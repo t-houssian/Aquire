@@ -1,12 +1,14 @@
 import { useRef, useState } from 'react';
 import { ArrowRight, Bot, Users, Landmark, ShieldCheck } from 'lucide-react';
 import type { GameConfig } from '../game/types';
-import { MAPS, getMap } from '../game/maps';
+import { MAPS, MAP_SEAT_TIERS, getMap } from '../game/maps';
 import { DEFAULT_HOUSE_RULES } from '../game/engine';
 import type { BotDifficulty, MapId } from '../game/types';
 import type { Settings } from '../lib/storage';
 import Modal from './Modal';
 import MapPreview from './MapPreview';
+import CharacterAvatar from './CharacterAvatar';
+import { pickCharacters, STYLE_NAMES } from '../game/characters';
 import HouseRulesControls, { maximumOpeningTiles } from './HouseRulesControls';
 
 function playerId() {
@@ -38,7 +40,8 @@ export default function Setup({
   const [names, setNames] = useState(['You', 'Alex', 'Morgan', 'Riley', 'Sam', 'Jordan', 'Casey', 'Drew', 'Taylor', 'Robin', 'Avery', 'Parker']);
   const [mapId, setMapId] = useState<MapId>('classic');
   const selectedMap = getMap(mapId);
-  const botNames = ['', 'Ellis', 'Margot', 'Jules', 'Remy', 'Blair', 'Sinclair', 'Marlow', 'Sterling', 'Quinn', 'Devon', 'Arden'];
+  const [castSeed, setCastSeed] = useState(() => crypto.getRandomValues(new Uint32Array(1))[0]);
+  const opponents = pickCharacters(count - 1, castSeed);
   const previewRef = useRef<HTMLDivElement>(null);
   const [botDifficulty, setBotDifficulty] = useState<BotDifficulty>('standard');
   const [houseRules, setHouseRules] = useState(() => ({ ...(settings?.houseRules ?? DEFAULT_HOUSE_RULES) }));
@@ -53,9 +56,10 @@ export default function Setup({
           id: playerId(),
           name:
             kind === 'solo' && i > 0
-              ? botNames[i]
+              ? opponents[i - 1].name
               : names[i].trim() || `Player ${i + 1}`,
           isBot: kind === 'solo' && i > 0,
+          ...(kind === 'solo' && i > 0 ? { characterId: opponents[i - 1].id } : {}),
         })),
       },
       kind,
@@ -84,11 +88,11 @@ export default function Setup({
         <div className="field-row">
           <span className="field-label">Seats at the table</span>
           <span className="muted small">
-            {kind === 'solo' ? `${count - 1} computer opponents` : `Up to ${selectedMap.maxPlayers} on this map`}
+            {kind === 'solo' ? `${count - 1} computer opponent${count === 2 ? '' : 's'}` : `Up to ${selectedMap.maxPlayers} on this map`}
           </span>
         </div>
         <div className={`number-options ${selectedMap.maxPlayers > 6 ? 'expanded' : ''}`}>
-          {Array.from({ length: selectedMap.maxPlayers - 2 }, (_, i) => i + 3).map((n) => (
+          {Array.from({ length: selectedMap.maxPlayers - 1 }, (_, i) => i + 2).map((n) => (
             <button
               key={n}
               aria-label={`${n} players`}
@@ -119,9 +123,9 @@ export default function Setup({
         <div className="edition-card">
           <Landmark size={23} />
           <div>
-            <span className="eyebrow">{selectedMap.maxPlayers > 6 ? 'CUSTOM LARGE-CITY EXPANSION' : 'THE 2008 EDITION'}</span>
+            <span className="eyebrow">{selectedMap.id !== 'classic' || count === 2 ? 'CUSTOM CITY · 2008 FOUNDATION' : 'THE 2008 EDITION'}</span>
             <strong>{selectedMap.maxPlayers > 6 ? 'A bigger city. More investors.' : 'The classic rules, at your table.'}</strong>
-            <p>{selectedMap.id !== 'classic' ? `3–${selectedMap.maxPlayers} investors · 2008 prices & bonuses · ${selectedMap.endSize}-hotel end target` : '3–6 investors · Majority & minority bonuses · The printed 2008 board'}</p>
+            <p>{selectedMap.id !== 'classic' ? `2–${selectedMap.maxPlayers} investors · 2008 prices & bonuses · ${selectedMap.endSize}-hotel end target` : '2–6 investors · 2008 prices & bonuses · Two-player house variant'}</p>
           </div>
         </div>
         <div className="setup-options">
@@ -136,13 +140,13 @@ export default function Setup({
             setHouseRules((rules) => ({ ...rules, startingTilesPerPlayer: Math.min(rules.startingTilesPerPlayer, maximumOpeningTiles(next.tiles.length, seats)) }));
             requestAnimationFrame(() => previewRef.current?.scrollIntoView({ behavior: 'smooth', block: 'nearest' }));
           }}>
-            {[6, 8, 10, 12].map((seats) => <optgroup key={seats} label={`Up to ${seats} players`}>
+            {MAP_SEAT_TIERS.map((seats) => <optgroup key={seats} label={`Up to ${seats} players`}>
               {MAPS.filter((map) => map.maxPlayers === seats).map((map) => <option key={map.id} value={map.id}>{map.name} · {map.tiles.length} tiles · {map.columns}×{map.rows}</option>)}
             </optgroup>)}
           </select>
           <div ref={previewRef}><MapPreview map={selectedMap} /></div>
           {selectedMap.maxPlayers > 6 && <p className="small muted">Expansion end: declare after {selectedMap.endSize} hotels in one chain, or once every active chain is safe, after playing a tile.</p>}
-          {selectedMap.maxPlayers === 6 && selectedMap.endSize !== 41 && <p className="small muted">Custom-city end: declare after {selectedMap.endSize} hotels in one chain, or when every active chain is safe.</p>}
+          {selectedMap.maxPlayers <= 6 && selectedMap.endSize !== 41 && <p className="small muted">Custom-city end: declare after {selectedMap.endSize} hotels in one chain, or when every active chain is safe.</p>}
           {kind === 'solo' && <>
             <label className="field-label" htmlFor="setup-difficulty">Computer difficulty</label>
             <select id="setup-difficulty" value={botDifficulty} onChange={(event) => setBotDifficulty(event.target.value as BotDifficulty)}>
@@ -151,6 +155,10 @@ export default function Setup({
               <option value="strategist">Strategist · protects its lead</option>
             </select>
           </>}
+          {kind === 'solo' && <div className="setup-cast">
+            <div className="field-row"><span className="field-label">Meet the competition</span><button type="button" className="text-button" onClick={() => setCastSeed((seed) => seed + 1)}>Shuffle rivals</button></div>
+            <div className="cast-preview">{opponents.map((character) => <div className="cast-preview-item" key={character.id} title={character.quote}><CharacterAvatar characterId={character.id} /><div><strong>{character.name}</strong><small>{STYLE_NAMES[character.style]}</small></div></div>)}</div>
+          </div>}
           <HouseRulesControls value={houseRules} onChange={setHouseRules} mapTiles={selectedMap.tiles.length} players={count} />
           {settings && onSettingsChange && <div className="setup-privacy">
             <label><input type="checkbox" checked={settings.hideOpponentHoldings} onChange={(event) => onSettingsChange({ ...settings, hideOpponentHoldings: event.target.checked })} /> Hide opponents’ holdings after moves</label>

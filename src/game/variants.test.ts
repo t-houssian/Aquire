@@ -1,14 +1,15 @@
 import { describe, expect, it } from 'vitest';
 import { ALL_TILES, MAPS, analyzeTile, applyAction, canEndGame, chooseBotAction, createGame, getLegalTiles, getNeighbors } from './engine';
-import { CREATIVE_MAP_IDS } from './maps';
+import { CREATIVE_MAP_IDS, SMALL_MAP_IDS, getMap } from './maps';
 import type { BotDifficulty, GameState, MapId } from './types';
 
 const players = Array.from({ length: 3 }, (_, i) => ({ id: `p${i}`, name: `Player ${i}`, isBot: true }));
-const game = (mapId: MapId = 'classic', botDifficulty: BotDifficulty = 'standard', seed = 11) => createGame({ players, mapId, botDifficulty, seed });
+const game = (mapId: MapId = 'classic', botDifficulty: BotDifficulty = 'standard', seed = 11) => createGame({ players: players.slice(0, getMap(mapId).maxPlayers), mapId, botDifficulty, seed });
 
 describe('optional 2008 city maps', () => {
-  it('keeps all fifty cities connected, distinct and rotationally balanced', () => {
-    expect(MAPS.map((map) => map.id)).toEqual([
+  it('keeps all eighty cities connected, distinct and rotationally balanced', () => {
+    expect(MAPS).toHaveLength(80);
+    expect(MAPS.filter((map) => !SMALL_MAP_IDS.has(map.id)).map((map) => map.id)).toEqual([
       'classic', 'corner-plazas', 'riverwalk', 'grand-avenue', 'courtyard', 'peninsulas',
       'hourglass', 'crossroads', 'switchback', 'atoll', 'four-spires',
       'twin-docks', 'obelisk', 'coral-crown', 'lightning-run', 'compass-rose', 'pinwheel', 'starfall-x', 'twin-lagoons',
@@ -24,7 +25,7 @@ describe('optional 2008 city maps', () => {
       'max-world-tree', 'max-astral-loom',
     ]);
     expect(MAPS[0].tiles).toEqual(ALL_TILES);
-    expect(MAPS.map((map) => map.tiles.length)).toEqual([
+    expect(MAPS.filter((map) => !SMALL_MAP_IDS.has(map.id)).map((map) => map.tiles.length)).toEqual([
       108, 92, 96, 100, 102, 96, 84, 80, 84, 86, 80,
       108, 139, 136, 118, 127, 136, 115, 144,
       157, 156, 121, 126, 117, 153, 122, 140, 148, 107,
@@ -36,7 +37,7 @@ describe('optional 2008 city maps', () => {
     expect(new Set(MAPS.map((map) => map.palette.accent)).size).toBe(MAPS.length);
     expect(new Set(MAPS.map((map) => map.tiles.join(','))).size).toBe(MAPS.length);
     for (const map of MAPS) {
-      expect(map.tiles.length).toBeGreaterThanOrEqual(80);
+      expect(map.tiles.length).toBeGreaterThanOrEqual(map.maxPlayers === 2 ? 30 : map.maxPlayers === 4 ? 50 : 80);
       const tiles = new Set(map.tiles);
       expect(tiles.size).toBe(map.tiles.length);
       for (const tile of tiles) {
@@ -88,8 +89,25 @@ describe('optional 2008 city maps', () => {
       expect(state.bag.length, map.id).toBeGreaterThan(0);
     }
   });
+  it('adds fifteen four-seat and fifteen smaller two-seat cities', () => {
+    const duo = MAPS.filter((map) => map.maxPlayers === 2);
+    const four = MAPS.filter((map) => map.maxPlayers === 4);
+    expect(duo).toHaveLength(15); expect(four).toHaveLength(15);
+    expect(SMALL_MAP_IDS.size).toBe(30);
+    expect(Math.max(...duo.map((map) => map.tiles.length))).toBeLessThan(Math.min(...four.map((map) => map.tiles.length)));
+    expect(Math.max(...four.map((map) => map.tiles.length))).toBeLessThan(Math.min(...MAPS.filter((map) => map.maxPlayers === 6).map((map) => map.tiles.length)));
+    for (const map of [...duo, ...four]) {
+      expect(map.endSize).toBe(map.maxPlayers === 2 ? 21 : 31);
+      const opening = Math.min(10, Math.floor(map.tiles.length / map.maxPlayers) - 6);
+      const seats = Array.from({ length: map.maxPlayers }, (_, i) => ({ id: `small-${i}`, name: `Seat ${i}` }));
+      const state = createGame({ players: seats, mapId: map.id, seed: 77, houseRules: { startingTilesPerPlayer: opening } });
+      expect(Object.keys(state.board)).toHaveLength(opening * map.maxPlayers);
+      expect(state.players.every((player) => player.hand.length === 6)).toBe(true);
+      expect(state.bag.length).toBe(map.tiles.length - map.maxPlayers * (opening + 6));
+    }
+  });
   it('keeps enough unique tiles for a six-seat opening on every shape', () => {
-    for (const map of MAPS) {
+    for (const map of MAPS.filter((map) => map.maxPlayers >= 6)) {
       const seats = Array.from({ length: 6 }, (_, i) => ({ id: `seat-${i}`, name: `Seat ${i}` }));
       const state = createGame({ players: seats, mapId: map.id, seed: 77 });
       expect(state.players.every((player) => player.hand.length === 6), map.id).toBe(true);
@@ -108,7 +126,7 @@ describe('optional 2008 city maps', () => {
     }
   });
   it('scales end declarations on expansion maps while leaving the printed board threshold at 41', () => {
-    for (const map of [MAPS[0], ...MAPS.filter((item) => item.maxPlayers > 6)]) {
+    for (const map of [MAPS[0], ...MAPS.filter((item) => item.maxPlayers !== 6)]) {
       const state = game(map.id);
       state.phase = 'buy';
       state.tilePlacedThisTurn = true;
@@ -158,7 +176,7 @@ describe('optional 2008 city maps', () => {
     }
   }, 120000);
   it('finishes complete games at each new seat limit', () => {
-    for (const map of MAPS.filter((item) => item.maxPlayers > 6)) {
+    for (const map of MAPS.filter((item) => item.maxPlayers !== 6)) {
       const seats = Array.from({ length: map.maxPlayers }, (_, i) => ({ id: `b${i}`, name: `Bot ${i}`, isBot: true }));
       let state = createGame({ players: seats, mapId: map.id, botDifficulty: 'strategist', seed: 8201 });
       let steps = 0;

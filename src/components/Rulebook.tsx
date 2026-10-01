@@ -50,12 +50,12 @@ const sections = [
   {
     icon: Landmark,
     title: 'Majority and minority bonuses',
-    text: 'The largest shareholder receives ten times the share price; the second largest receives five times. A sole shareholder collects both bonuses. A tie for majority pools both bonuses; a tie for minority splits the minority bonus. Each tied payout rounds up to the nearest $100. Players holding no shares receive nothing. The 2008 edition seats three to six players.',
+    text: 'The largest shareholder receives ten times the share price; the second largest receives five times. A sole shareholder collects both bonuses. A tie for majority pools both bonuses; a tie for minority splits the minority bonus. Each tied payout rounds up to the nearest $100. Players holding no shares receive nothing. The printed 2008 edition seats three to six players. This app also offers a two-player house variant with the same shareholder rules; there is no additional bank investor.',
   },
   {
     icon: Layers3,
     title: 'Custom city maps',
-    text: 'The printed 12×9 board remains the default. Forty-nine optional maps use different dimensions and shapes; twenty-eight seat up to six, seven seat eight, seven seat ten, and seven seat twelve. Six-seat custom boards with more tiles may have a later one-chain end target, shown at setup. The larger tiers end at 61, 81, or 111 hotels in one chain; on every board, all active chains being safe also permits ending after a tile is played. These are house-made map rules. The seven printed chains, 25 shares each, and printed prices remain the default.',
+    text: 'The printed 12×9 board remains the default. Seventy-nine optional maps use different dimensions and shapes: fifteen tiny cities for two, fifteen small cities for four, twenty-eight for six, and seven each for eight, ten and twelve. The tiny and small cities use 21- and 31-hotel end targets. Six-seat custom boards with more tiles may have a later one-chain end target, shown at setup. The larger tiers end at 61, 81, or 111 hotels in one chain; on every board, all active chains being safe also permits ending after a tile is played. These are house-made map rules. The seven printed chains, 25 shares each, and printed prices remain the default.',
   },
   {
     icon: Landmark,

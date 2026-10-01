@@ -45,6 +45,8 @@ import type { ChainId, GameState, GameAction, GameLog, Stocks, Tile } from '../g
 import { money } from '../lib/storage';
 import { summarizeMatch } from '../lib/matches';
 import Finale from './Finale';
+import CharacterAvatar from './CharacterAvatar';
+import { getCharacter } from '../game/characters';
 import { mapThemeStyle } from './MapPreview';
 const colors = [
   '#8eab6b', '#dc9f7a', '#8d9fb8', '#bfa0bf', '#bcb06c', '#85b6b0',
@@ -270,7 +272,7 @@ export default function GameView({
             <Menu size={18} />
           </button>
           <button className="text-button" onClick={onHome}>
-            <ArrowLeft size={16} /> The clubhouse
+            <ArrowLeft size={16} /> {game.campaign ? 'The Long Game' : 'The clubhouse'}
           </button>
         </div>
         <div className="landscape-balances" role="group" aria-label="Investor cash" tabIndex={0}>
@@ -324,7 +326,7 @@ export default function GameView({
             key={p.id}
           >
             <div className="avatar" style={{ '--avatar': colors[i] } as CSSProperties}>
-              {p.name.slice(0, 1).toUpperCase()}
+              <CharacterAvatar characterId={p.characterId} name={p.name} />
               {p.id === actor.id && !isEnded && <span />}
             </div>
             <div>
@@ -334,7 +336,7 @@ export default function GameView({
               </strong>
               <span>
                 {p.isBot
-                  ? 'The house'
+                  ? getCharacter(p.characterId)?.title ?? 'The house'
                   : p.id === actor.id && !isEnded
                     ? 'At the table'
                     : 'Investor'}
@@ -1072,7 +1074,7 @@ export function InvestorPanel({
                 className="avatar small-avatar"
                 style={{ '--avatar': colors[i] } as CSSProperties}
               >
-                {p.name[0]}
+                <CharacterAvatar characterId={p.characterId} name={p.name} />
               </span>
               <strong>{p.name}</strong>
               <span>{hiddenMoney && p.id !== viewerId && game.phase !== 'ended' ? 'Private' : money(p.cash)}</span>

@@ -81,6 +81,7 @@ Deno.test('new map tile sets survive server dealing and member-safe room views',
     const { id: mapId, tiles, maxPlayers } = map;
     const count = tiles.length;
     const room = fixture();
+    room.players = room.players.slice(0, maxPlayers);
     room.players.push(...Array.from({ length: maxPlayers - room.players.length }, (_, i) => ({ id: `bot-${i}`, name: `Bot ${i}`, isBot: true })));
     room.game = createGame({ players: room.players, mapId, seed: 81 });
     room.game = secureDeal(room.game);

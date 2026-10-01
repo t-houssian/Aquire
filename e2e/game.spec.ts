@@ -190,18 +190,17 @@ test('solo: start three seats, found a chain, buy shares, save and resume after 
   await expect(page.getByTestId('turn-recap')).toBeVisible();
 });
 
-test('pass and play: the 2008 edition seats at least three and keeps racks private between turns', async ({ page }) => {
+test('pass and play: the two-player extension keeps racks private between turns', async ({ page }) => {
   await page.goto('/');
   await page.getByRole('button', { name: /Around the table/ }).click();
   await page.getByLabel('Player 1', { exact: true }).fill('Alex');
-  await expect(page.getByRole('button', { name: '2 players', exact: true })).toHaveCount(0);
-  await page.getByRole('button', { name: '3 players', exact: true }).click();
+  await page.getByRole('button', { name: '2 players', exact: true }).click();
   await page.getByLabel('Player 2', { exact: true }).fill('Morgan');
-  await page.getByLabel('Player 3', { exact: true }).fill('Riley');
+  await expect(page.getByLabel('Player 3', { exact: true })).toHaveCount(0);
   await expect(page.getByRole('button', { name: /^Tycoon/ })).toHaveCount(0);
   await page.getByRole('button', { name: /^Let’s build something/ }).click();
   await expect(page.locator('.game-heading .eyebrow')).toContainText('2008 EDITION');
-  await expect(page.locator('.players-bar .player-chip')).toHaveCount(3);
+  await expect(page.locator('.players-bar .player-chip')).toHaveCount(2);
   await expect(page.locator('.tile-rack')).toHaveCount(0);
   await expect(page.locator('.game-board button[aria-label*="in your hand"]')).toHaveCount(0);
   const before = await savedGame(page);

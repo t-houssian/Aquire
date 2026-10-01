@@ -15,14 +15,15 @@ To play in a phone browser, connect to the same Wi-Fi as this computer and open 
 
 ## What is implemented
 
-- Complete 3–6 player games on the printed board and custom expansion games with up to 8, 10, or 12 players; three computer difficulty levels and the 2008 majority/minority shareholder bonuses.
+- Complete 2–6 player games on the printed board, fifteen tiny two-seat maps, fifteen small four-seat maps, and custom expansions with up to 8, 10, or 12 players; three computer difficulty levels and the 2008 majority/minority shareholder bonuses.
 - All 108 printed tiles, the seven 2008 hotel chains and 25 shares each by default, exact stock/bonus tables, founder stock when available, safe chains, tied and multiple-chain mergers, ordered shareholder decisions, and keep/sell/2:1 trade combinations.
 - Optional final-turn declaration, full bonus and stock liquidation, shared victories, safe-chain tile retirement, the 2008 full-rack exchange, and finite-game safeguards for rare deadlocks.
 - Private racks in pass-and-play, automatic local saves with a save-or-end exit choice, a separate End game control for unfinished tables in My games, compact completed-match history, leaderboards, trophy cases, contextual hints, sound preferences, and native haptics.
 - Colored chain initials on every occupied chain tile, and centered opponent-turn recaps with the exact board location, purchases, founding shares, and merger activity.
 - Optional memory preferences: hide opponents’ holdings/history details (on by default) and show stock availability without remaining quantities (off by default). Both can also be changed while setting up a game.
 - Optional per-table house rules for choosing 2–12 hotel chains and 1–100 shares per chain, opening tiles and cash, up to six placements and five safe removals per turn, 1–10 regular share buys, timed turns, hidden cash and anonymous buying, dividends, turn trading, and normal or crazy market rolls. Market rolls can occur after each round, before each turn, or after every two or three rounds. Set defaults in Table preferences, adjust them in local or online setup, and inspect the active rules in the game’s House rules tab. Printed 2008 settings remain the default.
-- The official 108-tile board plus thirty-three optional, rotationally balanced maps. The eight newest six-seat maps break away from the original 12×9 dimensions with long docks, a tall obelisk, an S-bend, a star, a pinwheel, crossed diagonals, and lagoons. Two new maps each for 8, 10, and 12 seats add sky courts, skyline prongs, carved avenues, a plaza lattice, a 30-column ring, and an eight-point megacity star. Every map has its own palette and live preview. Custom maps keep 2008 prices and turn rules while showing any changed end target during setup.
+- Eighty connected, rotationally balanced maps: the printed board, fifteen tiny two-player cities, fifteen four-player cities, twenty-eight six-player variants, and seven each for eight, ten and twelve. Every map has its own theme and preview. Custom boards retain printed prices and turn rules while showing their end target at setup.
+- **The Long Game:** twelve solo story chapters, 56 unique rivals with original faces and investing personalities, and a finale against eleven Strategists on World Tree. Win outright to advance, retry losses or ties, and resume saved chapters. The cast also appears in free play. Story progress stays on the device and adds no Supabase writes.
 - A closing-bell ceremony that reveals final hotel payouts smallest to largest, then standings, a winner celebration, and an award for every investor.
 - Responsive phone/tablet/desktop layouts, keyboard-accessible controls and dialogs, reduced-motion support, bundled fonts, branded native icons and splash screens.
 - A collapsible desktop sidebar with a remembered preference, and a desktop game layout that fits the board, current decision, and market into the available window height.
@@ -30,12 +31,14 @@ To play in a phone browser, connect to the same Wi-Fi as this computer and open 
 
 Ending an unfinished local game removes its save without adding a match result. An online host can end a room for everyone; guests can leave without closing the shared game. Saved online rooms appear in My games and return after a reload using the same guest session.
 
-| Expansion tier | Board dimensions | Maps (playable tiles) | Maximum seats |
+| Map tier | Maps | Playable tiles | Maximum seats |
 | --- | --- | --- | --- |
-| New six-seat shapes | 20×7 to 11×17 | Twin Docks (108), The Obelisk (139), Coral Crown (136), Lightning Run (118), Compass Rose (127), The Pinwheel (136), Starfall X (115), Twin Lagoons (144) | 6 |
-| Big | 16×12, 23×11, 15×18 | Grand Rectangle (192), Crater City (168), Twin Harbors (160), Aurora Gate (185), Trident Towers (206) | 8 |
-| Mega | 20×14, 27×13, 18×19 | Diamond Dominion (240), Three Rivers (240), The Great Divide (232), The Triple Arch (255), Citadel Grid (262) | 10 |
-| Max | 24×16, 30×17, 23×23 | Metropolis Max (384), Grand Archipelago (292), The Grand Cross (312), Celestial Ring (366), Orion Star (409) | 12 |
+| Tiny cities | 15 | 30–42 | 2 |
+| Small cities | 15 | 51–75 | 4 |
+| Classic and six-seat variants | 29 | 80–157 | 6 |
+| Big | 7 | 160–264 | 8 |
+| Mega | 7 | 232–325 | 10 |
+| Max | 7 | 292–453 | 12 |
 
 **Live online rooms require a configured Supabase project.** This workspace’s connected project was deployed and tested with real Auth, a joined room, a full game, archived results, and cleanup on September 28, 2026. Follow [the Supabase setup guide](docs/ONLINE.md) for another project. Only the public project base URL and publishable key belong in `.env.local`.
 

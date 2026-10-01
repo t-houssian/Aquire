@@ -55,11 +55,11 @@ function finishMerger(state: GameState): GameState {
 }
 
 describe('2008 setup, names and exact printed prices (pp. 1–5, 7)', () => {
-  it('allows three to six seats and rejects a two-player game or unsupported bonus variant', () => {
-    expect(() => createGame({ players: players(2) })).toThrow();
+  it('allows two to six seats with the two-player extension and rejects unsupported bonus variants', () => {
+    expect(() => createGame({ players: players(1) })).toThrow();
     expect(() => createGame({ players: players(7) })).toThrow();
     expect(() => createGame({ players: players(3), mode: 'tycoon' as never })).toThrow();
-    for (const count of [3, 4, 5, 6]) {
+    for (const count of [2, 3, 4, 5, 6]) {
       const config = { players: players(count), seed: 249 };
       const state = createGame(config);
       expect(state.version).toBe(2);

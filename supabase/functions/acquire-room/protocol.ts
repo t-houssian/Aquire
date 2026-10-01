@@ -5,6 +5,7 @@ export interface RoomPlayer {
   id: string;
   name: string;
   isBot: boolean;
+  characterId?: string;
 }
 export interface StoredRoom {
   id: string;
@@ -116,7 +117,7 @@ export function requireCurrentRules(room: StoredRoom): void {
       (room.game.version !== 2 ||
         room.game.ruleset !== '2008' ||
         room.game.mode !== 'classic' ||
-        room.game.players.length < 3))
+        room.game.players.length < 2))
   ) {
     throw new RequestError(
       'OLD_RULESET',
@@ -174,6 +175,7 @@ export function publicRoom(room: StoredRoom, userId: string) {
         id: player.id,
         name: player.name,
         isBot: player.isBot,
+        ...(player.characterId ? { characterId: player.characterId } : {}),
         cash: privateMoney && player.id !== userId ? 0 : player.cash,
         stocks: privateTrades && player.id !== userId
           ? Object.fromEntries(Object.keys(player.stocks).map((chain) => [chain, 0])) as typeof player.stocks
@@ -234,7 +236,7 @@ export function publicRoom(room: StoredRoom, userId: string) {
     game,
     viewerId: userId,
     updatedAt: room.updated_at,
-    features: ['maps-v1', 'large-maps-v1', 'shaped-maps-v2', 'shaped-maps-v3', 'difficulty-v1', 'match-history-v1', 'house-rules-v1', 'hotel-roster-v1', 'hotel-stock-v1', 'market-frequency-v1', 'room-notifications-v1', 'room-deltas-v1'],
+    features: ['maps-v1', 'large-maps-v1', 'shaped-maps-v2', 'shaped-maps-v3', 'small-tables-v1', 'difficulty-v1', 'match-history-v1', 'house-rules-v1', 'hotel-roster-v1', 'hotel-stock-v1', 'market-frequency-v1', 'room-notifications-v1', 'room-deltas-v1'],
   };
 }
 

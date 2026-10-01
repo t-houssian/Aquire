@@ -8,6 +8,7 @@ import {
   validateHouseRules,
 } from '../_shared/game/engine.ts';
 import type { GameState } from '../_shared/game/types.ts';
+import { pickCharacters } from '../_shared/game/characters.ts';
 import { getMap, isMapId } from '../_shared/game/maps.ts';
 import {
   parseAction,
@@ -41,7 +42,7 @@ const dbMessages: Record<string, [string, number]> = {
   ],
   INVALID_NAME: ['Choose a name between 1 and 24 characters.', 400],
   INVALID_MODE: ['This game follows the 2008 rules, with no alternate mode.', 400],
-  PLAYER_COUNT: ['Choose at least three players without exceeding the selected map’s seat limit.', 400],
+  PLAYER_COUNT: ['Choose at least two players without exceeding the selected map’s seat limit.', 400],
   OLD_RULESET: ['This table uses an older rules edition. Create a new 2008 table.', 409],
 };
 function dbError(message: string): never {
@@ -246,14 +247,15 @@ Deno.serve(async (request: Request) => {
       if (!Number.isInteger(botCount) || Number(botCount) < 0 || Number(botCount) > 11)
         throw new RequestError('INVALID_BOTS', 'Choose between zero and eleven computer players.');
       const players = [...room.players];
-      const botNames = ['Marlow', 'Sinclair', 'Sterling', 'Avery', 'Ellis', 'Quinn', 'Devon', 'Arden', 'Rowan', 'Sage', 'Emery'];
+      const cast = pickCharacters(Number(botCount), crypto.getRandomValues(new Uint32Array(1))[0]);
       for (let i = 0; i < Number(botCount); i++)
         players.push({
           id: `bot-${crypto.randomUUID()}`,
-          name: botNames[i],
+          name: cast[i].name,
+          characterId: cast[i].id,
           isBot: true,
         });
-      if (players.length < 3 || players.length > getMap(mapId).maxPlayers)
+      if (players.length < 2 || players.length > getMap(mapId).maxPlayers)
         throw new RequestError('PLAYER_COUNT', ...dbMessages.PLAYER_COUNT);
       if (players.length * (houseRules.startingTilesPerPlayer + 6) > getMap(mapId).tiles.length)
         throw new RequestError('INVALID_HOUSE_RULES', 'This map cannot fit the selected opening and six private tiles per investor.');

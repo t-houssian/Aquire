@@ -60,6 +60,179 @@ const shaped = (
 export const MAPS: MapDefinition[] = [
   makeMap('classic', 'The Classic', 'The complete 2008 board.', 'The original city',
     { name: 'Sage & stone', canvas: '#f1f4e9', frame: '#e0e6d6', tile: '#f8f9f0', accent: '#69934b', ink: '#456144', void: '#edf1e6' }, () => true),
+  shaped('duo-pocket-square', 'Pocket Square', 'A tiny city with nowhere to hide. Build a first hotel and contest every corner.', 'A compact classic',
+    { name: 'Pocket linen', canvas: '#f8f0ec', frame: '#e2cfc5', tile: '#fdfbfa', accent: '#8e5739', ink: '#5b4133', void: '#d0ad9a' }, [
+      '######', '######', '######',
+      '######', '######', '######',
+    ], 2, 21),
+  shaped('duo-teacup-court', 'Teacup Court', 'Two investors circle a tiny tea garden. Both paths lead back to the same contest.', 'A little central court',
+    { name: 'Porcelain tea', canvas: '#ecf8f4', frame: '#c5e2d8', tile: '#fafdfc', accent: '#398e70', ink: '#335b4d', void: '#9ad0bd' }, [
+      '#######', '#######', '##...##',
+      '##...##', '#######', '#######',
+    ], 2, 21),
+  shaped('duo-button-bay', 'Button Bay', 'Clipped corners turn a seaside pocket into a quick contest for the center.', 'Clipped seaside corners',
+    { name: 'Blue buttons', canvas: '#f8ecf8', frame: '#e0c5e2', tile: '#fdfafd', accent: '#89398e', ink: '#59335b', void: '#cd9ad0' }, [
+      '.######.', '########', '########',
+      '########', '.######.',
+    ], 2, 21),
+  shaped('duo-sugar-steps', 'Sugar Steps', 'Two offset terraces climb across a narrow candy-colored city.', 'Stepped terraces',
+    { name: 'Sugar apricot', canvas: '#f6f8ec', frame: '#dce2c5', tile: '#fcfdfa', accent: '#7b8e39', ink: '#525b33', void: '#c4d09a' }, [
+      '####......', '######....', '##########',
+      '....######', '......####',
+    ], 2, 21),
+  shaped('duo-moon-lock', 'Moon Lock', 'Claim the ends of a little moonlit lock before the middle changes hands.', 'Two rooms and a crossing',
+    { name: 'Silver keyhole', canvas: '#ecf2f8', frame: '#c5d3e2', tile: '#fafbfd', accent: '#39628e', ink: '#33475b', void: '#9ab4d0' }, [
+      '###..###', '###..###', '########',
+      '########', '###..###', '###..###',
+    ], 2, 21),
+  shaped('duo-matchbox', 'The Matchbox', 'A long, shallow city makes each neighboring tile count.', 'A narrow classic',
+    { name: 'Matchbox red', canvas: '#f8ecee', frame: '#e2c5cb', tile: '#fdfafb', accent: '#8e3949', ink: '#5b333b', void: '#d09aa4' }, [
+      '#########', '#########', '#########',
+      '#########',
+    ], 2, 21),
+  shaped('duo-fern-path', 'Fern Path', 'A tall garden path widens at the middle and tapers at both ends.', 'Tapered garden path',
+    { name: 'Fern velvet', canvas: '#ecf8ed', frame: '#c5e2c8', tile: '#fafdfa', accent: '#398e41', ink: '#335b37', void: '#9ad09f' }, [
+      '.###.', '#####', '#####',
+      '#####', '#####', '#####',
+      '#####', '#####', '.###.',
+    ], 2, 21),
+  shaped('duo-biscuit-ring', 'Biscuit Ring', 'A hollow biscuit-shaped city invites a race around the outside.', 'Small hollow ring',
+    { name: 'Biscuit cream', canvas: '#f1ecf8', frame: '#d1c5e2', tile: '#fbfafd', accent: '#5a398e', ink: '#43335b', void: '#af9ad0' }, [
+      '#######', '#######', '##...##',
+      '##...##', '##...##', '#######',
+      '#######',
+    ], 2, 21),
+  shaped('duo-koi-crossing', 'Koi Crossing', 'Two quiet shores meet on a broad crossing over the pond.', 'Twin pond shores',
+    { name: 'Koi pond', canvas: '#f8f5ec', frame: '#e2d9c5', tile: '#fdfcfa', accent: '#8e7339', ink: '#5b4f33', void: '#d0bf9a' }, [
+      '###...###', '#########', '#########',
+      '#########', '###...###',
+    ], 2, 21),
+  shaped('duo-starlight-kite', 'Starlight Kite', 'A little diamond skyline puts long approaches around a busy heart.', 'Tall city kite',
+    { name: 'Starlight ink', canvas: '#ecf8f8', frame: '#c5e2e1', tile: '#fafdfd', accent: '#398e8c', ink: '#335b5a', void: '#9ad0cf' }, [
+      '...#...', '..###..', '.#####.',
+      '#######', '#######', '#######',
+      '.#####.', '..###..', '...#...',
+    ], 2, 21),
+  shaped('duo-coral-comb', 'Coral Comb', 'Four short reef fingers branch off a narrow central lane.', 'Four reef fingers',
+    { name: 'Coral sherbet', canvas: '#f8ecf5', frame: '#e2c5da', tile: '#fdfafc', accent: '#8e3977', ink: '#5b3351', void: '#d09ac2' }, [
+      '.##....##.', '.##....##.', '##########',
+      '##########', '.##....##.', '.##....##.',
+    ], 2, 21),
+  shaped('duo-lemon-bow', 'Lemon Bow', 'Two little districts draw together at a two-column bow.', 'A tiny bow tie',
+    { name: 'Lemon ribbon', canvas: '#f2f8ec', frame: '#d2e2c5', tile: '#fbfdfa', accent: '#5e8e39', ink: '#455b33', void: '#b2d09a' }, [
+      '###...###', '###...###', '#########',
+      '#########', '###...###', '###...###',
+    ], 2, 21),
+  shaped('duo-velvet-rail', 'Velvet Rail', 'Two sheltered station ends sit along a long two-track boulevard.', 'Pocket railway',
+    { name: 'Velvet plum', canvas: '#eceef8', frame: '#c5cae2', tile: '#fafafd', accent: '#39458e', ink: '#33395b', void: '#9aa2d0' }, [
+      '###.....###', '###########', '###########',
+      '###.....###',
+    ], 2, 21),
+  shaped('duo-pebble-isle', 'Pebble Isle', 'Four small bays shape a bright island with room for one decisive meeting.', 'Four-corner island bays',
+    { name: 'Pebble seafoam', canvas: '#f8eeec', frame: '#e2c9c5', tile: '#fdfafa', accent: '#8e4539', ink: '#5b3933', void: '#d0a29a' }, [
+      '..####..', '..####..', '########',
+      '########', '########', '..####..',
+      '..####..',
+    ], 2, 21),
+  shaped('duo-jellybean', 'Jellybean', 'A slender city bends gently around opposite corners.', 'Curved pocket skyline',
+    { name: 'Blackcurrant fizz', canvas: '#ecf8f1', frame: '#c5e2d2', tile: '#fafdfb', accent: '#398e5e', ink: '#335b45', void: '#9ad0b2' }, [
+      '..###', '..###', '#####',
+      '#####', '#####', '#####',
+      '#####', '#####', '###..',
+      '###..',
+    ], 2, 21),
+  shaped('four-market-square', 'Market Square', 'Four investors share a modest rectangular city. A familiar place to learn an unfamiliar rival.', 'A neighborhood classic',
+    { name: 'Market morning', canvas: '#f5ecf8', frame: '#dac5e2', tile: '#fcfafd', accent: '#77398e', ink: '#50335b', void: '#c19ad0' }, [
+      '#########', '#########', '#########',
+      '#########', '#########', '#########',
+      '#########', '#########',
+    ], 4, 31),
+  shaped('four-amber-court', 'Amber Court', 'A sunlit central courtyard splits the routes through this compact city.', 'Sunlit central courtyard',
+    { name: 'Amber conservatory', canvas: '#f8f8ec', frame: '#e1e2c5', tile: '#fdfdfa', accent: '#8d8e39', ink: '#5b5b33', void: '#cfd09a' }, [
+      '#########', '#########', '#########',
+      '###...###', '###...###', '###...###',
+      '#########', '#########', '#########',
+    ], 4, 31),
+  shaped('four-sailmakers', 'Sailmakers Wharf', 'Four little corner bays shape a long trading wharf.', 'Clipped trading wharf',
+    { name: 'Sailcloth blue', canvas: '#ecf5f8', frame: '#c5d9e2', tile: '#fafcfd', accent: '#39748e', ink: '#334f5b', void: '#9abfd0' }, [
+      '..########..', '..########..', '############',
+      '############', '############', '..########..',
+      '..########..',
+    ], 4, 31),
+  shaped('four-paper-lantern', 'Paper Lantern', 'A tall lantern city narrows at either tip, inviting careful vertical expansion.', 'Tall lantern silhouette',
+    { name: 'Lantern blush', canvas: '#f8ecf1', frame: '#e2c5d1', tile: '#fdfafb', accent: '#8e395b', ink: '#5b3343', void: '#d09aaf' }, [
+      '..###..', '.#####.', '.#####.',
+      '#######', '#######', '#######',
+      '#######', '#######', '#######',
+      '#######', '.#####.', '.#####.',
+      '..###..',
+    ], 4, 31),
+  shaped('four-crescent-pier', 'Crescent Pier', 'Two broad docks connect through a slim middle passage. Pick which waterfront to back.', 'Compact twin docks',
+    { name: 'Crescent tide', canvas: '#edf8ec', frame: '#c8e2c5', tile: '#fafdfa', accent: '#428e39', ink: '#385b33', void: '#9fd09a' }, [
+      '####.....####', '####.....####', '#############',
+      '#############', '####.....####', '####.....####',
+    ], 4, 31),
+  shaped('four-foxglove', 'Foxglove', 'A clipped flower skyline brings four districts together around one crowded heart.', 'Flower-shaped neighborhood',
+    { name: 'Foxglove mauve', canvas: '#eeecf8', frame: '#cbc5e2', tile: '#fafafd', accent: '#49398e', ink: '#3b335b', void: '#a49ad0' }, [
+      '....###....', '...#####...', '..#######..',
+      '.#########.', '###########', '.#########.',
+      '..#######..', '...#####...', '....###....',
+    ], 4, 31),
+  shaped('four-copper-coil', 'Copper Coil', 'A two-tile-wide coil sends rival chains around the edges of a silent square.', 'Thin square loop',
+    { name: 'Copper patina', canvas: '#f8f2ec', frame: '#e2d3c5', tile: '#fdfbfa', accent: '#8e6239', ink: '#5b4733', void: '#d0b49a' }, [
+      '##########', '##########', '##......##',
+      '##......##', '##......##', '##......##',
+      '##......##', '##......##', '##########',
+      '##########',
+    ], 4, 31),
+  shaped('four-blue-hour', 'Blue Hour', 'An offset promenade steps from the morning district into the evening district.', 'Stepped blue promenade',
+    { name: 'Twilight cobalt', canvas: '#ecf8f6', frame: '#c5e2db', tile: '#fafdfc', accent: '#398e7b', ink: '#335b52', void: '#9ad0c4' }, [
+      '#####.........', '#########.....', '##############',
+      '##############', '.....#########', '.........#####',
+    ], 4, 31),
+  shaped('four-honey-arcade', 'Honey Arcade', 'Twin arcades sit beside a shared alley, with corner plazas opening the edges.', 'Two little arcades',
+    { name: 'Honey glaze', canvas: '#f8ecf8', frame: '#e2c5e0', tile: '#fdfafd', accent: '#8e3989', ink: '#5b3359', void: '#d09acd' }, [
+      '..########..', '..########..', '############',
+      '##...##...##', '##...##...##', '############',
+      '..########..', '..########..',
+    ], 4, 31),
+  shaped('four-pistachio-park', 'Pistachio Park', 'A narrow park divides an upright city between two looping paths.', 'Upright park loop',
+    { name: 'Pistachio cream', canvas: '#f4f8ec', frame: '#d8e2c5', tile: '#fcfdfa', accent: '#708e39', ink: '#4d5b33', void: '#bdd09a' }, [
+      '..####..', '..####..', '########',
+      '###..###', '###..###', '###..###',
+      '###..###', '########', '..####..',
+      '..####..',
+    ], 4, 31),
+  shaped('four-vinyl-club', 'Vinyl Club', 'A bright record-shaped city circles a small open stage.', 'Record and center stage',
+    { name: 'Vinyl burgundy', canvas: '#ecf0f8', frame: '#c5d0e2', tile: '#fafbfd', accent: '#39578e', ink: '#33425b', void: '#9aadd0' }, [
+      '..#######..', '.#########.', '###########',
+      '####...####', '###########', '.#########.',
+      '..#######..',
+    ], 4, 31),
+  shaped('four-tulip-terminal', 'Tulip Terminal', 'A narrow north-south city fans out around a wide central terminal.', 'Tall stem, broad terminal',
+    { name: 'Tulip terracotta', canvas: '#f8eced', frame: '#e2c5c7', tile: '#fdfafa', accent: '#8e393e', ink: '#5b3336', void: '#d09a9d' }, [
+      '..#####..', '..#####..', '..#####..',
+      '..#####..', '#########', '#########',
+      '#########', '..#####..', '..#####..',
+      '..#####..', '..#####..',
+    ], 4, 31),
+  shaped('four-kite-festival', 'Kite Festival', 'Two opposing kites meet at a short string of central tiles.', 'Paired city kites',
+    { name: 'Festival ribbons', canvas: '#ecf8ef', frame: '#c5e2cc', tile: '#fafdfb', accent: '#398e4c', ink: '#335b3d', void: '#9ad0a6' }, [
+      '...#.....#...', '..###...###..', '.###########.',
+      '#############', '.###########.', '..###...###..',
+      '...#.....#...',
+    ], 4, 31),
+  shaped('four-snowglobe', 'Snowglobe', 'A little frosted dome opens around a central viewing garden.', 'Rounded winter garden',
+    { name: 'Snowglobe frost', canvas: '#f2ecf8', frame: '#d4c5e2', tile: '#fbfafd', accent: '#65398e', ink: '#48335b', void: '#b69ad0' }, [
+      '..######..', '..######..', '##########',
+      '####..####', '####..####', '####..####',
+      '##########', '..######..', '..######..',
+    ], 4, 31),
+  shaped('four-rooftop-radio', 'Rooftop Radio', 'A long neighborhood has four small aerials reaching into the skyline.', 'Four rooftop aerials',
+    { name: 'Radio mint', canvas: '#f8f6ec', frame: '#e2ddc5', tile: '#fdfcfa', accent: '#8e7e39', ink: '#5b5433', void: '#d0c69a' }, [
+      '..###.....###..', '###############', '###############',
+      '###############', '..###.....###..',
+    ], 4, 31),
   makeMap('corner-plazas', 'Corner Plazas', 'Four open plazas push growth toward the center.', 'Open corners',
     { name: 'Rose garden', canvas: '#fff0ed', frame: '#efdad8', tile: '#fff9f6', accent: '#a95b72', ink: '#633e50', void: '#f5d7d6' },
     (c, r) => !((c < 2 || c > 9) && (r < 2 || r > 6))),
@@ -340,6 +513,16 @@ export const CREATIVE_MAP_IDS: ReadonlySet<MapId> = new Set([
   'mega-thunderbird', 'mega-mirage-steps',
   'max-world-tree', 'max-astral-loom',
 ]);
+/** Small-city and two-player house expansion, supported by matching online servers. */
+export const SMALL_MAP_IDS: ReadonlySet<MapId> = new Set([
+  'duo-pocket-square', 'duo-teacup-court', 'duo-button-bay', 'duo-sugar-steps', 'duo-moon-lock',
+  'duo-matchbox', 'duo-fern-path', 'duo-biscuit-ring', 'duo-koi-crossing', 'duo-starlight-kite',
+  'duo-coral-comb', 'duo-lemon-bow', 'duo-velvet-rail', 'duo-pebble-isle', 'duo-jellybean',
+  'four-market-square', 'four-amber-court', 'four-sailmakers', 'four-paper-lantern', 'four-crescent-pier',
+  'four-foxglove', 'four-copper-coil', 'four-blue-hour', 'four-honey-arcade', 'four-pistachio-park',
+  'four-vinyl-club', 'four-tulip-terminal', 'four-kite-festival', 'four-snowglobe', 'four-rooftop-radio',
+]);
+export const MAP_SEAT_TIERS = [2, 4, 6, 8, 10, 12] as const;
 export const getMap = (id: MapId | undefined): MapDefinition => MAPS.find((map) => map.id === id) ?? MAPS[0];
 export const isMapId = (value: unknown): value is MapId => typeof value === 'string' && MAPS.some((map) => map.id === value);
 export const mapHasTile = (id: MapId | undefined, tile: Tile) => getMap(id).tiles.includes(tile);

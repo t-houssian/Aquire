@@ -5,6 +5,7 @@ export interface TurnRecapData {
   turn: number;
   playerId: string;
   playerName: string;
+  characterId?: string;
   isBot: boolean;
   mapId?: MapId;
   tile: Tile | null;
@@ -98,6 +99,7 @@ export function collectTurnRecaps(
       turn: entry.turn,
       playerId: player.id,
       playerName: player.name,
+      ...(player.characterId ? { characterId: player.characterId } : {}),
       isBot: player.isBot,
       mapId: next.mapId,
       tile: placement ?? null,

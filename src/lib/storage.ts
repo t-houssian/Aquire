@@ -1,5 +1,6 @@
 import type { GameState, HouseRules } from '../game/types';
 import { DEFAULT_HOUSE_RULES, validateHouseRules } from '../game/engine';
+import { recordStoryResult } from './campaign';
 import { summarizeMatch, type MatchSummary } from './matches';
 export interface SavedGame {
   game: GameState;
@@ -57,7 +58,7 @@ export function readGames(): SavedGame[] {
         ) as SavedGame[];
     const active = valid.filter((save) => {
           if (save.game.phase !== 'ended') return true;
-          try { archiveMatch(save.game, 'local'); return false; }
+          try { recordStoryResult(save.game); archiveMatch(save.game, 'local'); return false; }
           catch { return true; }
         });
     if (active.length !== data.length) localStorage.setItem(SAVE_KEY, JSON.stringify(active.slice(0, 24)));
@@ -77,6 +78,7 @@ export function readLegacyGameCount(): number {
 export function saveGame(game: GameState, kind: SavedGame['kind']) {
   const saves = readGames().filter((s) => s.game.id !== game.id);
   if (game.phase === 'ended') {
+    recordStoryResult(game);
     archiveMatch(game, 'local');
     localStorage.setItem(SAVE_KEY, JSON.stringify(saves.slice(0, 24)));
     return;

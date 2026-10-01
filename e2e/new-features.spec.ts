@@ -287,7 +287,7 @@ test('all sixteen creative city previews expose their shapes, themes and seat li
   await page.getByRole('button', { name: /Let’s play/ }).first().click();
   const dialog = page.getByRole('dialog', { name: 'A new opportunity' });
   const cities = dialog.getByLabel('City map');
-  await expect(cities.locator('option')).toHaveCount(50);
+  await expect(cities.locator('option')).toHaveCount(80);
   const accents = new Set<string>();
   for (const map of MAPS.filter((map) => CREATIVE_MAP_IDS.has(map.id))) {
     await cities.selectOption(map.id);

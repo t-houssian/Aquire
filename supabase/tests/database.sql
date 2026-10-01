@@ -69,8 +69,8 @@ begin
     raise exception 'Stale update succeeded';
   exception when others then if sqlerrm <> 'VERSION_CONFLICT' then raise; end if; end;
   begin
-    perform public.acquire_commit_room(host, 'TST234', 1, '{"version":2,"ruleset":"2008","mode":"classic"}'::jsonb, members, 'playing');
-    raise exception 'A two-player 2008 game started';
+    perform public.acquire_commit_room(host, 'TST234', 1, '{"version":2,"ruleset":"2008","mode":"classic"}'::jsonb, jsonb_build_array(members->0), 'playing');
+    raise exception 'A one-player game started';
   exception when others then if sqlerrm <> 'PLAYER_COUNT' then raise; end if; end;
   members := members || '[{"id":"computer","name":"Computer","isBot":true}]'::jsonb;
   begin
@@ -171,6 +171,7 @@ end $$;
 do $$
 declare
   map_ids text[] := array[
+    'duo-pocket-square', 'duo-teacup-court', 'duo-button-bay', 'duo-sugar-steps', 'duo-moon-lock', 'duo-matchbox', 'duo-fern-path', 'duo-biscuit-ring', 'duo-koi-crossing', 'duo-starlight-kite', 'duo-coral-comb', 'duo-lemon-bow', 'duo-velvet-rail', 'duo-pebble-isle', 'duo-jellybean', 'four-market-square', 'four-amber-court', 'four-sailmakers', 'four-paper-lantern', 'four-crescent-pier', 'four-foxglove', 'four-copper-coil', 'four-blue-hour', 'four-honey-arcade', 'four-pistachio-park', 'four-vinyl-club', 'four-tulip-terminal', 'four-kite-festival', 'four-snowglobe', 'four-rooftop-radio',
     'twin-docks', 'obelisk', 'coral-crown', 'lightning-run', 'compass-rose', 'pinwheel', 'starfall-x', 'twin-lagoons',
     'big-aurora-gate', 'big-trident-towers', 'mega-triple-arch', 'mega-citadel-grid', 'max-celestial-ring', 'max-orion-star',
     'lunar-moth', 'ember-gear', 'jade-infinity', 'clockwork-keys', 'crystal-cascade', 'cloud-palace', 'comet-arcade', 'saffron-labyrinth', 'biolume-reef', 'lotus-gardens', 'big-dragon-spine', 'big-moon-mosaic', 'mega-thunderbird', 'mega-mirage-steps', 'max-world-tree', 'max-astral-loom'
@@ -185,7 +186,7 @@ begin
   for i in 1..array_length(map_ids, 1) loop
     host := ('00000000-0000-4000-8000-' || lpad((300 + i)::text, 12, '0'))::uuid;
     code := 'MAP' || substr('ABCDEFGHJKLMNPQRSTUVWXYZ', (i - 1) / 23 + 1, 1) || substr('ABCDEFGHJKLMNPQRSTUVWXYZ', (i - 1) % 23 + 1, 1) || 'X';
-    maximum := case when map_ids[i] like 'big-%' then 8 when map_ids[i] like 'mega-%' then 10 when map_ids[i] like 'max-%' then 12 else 6 end;
+    maximum := case when map_ids[i] like 'duo-%' then 2 when map_ids[i] like 'four-%' then 4 when map_ids[i] like 'big-%' then 8 when map_ids[i] like 'mega-%' then 10 when map_ids[i] like 'max-%' then 12 else 6 end;
     game := jsonb_build_object('version', 2, 'ruleset', '2008', 'mode', 'classic', 'mapId', map_ids[i]);
     result := public.acquire_create_room(host, 'Host', code, 'classic');
     seats := result->'players';

@@ -12,6 +12,7 @@ import {
   type GameAction,
   type GameState,
 } from '../src/game/engine';
+import { getMap } from '../src/game/maps';
 import type { OnlineRoom } from '../src/lib/online';
 import type { HouseRules, MapId } from '../src/game/types';
 
@@ -43,7 +44,7 @@ class MockSupabase {
       game: null,
       viewerId,
       updatedAt: new Date().toISOString(),
-      features: ['maps-v1', 'large-maps-v1', 'shaped-maps-v2', 'shaped-maps-v3', 'difficulty-v1', 'match-history-v1', 'house-rules-v1', 'hotel-roster-v1', 'hotel-stock-v1', 'market-frequency-v1'],
+      features: ['maps-v1', 'large-maps-v1', 'shaped-maps-v2', 'shaped-maps-v3', 'small-tables-v1', 'difficulty-v1', 'match-history-v1', 'house-rules-v1', 'hotel-roster-v1', 'hotel-stock-v1', 'market-frequency-v1'],
     };
   }
   snapshot(): OnlineRoom {
@@ -59,10 +60,10 @@ class MockSupabase {
     }
     return room;
   }
-  start(options: { mapId?: MapId; botDifficulty?: 'standard' | 'strategist'; houseRules?: HouseRules } = {}) {
+  start(options: { botCount?: number; mapId?: MapId; botDifficulty?: 'standard' | 'strategist'; houseRules?: HouseRules } = {}) {
     if (this.room.players.length === 1)
       this.room.players.push({ id: GUEST, name: 'Morgan', isBot: false });
-    if (this.room.players.length === 2)
+    if (this.room.players.length === 2 && options.botCount !== 0 && getMap(options.mapId).maxPlayers > 2)
       this.room.players.push({
         id: '33333333-3333-4333-8333-333333333333',
         name: 'Jordan',
@@ -614,4 +615,32 @@ test.describe('online room UI — HTTP-mocked Supabase', () => {
       0,
     );
   });
+});
+
+
+test('two human seats can start a tiny city without adding computers', async ({ page }) => {
+  const backend = new MockSupabase();
+  backend.room.players.push({ id: GUEST, name: 'Morgan', isBot: false });
+  await backend.install(page);
+  await page.goto('/'); await openOnline(page);
+  await page.getByRole('button', { name: 'Open your table' }).click();
+  await page.getByLabel('City map').selectOption('duo-sugar-steps');
+  await expect(page.getByRole('button', { name: 'Start the game' })).toBeEnabled();
+  await page.getByRole('button', { name: 'Start the game' }).click();
+  await expectBoard(page);
+  expect(backend.fullGame?.players).toHaveLength(2);
+  expect(backend.fullGame?.mapId).toBe('duo-sugar-steps');
+  expect(backend.operations.find((operation) => operation.operation === 'start')).toMatchObject({ botCount: 0, mapId: 'duo-sugar-steps' });
+});
+
+test('an older online server keeps small cities and two-seat starts disabled', async ({ page }) => {
+  const backend = new MockSupabase();
+  backend.room.features = backend.room.features?.filter((feature) => feature !== 'small-tables-v1');
+  await backend.install(page);
+  await page.goto('/'); await openOnline(page);
+  await page.getByRole('button', { name: 'Open your table' }).click();
+  await expect(page.locator('option[value="duo-pocket-square"]')).toBeDisabled();
+  await expect(page.locator('option[value="four-market-square"]')).toBeDisabled();
+  await page.locator('#bot-seats').selectOption('1');
+  await expect(page.getByRole('button', { name: 'Start the game' })).toBeDisabled();
 });

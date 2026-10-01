@@ -50,7 +50,7 @@ function checkInvariants(state: GameState) {
 }
 
 describe('complete seeded games', () => {
-  for (const count of [3, 4, 5, 6]) {
+  for (const count of [2, 3, 4, 5, 6]) {
     it(`${count} players finish 2008 games with conserved tiles/shares and no bankruptcies`, () => {
       for (const seed of [1, 7, 42, 319, 999, 1021, 4007, 7349, 9991, 21527]) {
         let state = createGame(config(count, seed));
@@ -121,10 +121,10 @@ describe('action boundaries', () => {
     expect(() => applyAction(state, { type: 'declare-end' })).toThrow('41');
     expect(JSON.stringify(state)).toBe(original);
   });
-  it('requires three to six distinct named investors', () => {
-    expect(() => createGame(config(1))).toThrow('three and six');
-    expect(() => createGame(config(2))).toThrow('three and six');
-    expect(() => createGame(config(7))).toThrow('three and six');
+  it('requires two to six distinct named investors', () => {
+    expect(() => createGame(config(1))).toThrow('two and 6');
+    expect(createGame(config(2)).players).toHaveLength(2);
+    expect(() => createGame(config(7))).toThrow('two and 6');
     expect(() =>
       createGame({
         players: [
