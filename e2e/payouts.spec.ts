@@ -1,5 +1,5 @@
 import { expect, test, type Page } from '@playwright/test';
-import { ALL_TILES, CHAIN_IDS, applyAction, createGame, type GameState } from '../src/game/engine';
+import { ALL_TILES, CHAIN_IDS, applyAction, createGame, getLegalTiles, type GameState } from '../src/game/engine';
 
 const players = ['Alex', 'Morgan', 'Riley'].map((name, i) => ({ id: `p${i}`, name }));
 function fixture() {
@@ -30,6 +30,48 @@ async function openTable(page: Page, game: GameState) {
     await page.locator('.saved-game-main').first().click();
     await page.locator('.privacy-panel').getByRole('button').click();
   }
+}
+
+for (const phase of ['buy', 'merger-shares'] as const) {
+  test(phase + ' highlights legal rack options without placing or selecting a second tile', async ({ page }, info) => {
+    let game = fixture();
+    game = phase === 'buy' ? { ...game, phase: 'buy' }
+      : applyAction(game, { type: 'place', tile: '3A' });
+    const viewerId = phase === 'buy' ? 'p1' : 'p0';
+    const legal = getLegalTiles(game, viewerId);
+    expect(legal.length).toBeGreaterThan(0);
+    await openTable(page, game);
+    for (const [width, height] of [[393, 700], [844, 390], [320, 568], [1280, 800]]) {
+      await page.setViewportSize({ width, height });
+      const boardButton = page.getByRole('button', { name: 'Board', exact: true });
+      if (await boardButton.isVisible()) await boardButton.click();
+      const previews = page.locator('.game-board .rack-preview');
+      await expect(previews).toHaveCount(legal.length);
+      expect(await previews.evaluateAll(cells => cells.map(cell => cell.getAttribute('data-tile')).sort())).toEqual([...legal].sort());
+      for (const cell of await previews.all()) await expect(cell).toBeDisabled();
+      await expect(page.locator('.board-legend')).toContainText('preview only');
+      const before = await page.evaluate(() => localStorage.getItem('aquire.games.v2'));
+      await previews.first().evaluate((button: HTMLButtonElement) => button.click());
+      expect(await page.evaluate(() => localStorage.getItem('aquire.games.v2'))).toBe(before);
+      await expect(page.locator('.game-board .tile-selected')).toHaveCount(0);
+      await expect(page.getByRole('button', { name: /^Place / })).toHaveCount(0);
+      const colors = await previews.first().evaluate(button => {
+        const unbuilt = button.closest('.game-board')!.querySelector('.board-tile:not(.playable):not(.occupied):not(.map-void)')!;
+        return [getComputedStyle(button).backgroundColor, getComputedStyle(unbuilt).backgroundColor];
+      });
+      expect(colors[0]).not.toBe(colors[1]);
+      if (phase === 'merger-shares') {
+        const order = page.locator('.merger-decision-order');
+        await order.locator('summary').click();
+        await expect(order.getByRole('list', { name: 'Merger shareholder decision order' })).toContainText('Alex · Deciding now');
+        await order.locator('summary').click();
+      }
+      const geometry = await page.evaluate(() => ({ width: document.documentElement.scrollWidth, height: document.documentElement.scrollHeight }));
+      expect(geometry.width).toBeLessThanOrEqual(width + 1);
+      expect(geometry.height).toBeLessThanOrEqual(height + 1);
+      if (width === 393) await page.screenshot({ path: 'artifacts/rack-preview/' + phase + '-' + info.project.name + '.png' });
+    }
+  });
 }
 
 test('landscape cash stays visible without taking space from the board', async ({ page }) => {

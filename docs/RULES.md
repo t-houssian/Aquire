@@ -2,12 +2,14 @@
 
 The reference is the [official Wizards of the Coast rulebook](https://media.wizards.com/2015/downloads/ah/acquire_rules.pdf): ©1999, 2008, production code `30022192000001 EN`. The PDF's original creation date is January 16, 2008; its URL reflects a later upload. Pages 1–6 contain the rules; remaining pages provide reference cards.
 
+The publisher’s [Acquire FAQ](https://media.wizards.com/2015/faq/Acquire_FAQ.pdf) confirms clockwise stock decisions from the merger maker, including first access to limited survivor shares.
+
 ## Playing
 
 - Three to six players start with $6,000 and six private tiles. Initial board tiles determine seating (pp. 1–2).
 - Place a tile, resolve founding or mergers, optionally buy up to three shares, then draw (pp. 2–5).
 - Connections are orthogonal. Founders receive a share only if one remains; an empty bank gives no compensation (p. 2).
-- The largest merging chain survives; the mover breaks ties. Resolve acquired chains from largest to smallest. Shareholders keep, sell, or exchange two acquired shares for one survivor share (pp. 3–4).
+- The largest merging chain survives; the mover breaks ties. Resolve acquired chains from largest to smallest. Starting with the mover and continuing clockwise, shareholders keep, sell, or exchange two acquired shares for one survivor share. Share counts determine bonuses, not decision order (pp. 3–4).
 - Eleven tiles make a chain safe. Safe chains cannot merge together (p. 4).
 - The printed FAQ permits a player with no legal placement at the beginning of a turn to reveal and set aside the whole rack, draw six replacements, then continue that turn (p. 5). This includes temporarily blocked tiles.
 - After placing a tile, optionally declare the end at 41 tiles or when every active chain is safe. Finish the turn, pay bonuses, liquidate active shares, and compare cash. Ties share victory (p. 5).

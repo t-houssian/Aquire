@@ -1,5 +1,11 @@
 # Validation record
 
+## Rack previews and visible merger order — October 2, 2026
+
+Buying and merger phases highlight legal tiles from the viewer's own rack on the board, with all board placements disabled. Permanently or temporarily illegal tiles are excluded, and device handoff hides rack markings. The preview uses map colors and retains the existing board sizing. A collapsible decision list shows the saved clockwise shareholder queue, current position and completed choices. The 2008 rulebook and publisher FAQ confirm that share counts determine bonuses while the merger maker starts stock decisions, continuing clockwise.
+
+The production TypeScript/Vite build passed, along with 44 focused rendering/rules tests and 73 browser checks across desktop/mobile Chromium and mobile WebKit, with two existing platform skips. Coverage includes disabled preview clicks leaving saved games unchanged, viewer-specific racks, private handoff, unequal holdings with only one survivor share left, and portrait/landscape buying and merger controls. The first run found a few pixels of landscape overflow; tighter order-list spacing resolved it and the full focused browser matrix passed. No hosted test guests or game data were created. These are emulated browser checks, not physical iPhone tests. Website changes await the normal GitHub-to-Cloudflare push.
+
 ## Guest records, expanded wardrobe and public tables — October 2, 2026
 
 The wardrobe now has fourteen customization fields and twenty rewards earned by unique story wins or competitive online wins. Legacy nine-character faces remain compatible with the new sixteen-character format. Optional country and guest records show games, wins, shared firsts, win percentage, average/best placement and best fortune. Public waiting tables advertise their city, seats, computer difficulty and house rules before joining; private codes remain available. Guest identity stays browser-specific, with sign-in deferred.

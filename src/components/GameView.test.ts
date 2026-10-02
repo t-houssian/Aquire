@@ -34,6 +34,48 @@ function render(
 }
 
 describe('boardroom privacy and settlement presentation', () => {
+  it('previews only legal tiles from the viewer’s rack while buying and disables every board cell', () => {
+    const game = table();
+    game.phase = 'buy';
+    game.currentPlayer = 1;
+    game.board = {};
+    for (let i = 1; i <= 11; i++) {
+      game.board[i + 'A'] = 'tower';
+      game.board[i + 'C'] = 'continental';
+    }
+    game.players[0].hand = ['1B', '12I'];
+    game.players[1].hand = ['11I'];
+    const html = render(game);
+    const cell = (tile: string) => html.match(new RegExp('<button[^>]*data-tile="' + tile + '"[^>]*>'))?.[0] ?? '';
+    expect(cell('12I')).toContain('rack-preview');
+    expect(cell('12I')).toContain('legal tile preview, placement disabled');
+    expect(cell('1B')).not.toContain('rack-preview');
+    expect(cell('11I')).not.toContain('rack-preview');
+    expect(html.match(/<button[^>]*data-tile=/g)).toHaveLength(108);
+    expect(html.match(/<button[^>]*data-tile=[^>]*disabled=""/g)).toHaveLength(108);
+    expect(render(game, 'human', true)).not.toContain('rack-preview');
+  });
+
+  it('previews the viewer’s next tiles during merger decisions and shows the real clockwise queue', () => {
+    let game = table();
+    game.currentPlayer = 0;
+    game.board = { '1A': 'tower', '2A': 'tower', '4A': 'american', '5A': 'american' };
+    game.players[0].hand = ['3A', '12I'];
+    game.players.forEach((player, i) => { player.stocks.american = [2, 12, 4][i]; });
+    game.bank.american = 7;
+    game = applyAction(game, { type: 'place', tile: '3A' });
+    game = applyAction(game, { type: 'choose-survivor', chain: 'tower' });
+    const html = render(game);
+    expect(html.match(/<button[^>]*data-tile="12I"[^>]*>/)?.[0]).toContain('rack-preview');
+    expect(html.match(/<button[^>]*data-tile="12I"[^>]*>/)?.[0]).toContain('disabled=""');
+    expect(html).toContain('Decision 1 of 3 · View order');
+    expect(html).toContain('Alex · Deciding now');
+    const queue = html.match(/<ol aria-label="Merger shareholder decision order">(.*?)<\/ol>/s)?.[1] ?? '';
+    expect(queue.indexOf('Alex')).toBeLessThan(queue.indexOf('Ellis'));
+    expect(queue.indexOf('Ellis')).toBeLessThan(queue.indexOf('Morgan'));
+    expect(render(game, 'human', true)).not.toContain('rack-preview');
+  });
+
   it('shows only the viewer’s rack while a computer opponent is deciding', () => {
     const game = table();
     game.currentPlayer = 1;

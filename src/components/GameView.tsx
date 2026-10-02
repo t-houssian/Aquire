@@ -215,7 +215,9 @@ export default function GameView({
   const saleValue = hotels.reduce((sum, chain) => sum + sellCart[chain.id] * getSharePrice(game, chain.id), 0);
   const purchaseLimit = rules.buyLimit + soldCount;
   const removableTiles = new Set(controllable && game.phase === 'place' ? getRemovableTiles(game) : []);
-  const legal = game.phase === 'place' && controllable ? getLegalTiles(game) : [];
+  const rackPreview = !privateGate && (game.phase === 'buy' || game.phase.startsWith('merger-'));
+  const legal = rackPreview || (game.phase === 'place' && controllable)
+    ? getLegalTiles(game, player.id) : [];
   const selection = selected ? analyzeTile(game, selected) : null;
   const total = hotels.reduce((sum, c) => sum + cart[c.id] * getSharePrice(game, c.id), 0),
     quantity = Object.values(cart).reduce((a, b) => a + b, 0);
@@ -422,7 +424,7 @@ export default function GameView({
                         <button
                           key={tile}
                           data-tile={tile}
-                          className={`board-tile ${!isPlayableSpace ? 'map-void' : ''} ${chain ? 'occupied' : ''} ${chain === 'independent' ? 'independent-tile' : ''} ${def ? 'chain-tile' : ''} ${head ? 'chain-headquarters' : ''} ${!removalMode && inHand && legal.includes(tile) ? 'playable' : ''} ${removalMode && removableTiles.has(tile) ? 'removal-target' : ''} ${selected === tile || selectedRemoval === tile ? 'tile-selected' : ''} ${game.lastPlacedTile === tile ? 'last-placed' : ''}`}
+                          className={`board-tile ${!isPlayableSpace ? 'map-void' : ''} ${chain ? 'occupied' : ''} ${chain === 'independent' ? 'independent-tile' : ''} ${def ? 'chain-tile' : ''} ${head ? 'chain-headquarters' : ''} ${!removalMode && inHand && legal.includes(tile) ? `playable${rackPreview ? ' rack-preview' : ''}` : ''} ${removalMode && removableTiles.has(tile) ? 'removal-target' : ''} ${selected === tile || selectedRemoval === tile ? 'tile-selected' : ''} ${game.lastPlacedTile === tile ? 'last-placed' : ''}`}
                           style={
                             def
                               ? ({
@@ -431,7 +433,7 @@ export default function GameView({
                                 } as CSSProperties)
                               : undefined
                           }
-                          aria-label={`${tile}${!isPlayableSpace ? ', outside this map' : def ? ', ' + def.name : chain ? ', independent hotel' : ''}${inHand ? ', in your hand' : ''}`}
+                          aria-label={`${tile}${!isPlayableSpace ? ', outside this map' : def ? ', ' + def.name : chain ? ', independent hotel' : ''}${inHand ? ', in your hand' : ''}${rackPreview && legal.includes(tile) ? ', legal tile preview, placement disabled' : ''}`}
                           aria-pressed={selected === tile || selectedRemoval === tile}
                           disabled={!enabled || !isPlayableSpace}
                           onClick={() => removalMode ? setSelectedRemoval(tile) : select(tile)}
@@ -459,7 +461,7 @@ export default function GameView({
                 <i className="legend-independent" /> Placed · independent
               </span>
               <span>
-                <i className="legend-hand" /> In your hand
+                <i className="legend-hand" /> {rackPreview ? 'Your options · preview only' : 'In your hand'}
               </span>
               <span>
                 <ShieldCheck size={13} /> 11+ hotels = safe
@@ -688,6 +690,15 @@ export default function GameView({
                           ? <button className="text-button merger-bonus-link" onClick={() => onShowMergerPayout([...game.logs].reverse().find((entry) => entry.payout?.chain === acquired && entry.turn === game.turn)!)}>View bonuses</button>
                           : 'Bonuses paid.'}
                       </p>
+                      <details className="merger-decision-order">
+                        <summary>Decision {game.merger!.shareholderCursor + 1} of {game.merger!.shareholders.length} · View order</summary>
+                        <p>From {game.players[game.currentPlayer].name}, clockwise. Share counts determine bonuses.</p>
+                        <ol aria-label="Merger shareholder decision order">
+                          {game.merger!.shareholders.map((index, position) => <li key={game.players[index].id} aria-current={position === game.merger!.shareholderCursor ? 'step' : undefined}>
+                            {game.players[index].name} · {position < game.merger!.shareholderCursor ? 'Done' : position === game.merger!.shareholderCursor ? 'Deciding now' : 'Waiting'}
+                          </li>)}
+                        </ol>
+                      </details>
                       {shareholderDecisions.length > 0 && <details className="merger-decisions" open><summary>Shareholder decisions so far</summary><ol>{shareholderDecisions.map((entry) => <li key={entry.id}>{shareDecisionText(entry, game, viewerId)}</li>)}</ol></details>}
                       {actor.id === viewerId && !privateGate && <div className="merger-rack" aria-label="Your tile rack during merger">
                         <div><strong>Your tile rack</strong><span>Keep your next move in view.</span></div>

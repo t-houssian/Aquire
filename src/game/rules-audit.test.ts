@@ -322,6 +322,20 @@ describe('2008 unplayable tiles and complete rack exchange (p. 5 FAQ)', () => {
 });
 
 describe('2008 merger sequence and bank limits (pp. 3–4)', () => {
+  it('lets the merger maker trade before the majority holder when only one survivor share remains', () => {
+    const state = scenario(mergerBoard, '5C', { continental: [2, 12, 4], tower: [24, 0, 0] });
+    let next = step(state, { type: 'place', tile: '5C' });
+    expect(next.merger?.shareholders).toEqual([0, 1, 2]);
+    expect(next.logs.find(entry => entry.payout)?.payout?.majorityIds).toEqual(['p1']);
+    next = step(next, { type: 'resolve-shares', sell: 0, trade: 2 });
+    expect(next.players[0].stocks.tower).toBe(25);
+    expect(next.bank.tower).toBe(0);
+    expect(getCurrentActor(next).id).toBe('p1');
+    expect(() => step(next, { type: 'resolve-shares', sell: 0, trade: 2 })).toThrow();
+    next = step(next, { type: 'resolve-shares', sell: 12, trade: 0 });
+    expect(getCurrentActor(next).id).toBe('p2');
+  });
+
   it('lets the mover choose an equal survivor using original sizes and settles at the original price', () => {
     const state = scenario({ tower: ['3C', '4C'], american: ['6C', '7C'] }, '5C', { american: [2, 3, 1] });
     const placed = step(state, { type: 'place', tile: '5C' });

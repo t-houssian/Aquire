@@ -23,7 +23,7 @@ export default function ShareDecisionReveal({ entry, game, viewerId, onContinue 
         <article><ArrowLeftRight size={24} /><strong>{decision.trade ?? 'Private'}</strong><span>{acquired.name} traded</span><small>{decision.received ?? 'Private'} {survivor.name} received</small></article>
         <article><Archive size={24} /><strong>{decision.keep ?? 'Private'}</strong><span>{acquired.name} kept</span><small>For a possible comeback</small></article>
       </div> : <p className="muted">This table uses anonymous stock decisions. Their quantities stay private.</p>}
-      <p className="muted small">The bank has been updated. Shareholders decide clockwise from the investor who placed the merger tile; earlier decisions remain visible while you choose.</p>
+      <p className="muted small">Shareholders decide clockwise from the player who made the merger. Majority and minority determine bonuses. Earlier choices stay visible while you decide.</p>
       <button className="button primary full" onClick={onContinue}>Continue <ArrowRight size={17} /></button>
     </div>
   </Modal>;

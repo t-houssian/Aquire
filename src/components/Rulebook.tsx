@@ -35,7 +35,7 @@ const sections = [
   {
     icon: HandCoins,
     title: 'Keep, sell, or trade',
-    text: 'Starting with the player who made the merger, each investor decides what to do with the acquired chain’s shares. Sell at its price before the merger, exchange two acquired shares for one available survivor share, or keep shares in case the chain returns. You can combine all three. Outside a merger, active shares can be sold only when the optional turn-trading house rule is enabled.',
+    text: 'Starting with the player who made the merger and continuing clockwise, each shareholder decides what to do with the acquired chain’s shares. Share counts determine bonuses; they do not change this decision order. Sell at its price before the merger, exchange two acquired shares for one available survivor share, or keep shares in case the chain returns. You can combine all three. Outside a merger, active shares can be sold only when the optional turn-trading house rule is enabled.',
   },
   {
     icon: Trophy,
