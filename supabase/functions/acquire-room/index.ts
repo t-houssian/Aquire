@@ -1,3 +1,4 @@
+import { decodeAvatar } from '../_shared/game/avatars.ts';
 import { createClient } from '@supabase/supabase-js';
 import {
   applyAction,
@@ -148,6 +149,8 @@ Deno.serve(async (request: Request) => {
       return respond(body.sync === 'delta-v1' && before && body.knownVersion === before.version
         ? makeRoomUpdate(publicRoom(before, userId), view) : view);
     };
+    if ((body.operation === 'create' || body.operation === 'join') && body.avatar !== undefined && !decodeAvatar(body.avatar))
+      throw new RequestError('INVALID_AVATAR', 'Choose a valid character face.');
     if (body.operation === 'create') {
       // Retention still runs on projects without pg_cron. Failure is nonfatal for play.
       const prune = await admin.rpc('acquire_prune_data');
@@ -156,7 +159,8 @@ Deno.serve(async (request: Request) => {
       const mode = body.mode ?? 'classic';
       if (mode !== 'classic') throw new RequestError('INVALID_MODE', ...dbMessages.INVALID_MODE);
       for (let attempt = 0; attempt < 5; attempt++) {
-        const { data, error } = await admin.rpc('acquire_create_room', {
+        const { data, error } = await admin.rpc(body.avatar ? 'acquire_create_room_with_avatar' : 'acquire_create_room', {
+          ...(body.avatar ? { p_avatar: body.avatar } : {}),
           p_user_id: userId,
           p_name: name,
           p_code: roomCode(),
@@ -182,7 +186,8 @@ Deno.serve(async (request: Request) => {
     }
     const code = parseCode(body.code);
     if (body.operation === 'join') {
-      const room = await rpc('acquire_join_room', {
+      const room = await rpc(body.avatar ? 'acquire_join_room_with_avatar' : 'acquire_join_room', {
+        ...(body.avatar ? { p_avatar: body.avatar } : {}),
         p_user_id: userId,
         p_name: parseName(body.name),
         p_code: code,
@@ -246,8 +251,10 @@ Deno.serve(async (request: Request) => {
         throw new RequestError('INVALID_DIFFICULTY', 'Choose an available computer difficulty.');
       if (!Number.isInteger(botCount) || Number(botCount) < 0 || Number(botCount) > 11)
         throw new RequestError('INVALID_BOTS', 'Choose between zero and eleven computer players.');
+      if (mapId === 'goldspire-kingdom' && body.royalsUnlocked !== true)
+        throw new RequestError('STORY_LOCKED', 'Win every story challenge, including Goldspire Kingdom, to host this city.');
       const players = [...room.players];
-      const cast = pickCharacters(Number(botCount), crypto.getRandomValues(new Uint32Array(1))[0]);
+      const cast = pickCharacters(Number(botCount), crypto.getRandomValues(new Uint32Array(1))[0], body.royalsUnlocked === true);
       for (let i = 0; i < Number(botCount); i++)
         players.push({
           id: `bot-${crypto.randomUUID()}`,

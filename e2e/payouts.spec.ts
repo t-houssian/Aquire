@@ -69,6 +69,8 @@ test('buy and sell controls align inside their own rows across phone orientation
   for (const [width, height] of [[844, 390], [667, 375], [393, 700], [320, 568], [1280, 800]]) {
     await page.setViewportSize({ width, height });
     await expect(page.getByRole('button', { name: 'Buy Festival share' })).toBeVisible();
+    await expect(page.getByLabel('Your tile rack while buying')).toBeInViewport({ ratio: 1 });
+    await expect(page.locator('.buy-rack > div > span')).toHaveText(game.players[1].hand);
     const geometry = await page.locator('.stock-row').evaluateAll((rows) => rows.map((row) => {
       const box = row.getBoundingClientRect();
       return { top: box.top, bottom: box.bottom, controls: [...row.querySelectorAll('button')].map((button) => {
@@ -143,7 +145,7 @@ test('a multi-chain merger queues a separate bonus display for each acquired hot
   await page.getByRole('button', { name: 'Place 3A' }).click();
   await page.locator('.chain-choices button').filter({ hasText: 'Budgeton' }).click();
   await expect(page.getByRole('dialog', { name: 'Budgeton joins Festival' })).toBeVisible();
-  await page.getByRole('button', { name: 'Next merger' }).click();
+  await page.getByRole('button', { name: 'Next update' }).click();
   await expect(page.getByRole('dialog', { name: 'Worldwide joins Festival' })).toBeVisible();
   await expect(page.getByTestId('merger-reveal').locator('.merger-payout-row .paid')).toHaveCount(0);
   await page.getByTestId('merger-reveal').getByRole('button', { name: 'Continue' }).click();
@@ -164,4 +166,36 @@ test('all-safe end guidance leads from tile placement to a reachable declaration
   await expect(page.locator('.action-card')).toContainText('Final turn declared');
   const stored = await page.evaluate(() => JSON.parse(localStorage.getItem('aquire.games.v2')!)[0].game);
   expect(stored.endDeclared).toBe(true);
+});
+
+
+test('each merger choice is announced before the following shareholder chooses', async ({ page }, info) => {
+  const game = fixture();
+  game.players[1].stocks.budgeton = 8; game.players[0].stocks.budgeton = 4; game.players[2].stocks.budgeton = 2; game.bank.budgeton = 11;
+  await page.setViewportSize({ width: 844, height: 390 });
+  await openTable(page, game);
+  await page.locator('.tile-rack .rack-tile').filter({ hasText: /^3A/ }).click();
+  await page.getByRole('button', { name: 'Place 3A' }).click();
+  await page.getByTestId('merger-reveal').getByRole('button', { name: 'Continue' }).click();
+  await page.getByRole('button', { name: 'Sell more shares' }).click();
+  await page.getByRole('button', { name: 'Trade more shares' }).click();
+  await page.getByRole('button', { name: 'Confirm choices' }).click();
+  const reveal = page.getByTestId('share-decision-reveal');
+  await expect(reveal).toContainText('Majority');
+  await expect(reveal.locator('.share-decision-options article').nth(0)).toContainText('1');
+  await expect(reveal.locator('.share-decision-options article').nth(1)).toContainText('2');
+  await expect(reveal.locator('.share-decision-options article').nth(2)).toContainText('5');
+  await expect(page.locator('.game-screen')).toHaveAttribute('inert', '');
+  for (const [width, height] of [[844, 390], [393, 700], [320, 568]]) {
+    await page.setViewportSize({ width, height });
+    const continueButton = reveal.getByRole('button', { name: 'Continue', exact: true });
+    await continueButton.scrollIntoViewIfNeeded(); await expect(continueButton).toBeInViewport({ ratio: 1 });
+    expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth + 1)).toBe(true);
+  }
+  await page.getByRole('dialog').screenshot({ path: `artifacts/story/merger-decision-${info.project.name}.png` });
+  await reveal.getByRole('button', { name: 'Continue', exact: true }).click();
+  await page.locator('.privacy-panel').getByRole('button').click();
+  await expect(page.locator('.merger-decisions')).toContainText('Morgan sold 1 Budgeton, traded 2 for 1 Festival, and kept 5 Budgeton.');
+  // The official clockwise order is Morgan, Riley, Alex: do not silently sort by holdings.
+  await expect(page.locator('.player-chip.current')).toContainText('Riley');
 });

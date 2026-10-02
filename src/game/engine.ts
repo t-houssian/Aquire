@@ -1,3 +1,4 @@
+import { decodeAvatar } from './avatars.ts';
 import {
   CHAIN_IDS,
   DEFAULT_CHAIN_IDS,
@@ -516,6 +517,7 @@ export function createGame(config: GameConfig): GameState {
       id: p.id,
       name: p.name.trim().slice(0, 30),
       isBot: Boolean(p.isBot),
+      ...(decodeAvatar(p.avatar) ? { avatar: p.avatar } : {}),
       ...(p.isBot && getCharacter(p.characterId) ? { characterId: p.characterId } : {}),
       cash: houseRules.startingCash,
       stocks: stockMap(0),
@@ -807,8 +809,10 @@ function finishTurn(state: GameState) {
     const board = { ...state.board };
     delete board[tile];
     const afterRemoval = { ...state, board };
-    return analyzeTile(afterRemoval, tile).legal ||
-      state.players.some((player) => player.hand.some((held) => analyzeTile(afterRemoval, held).legal)) ||
+    // Recycling the removed tile itself is not new progress: with empty racks
+    // that would keep an exhausted table alive forever. A removal must reopen
+    // an existing held or drawable tile to prevent automatic settlement.
+    return state.players.some((player) => player.hand.some((held) => analyzeTile(afterRemoval, held).legal)) ||
       state.bag.some((held) => analyzeTile(afterRemoval, held).legal);
   });
   // The printed FAQ allows a fully blocked rack to be exchanged, including temporarily blocked tiles.
@@ -1098,6 +1102,7 @@ export function applyAction(previous: GameState, action: GameAction): GameState 
         action.trade / 2 <= state.bank[survivor],
         'The bank does not have enough surviving-chain shares for that trade.',
       );
+      const payout = state.logs.filter((entry) => entry.turn === state.turn && entry.payout?.chain === acquired).at(-1)?.payout;
       actor.stocks[acquired] -= action.sell + action.trade;
       state.bank[acquired] += action.sell + action.trade;
       actor.cash += action.sell * merger.sharePrice;
@@ -1108,7 +1113,7 @@ export function applyAction(previous: GameState, action: GameAction): GameState 
         state,
         'shares',
         `${actor.name}: sells ${action.sell}, trades ${action.trade} for ${action.trade / 2} ${DEFINITIONS[survivor].name}, and keeps ${actor.stocks[acquired]} ${DEFINITIONS[acquired].name} shares.`,
-        { playerId: actor.id, chain: acquired },
+        { playerId: actor.id, chain: acquired, shareDecision: { acquired, survivor, sell: action.sell, trade: action.trade, keep: actor.stocks[acquired], received: action.trade / 2, cash: action.sell * merger.sharePrice, role: payout?.majorityIds.includes(actor.id) ? 'Majority' : payout?.minorityIds.includes(actor.id) ? 'Minority' : 'Shareholder' } },
       );
       merger.shareholderCursor += 1;
       if (merger.shareholderCursor >= merger.shareholders.length) nextAcquisition(state);
@@ -1277,8 +1282,52 @@ function contestedBonuses(state: GameState, chain: ChainId, holdings: number[], 
   });
 }
 
-/** Bots use only the public table and their own rack; no future draw or opponent-hand access. */
-export function chooseBotAction(state: GameState): GameAction {
+/** A private table must not give CPU heuristics the server’s private portfolios.
+ * Estimate from publicly visible founders and board development, never hidden purchases. */
+function botInformationState(source: GameState): GameState {
+  const rules = getHouseRules(source);
+  if (!rules.hiddenMoney && !rules.anonymousBuying) return source;
+  const actorId = getCurrentActor(source).id;
+  const development = Math.min(0.55, Object.keys(source.board).length / getMap(source.mapId).tiles.length * 0.65);
+  const players = source.players.map((player) => {
+    if (player.id === actorId) return player;
+    const stocks = rules.anonymousBuying ? { ...stockMap(0) } : player.stocks;
+    if (rules.anonymousBuying) for (const chain of getActiveChains(source)) {
+      const founder = source.logs.some((entry) => entry.type === 'found' && entry.chain === chain && entry.playerId === player.id);
+      stocks[chain] = Math.max(founder ? 1 : 0, Math.floor((rules.shareSupply[chain] ?? 25) * development / source.players.length));
+    }
+    return { ...player, cash: rules.startingCash, stocks };
+  });
+  const bank = rules.anonymousBuying ? Object.fromEntries(Object.entries(source.bank).map(([chain, count]) =>
+    [chain, count > 0 ? rules.buyLimit + 3 : 0])) as Stocks : source.bank;
+  return { ...source, players, bank };
+}
+function expectedClosingPrice(state: GameState, chain: ChainId, size = getChainSize(state, chain)): number {
+  const mode = getHouseRules(state).marketMode;
+  return mode === 'off' ? getMarketPriceForSize(state, chain, size) : [1, 2, 3, 4, 5, 6].reduce((sum, die) =>
+    sum + getMarketPriceForSize(state, chain, size, marketShiftForDie(mode, die)), 0) / 6;
+}
+function dividendExpectation(state: GameState, chain: ChainId, shares: number): number {
+  if (!getHouseRules(state).dividends || state.endDeclared) return 0;
+  const hotels = getHotelChains(state), tiers = [...new Set(hotels.map((hotel) => DEFINITIONS[hotel].tier))];
+  const full = tiers.filter((tier) => hotels.filter((hotel) => DEFINITIONS[hotel].tier === tier).every((hotel) => getChainSize(state, hotel) >= 2)).length;
+  const rounds = Math.min(4, Math.max(1, state.bag.length / (state.players.length * getHouseRules(state).placementsPerTurn)));
+  return Math.floor(shares / 3) * getSharePrice(state, chain) * Math.min(1, full / 3) / Math.max(1, getActiveChains(state).length) * rounds;
+}
+/** Same public information and own rack as a human. RNG and opponents’ racks are never inspected. */
+export function chooseBotAction(source: GameState): GameAction {
+  const action = chooseInformedBotAction(botInformationState(source));
+  // Anonymous bank counts show availability only. Clamp the proposed order to
+  // legal stock at execution, rather than exposing its exact count to evaluation.
+  if (action.type === 'buy') for (const chain of Object.keys(action.stocks) as ChainId[])
+    action.stocks[chain] = Math.min(action.stocks[chain] ?? 0, source.bank[chain] + (action.sellStocks?.[chain] ?? 0));
+  if (action.type === 'resolve-shares' && source.merger?.survivor) {
+    const trade = Math.min(action.trade, source.bank[source.merger.survivor] * 2);
+    action.sell += action.trade - trade; action.trade = trade;
+  }
+  return action;
+}
+function chooseInformedBotAction(state: GameState): GameAction {
   assert(state.phase !== 'ended', 'This game is finished.');
   const actor = getCurrentActor(state);
   const difficulty = state.botDifficulty ?? 'standard';
@@ -1307,6 +1356,43 @@ export function chooseBotAction(state: GameState): GameAction {
   switch (state.phase) {
     case 'place': {
       const tiles = getLegalTiles(state);
+      if (!tiles.length && !state.bag.length && actor.hand.some((tile) => analyzeTile(state, tile).permanent))
+        return { type: 'replace-dead-tiles' };
+      if (difficulty === 'strategist' && getHouseRules(state).removalsPerTurn && (state.removalsThisTurn ?? 0) === 0) {
+        const removable = getRemovableTiles(state);
+        const potential = (table: GameState) => actor.hand.reduce((best, tile) => {
+          const analysis = analyzeTile(table, tile);
+          if (!analysis.legal || analysis.kind !== 'merge') return best;
+          const largest = Math.max(...analysis.chains.map((chain) => getChainSize(table, chain)));
+          return Math.max(best, ...analysis.chains.filter((chain) => getChainSize(table, chain) === largest)
+            .map((survivor) => strategistMergerValue(table, analysis.chains, survivor, analysis.connectedTiles.length)));
+        }, 0);
+        const before = potential(state);
+        let bestTile: Tile | undefined, bestGain = 10;
+        // Only consider edges near the bot’s own rack, or a price-row change.
+        for (const tile of removable) {
+          const chain = state.board[tile], board = { ...state.board }; delete board[tile];
+          const after = { ...state, board };
+          let gain = 0;
+          if (chain !== 'independent') {
+            const price = getSharePrice(state, chain), nextPrice = getSharePrice(after, chain);
+            const bonus = calculateBonuses(state.players.map((p) => p.stocks[chain]), price);
+            const nextBonus = calculateBonuses(state.players.map((p) => p.stocks[chain]), nextPrice);
+            const values = state.players.map((p, i) => p.stocks[chain] * (nextPrice - price) + nextBonus[i] - bonus[i]);
+            const own = state.players.findIndex((p) => p.id === actor.id);
+            const leadRival = state.players.map((p, i) => ({ i, wealth: i === own ? -Infinity : getNetWorth(state, p) })).sort((a, b) => b.wealth - a.wealth)[0].i;
+            gain += (values[own] - values[leadRival]) / 180;
+          }
+          if (getNeighbors(tile, state.mapId).some((neighbor) => actor.hand.includes(neighbor))) gain += potential(after) - before;
+          if (gain > bestGain) { bestGain = gain; bestTile = tile; }
+        }
+        if (bestTile) return { type: 'remove', tile: bestTile };
+        if (!tiles.length) {
+          const reopening = removable.find((tile) => { const board = { ...state.board }; delete board[tile]; return actor.hand.some((held) => analyzeTile({ ...state, board }, held).legal); });
+          if (reopening) return { type: 'remove', tile: reopening };
+        }
+
+      }
       if (!tiles.length) return (state.placementsThisTurn ?? 0) > 0
         ? { type: 'finish-placing' }
         : state.bag.length && (state.removalsThisTurn ?? 0) === 0
@@ -1353,6 +1439,7 @@ export function chooseBotAction(state: GameState): GameAction {
         return value + handNeighbors * 2 * personality.network;
       };
       tiles.sort((a, b) => score(b) - score(a));
+      if (difficulty === 'strategist' && (state.placementsThisTurn ?? 0) > 0 && score(tiles[0]) < 0) return { type: 'finish-placing' };
       return { type: 'place', tile: tiles[0] };
     }
     case 'found': {
@@ -1390,19 +1477,24 @@ export function chooseBotAction(state: GameState): GameAction {
         const survivor = merger.survivor!;
         const finalSize = merger.chains.reduce((sum, chain) => sum + merger.sizes[chain]!, 0)
           + independentConnection(state, merger.tile).tiles.length;
-        const finalPrice = getMarketPriceForSize(state, survivor, finalSize);
+        const finalPrice = expectedClosingPrice(state, survivor, finalSize);
         const index = state.players.findIndex((player) => player.id === actor.id);
-        let bestTrade = 0, bestValue = -Infinity;
+        const futureBoard = Object.fromEntries(Object.entries(state.board).map(([tile, chain]) => [tile, merger.chains.includes(chain as ChainId) ? survivor : chain])) as GameState['board'];
+        const future = { ...state, board: futureBoard };
+        const revival = actor.hand.some((tile) => analyzeTile(future, tile).kind === 'found');
+        let bestTrade = 0, bestKeep = 0, bestValue = -Infinity;
         for (let certificates = 0; certificates <= Math.min(Math.floor(held / 2), state.bank[survivor]); certificates++) {
-          const cash = actor.cash + (held - certificates * 2) * merger.sharePrice;
+          for (let keep = 0; keep <= Math.min(revival ? 3 : 0, held - certificates * 2); keep++) {
+          const cash = actor.cash + (held - certificates * 2 - keep) * merger.sharePrice;
           const holdings = state.players.map((player, i) => player.stocks[survivor] + (i === index ? certificates : 0));
           const bonuses = calculateBonuses(holdings, finalPrice);
           const rivalBonus = Math.max(...bonuses.filter((_, i) => i !== index));
-          const value = cash + certificates * finalPrice + (bonuses[index] - rivalBonus) * 0.5
+          const value = cash + certificates * finalPrice + keep * (getPriceForSize(merger.acquired!, 2) + 350) + dividendExpectation(state, survivor, actor.stocks[survivor] + certificates) + (bonuses[index] - rivalBonus) * 0.5
             - Math.max(0, personality.tradeReserve - cash) * 0.75;
-          if (value > bestValue) { bestValue = value; bestTrade = certificates * 2; }
+          if (value > bestValue) { bestValue = value; bestTrade = certificates * 2; bestKeep = keep; }
+          }
         }
-        return { type: 'resolve-shares', sell: held - bestTrade, trade: bestTrade };
+        return { type: 'resolve-shares', sell: held - bestTrade - bestKeep, trade: bestTrade };
       }
       const reserveNeeded = Math.max(0, 1800 - actor.cash);
       const reserveShares = Math.min(held, Math.ceil(reserveNeeded / merger.sharePrice));
@@ -1414,22 +1506,40 @@ export function chooseBotAction(state: GameState): GameAction {
       const stocks: Partial<Stocks> = {};
       const sellStocks: Partial<Stocks> = {};
       if (getHouseRules(state).trading) {
+        const index = state.players.findIndex((p) => p.id === actor.id);
         for (const chain of getHotelChains(state)) {
-          if (getChainSize(state, chain) > 0) continue;
+          if (getChainSize(state, chain) > 0) {
+            if (difficulty !== 'strategist') continue;
+            const price = getSharePrice(state, chain), futurePrice = expectedClosingPrice(state, chain);
+            const holdings = state.players.map((p) => p.stocks[chain]);
+            const saleCapacity = Math.min(3 - Object.values(sellStocks).reduce((sum, n) => sum + (n ?? 0), 0), actor.stocks[chain]);
+            for (let quantity = 1; quantity <= saleCapacity; quantity++) {
+              const bonusBefore = contestedBonuses(state, chain, holdings, index, state.bank[chain]);
+              const bonusAfter = contestedBonuses(state, chain, holdings.map((held, i) => held - (i === index ? quantity : 0)), index, state.bank[chain] + quantity);
+              const loss = bonusBefore[index] - bonusAfter[index] + dividendExpectation(state, chain, holdings[index]) - dividendExpectation(state, chain, holdings[index] - quantity);
+              const value = quantity * (price - futurePrice) - loss * 0.7;
+              if (value > 40 || (actor.cash < price && loss < price * quantity * 0.15 && !state.endDeclared)) sellStocks[chain] = quantity;
+            }
+            continue;
+          }
+          if (actor.hand.some((tile) => analyzeTile(state, tile).kind === 'found')) continue;
           const quantity = Math.min(3 - Object.values(sellStocks).reduce((sum, n) => sum + (n ?? 0), 0), actor.stocks[chain]);
           if (quantity > 0) sellStocks[chain] = quantity;
         }
       }
       const sold = Object.values(sellStocks).reduce((sum, n) => sum + (n ?? 0), 0);
-      let cash = actor.cash;
+      let cash = actor.cash + Object.entries(sellStocks).reduce((sum, [chain, count]) => sum + getSharePrice(state, chain as ChainId) * (count ?? 0), 0);
       if (difficulty === 'strategist') {
         const index = state.players.findIndex((player) => player.id === actor.id);
         let left = getHouseRules(state).buyLimit + sold;
         while (left > 0) {
           let best: { chain: ChainId; quantity: number; score: number } | undefined;
           for (const chain of getActiveChains(state)) {
+            if (sellStocks[chain]) continue;
             const price = getSharePrice(state, chain);
             const remaining = state.bank[chain] - (stocks[chain] ?? 0);
+            const growth = actor.hand.reduce((sum, tile) => { const analysis = analyzeTile(state, tile); return sum + (analysis.kind === 'grow' && analysis.chains[0] === chain ? analysis.connectedTiles.length : 0); }, 0);
+            const futurePrice = expectedClosingPrice(state, chain, getChainSize(state, chain) + growth);
             const holdings = state.players.map((player, i) => player.stocks[chain] + (i === index ? stocks[chain] ?? 0 : 0));
             const before = contestedBonuses(state, chain, holdings, index, remaining);
             // Consider whole purchases so a two/three-share bid can overtake a
@@ -1439,7 +1549,7 @@ export function chooseBotAction(state: GameState): GameAction {
               const denial = Math.max(...before.filter((_, i) => i !== index)) - Math.max(...after.filter((_, i) => i !== index));
               const reserveCost = state.endDeclared || state.bag.length < 15 ? 0
                 : Math.max(0, personality.reserve - (cash - count * price)) * 0.5;
-              const score = (after[index] - before[index] + denial * 0.25 * personality.denial - reserveCost) / (count * price);
+              const score = (after[index] - before[index] + count * (futurePrice - price) + dividendExpectation(state, chain, holdings[index] + count) - dividendExpectation(state, chain, holdings[index]) + denial * 0.25 * personality.denial - reserveCost) / (count * price);
               if (score > 0.2 && (!best || score > best.score)) best = { chain, quantity: count, score };
             }
           }

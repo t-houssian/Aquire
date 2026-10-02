@@ -1,3 +1,4 @@
+import { shareDecisionText } from './ShareDecisionReveal';
 import { useEffect, useRef, useState, type CSSProperties } from 'react';
 import {
   ArrowLeft,
@@ -259,6 +260,8 @@ export default function GameView({
     setCart((prev) => ({ ...prev, [id]: Math.max(0, prev[id] + change) }));
   const chainName = (id: ChainId) => CHAINS.find((c) => c.id === id)!.name;
   const acquired = game.merger?.acquired;
+  const acquisitionLogId = game.logs.filter((entry) => entry.turn === game.turn && entry.payout?.chain === acquired).at(-1)?.id ?? 0;
+  const shareholderDecisions = game.logs.filter((entry) => entry.turn === game.turn && entry.id > acquisitionLogId && entry.shareDecision?.acquired === acquired);
   const owned = acquired ? actor.stocks[acquired] : 0;
   const action = (a: GameAction) => {
     if (controllable) onAction(a);
@@ -326,7 +329,7 @@ export default function GameView({
             key={p.id}
           >
             <div className="avatar" style={{ '--avatar': colors[i] } as CSSProperties}>
-              <CharacterAvatar characterId={p.characterId} name={p.name} />
+              <CharacterAvatar characterId={p.characterId} avatar={p.avatar} name={p.name} />
               {p.id === actor.id && !isEnded && <span />}
             </div>
             <div>
@@ -683,6 +686,7 @@ export default function GameView({
                           ? <button className="text-button merger-bonus-link" onClick={() => onShowMergerPayout([...game.logs].reverse().find((entry) => entry.payout?.chain === acquired && entry.turn === game.turn)!)}>View bonuses</button>
                           : 'Bonuses paid.'}
                       </p>
+                      {shareholderDecisions.length > 0 && <details className="merger-decisions" open><summary>Shareholder decisions so far</summary><ol>{shareholderDecisions.map((entry) => <li key={entry.id}>{shareDecisionText(entry, game, viewerId)}</li>)}</ol></details>}
                       {actor.id === viewerId && !privateGate && <div className="merger-rack" aria-label="Your tile rack during merger">
                         <div><strong>Your tile rack</strong><span>Keep your next move in view.</span></div>
                         <div className="merger-rack-tiles">{player.hand.length ? player.hand.map((tile) => <span key={tile} className="merger-rack-tile">{tile}</span>) : <em>No tiles left in your rack</em>}</div>
@@ -775,7 +779,9 @@ export default function GameView({
                       </p>
                       {controllable && (
                         <>
-                          <div className="order-summary">
+                          <div className="order-summary order-with-rack">
+                            <div className="buy-rack" aria-label="Your tile rack while buying"><strong>Your next tiles</strong><div>{player.hand.length ? player.hand.map((tile) => <span key={tile}>{tile}</span>) : <em>Your rack is empty</em>}</div></div>
+                            <div className="order-summary-total">
                             {quantity || soldCount ? (
                               <>
                                 <span>
@@ -784,8 +790,9 @@ export default function GameView({
                                 <strong>{money(total - saleValue)}</strong>
                               </>
                             ) : (
-                              <span>No shares selected. You can also save your cash.</span>
+                              <span>No order yet.</span>
                             )}
+                            </div>
                           </div>
                           <div className="action-footer">
                             <span className="small muted">
@@ -1074,7 +1081,7 @@ export function InvestorPanel({
                 className="avatar small-avatar"
                 style={{ '--avatar': colors[i] } as CSSProperties}
               >
-                <CharacterAvatar characterId={p.characterId} name={p.name} />
+                <CharacterAvatar characterId={p.characterId} avatar={p.avatar} name={p.name} />
               </span>
               <strong>{p.name}</strong>
               <span>{hiddenMoney && p.id !== viewerId && game.phase !== 'ended' ? 'Private' : money(p.cash)}</span>

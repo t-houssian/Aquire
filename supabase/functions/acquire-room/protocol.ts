@@ -6,6 +6,7 @@ export interface RoomPlayer {
   name: string;
   isBot: boolean;
   characterId?: string;
+  avatar?: string;
 }
 export interface StoredRoom {
   id: string;
@@ -176,6 +177,7 @@ export function publicRoom(room: StoredRoom, userId: string) {
         name: player.name,
         isBot: player.isBot,
         ...(player.characterId ? { characterId: player.characterId } : {}),
+        ...(player.avatar ? { avatar: player.avatar } : {}),
         cash: privateMoney && player.id !== userId ? 0 : player.cash,
         stocks: privateTrades && player.id !== userId
           ? Object.fromEntries(Object.keys(player.stocks).map((chain) => [chain, 0])) as typeof player.stocks
@@ -190,6 +192,11 @@ export function publicRoom(room: StoredRoom, userId: string) {
       bag: state.bag.map(() => '?'),
       discarded: state.discarded,
       logs: state.logs.map((entry) => {
+        if (entry.shareDecision && state.phase !== 'ended' && entry.playerId !== userId) return { ...entry,
+          message: privateTrades ? 'Private merger shares were resolved.' : entry.message,
+          shareDecision: { ...entry.shareDecision, cash: privateMoney ? null : entry.shareDecision.cash,
+            ...(privateTrades ? { sell: null, trade: null, keep: null, received: null, role: null } : {}) },
+        };
         if (entry.payout && state.phase !== 'ended') return { ...entry, payout: {
           ...entry.payout,
           majorityIds: privateTrades ? [] : entry.payout.majorityIds,
@@ -236,7 +243,7 @@ export function publicRoom(room: StoredRoom, userId: string) {
     game,
     viewerId: userId,
     updatedAt: room.updated_at,
-    features: ['maps-v1', 'large-maps-v1', 'shaped-maps-v2', 'shaped-maps-v3', 'small-tables-v1', 'difficulty-v1', 'match-history-v1', 'house-rules-v1', 'hotel-roster-v1', 'hotel-stock-v1', 'market-frequency-v1', 'room-notifications-v1', 'room-deltas-v1'],
+    features: ['kingdom-v1', 'avatars-v1', 'merger-decisions-v1', 'maps-v1', 'large-maps-v1', 'shaped-maps-v2', 'shaped-maps-v3', 'small-tables-v1', 'difficulty-v1', 'match-history-v1', 'house-rules-v1', 'hotel-roster-v1', 'hotel-stock-v1', 'market-frequency-v1', 'room-notifications-v1', 'room-deltas-v1'],
   };
 }
 

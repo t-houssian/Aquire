@@ -1,3 +1,5 @@
+import { readProfile } from './profile';
+import { kingdomUnlocked } from './campaign';
 import { createClient, FunctionsHttpError, type SupabaseClient } from '@supabase/supabase-js';
 import type { BotDifficulty, GameAction, GameMode, GameState, HouseRules, MapId } from '../game/types';
 import type { LeaderboardEntry, MatchSummary } from './matches';
@@ -10,6 +12,7 @@ export interface OnlinePlayer {
   name: string;
   isBot: boolean;
   characterId?: string;
+  avatar?: string;
 }
 export interface OnlineRoom {
   id: string;
@@ -154,7 +157,7 @@ async function invoke<T>(body: Record<string, unknown>): Promise<T> {
 }
 
 export function createRoom(name: string, mode: GameMode = 'classic'): Promise<OnlineRoom> {
-  return invoke({ operation: 'create', name, mode });
+  return invoke({ operation: 'create', name, mode, avatar: readProfile().avatar });
 }
 export function getOnlineHistory(): Promise<MatchSummary[]> {
   return invoke({ operation: 'history' });
@@ -163,13 +166,13 @@ export function getOnlineLeaderboard(): Promise<(LeaderboardEntry & { id: string
   return invoke({ operation: 'leaderboard' });
 }
 export function joinRoom(code: string, name: string): Promise<OnlineRoom> {
-  return invoke({ operation: 'join', code: code.trim().toUpperCase(), name });
+  return invoke({ operation: 'join', code: code.trim().toUpperCase(), name, avatar: readProfile().avatar });
 }
 export function getRoom(code: string): Promise<OnlineRoom> {
   return invoke({ operation: 'get', code: code.trim().toUpperCase() });
 }
 export function startRoom(code: string, botCount = 0, mapId: MapId = 'classic', botDifficulty: BotDifficulty = 'standard', houseRules?: Partial<HouseRules>): Promise<OnlineRoom> {
-  return invoke({ operation: 'start', code, botCount, mapId, botDifficulty, houseRules });
+  return invoke({ operation: 'start', code, botCount, mapId, botDifficulty, houseRules, royalsUnlocked: kingdomUnlocked() });
 }
 export function sendRoomAction(
   code: string,

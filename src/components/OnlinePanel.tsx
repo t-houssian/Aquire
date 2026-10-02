@@ -1,3 +1,5 @@
+import { readProfile } from '../lib/profile';
+import { kingdomUnlocked } from '../lib/campaign';
 import { useRef, useState } from 'react';
 import { ArrowRight, Check, Copy, Globe2, LoaderCircle, Users, WifiOff } from 'lucide-react';
 import Modal from './Modal';
@@ -35,7 +37,7 @@ export default function OnlinePanel({
   settings?: Settings;
   onSettingsChange?: (settings: Settings) => void;
 }) {
-  const [name, setName] = useState(''),
+  const [name, setName] = useState(() => readProfile().name),
     [code, setCode] = useState(() => localStorage.getItem('aquire.room') || ''),
     [tab, setTab] = useState<'create' | 'join'>('create'),
     [error, setError] = useState(''),
@@ -114,7 +116,7 @@ export default function OnlinePanel({
             <div className="lobby-players">
               {room.players.map((p, i) => (
                 <div key={p.id}>
-                  <span className="avatar"><CharacterAvatar characterId={p.characterId} name={p.name} /></span>
+                  <span className="avatar"><CharacterAvatar characterId={p.characterId} avatar={p.avatar} name={p.name} /></span>
                   <strong>{p.name}</strong>
                   <small>{p.id === room.hostId ? 'Host' : `Seat ${i + 1}`}</small>
                   <span className="live-dot" />
@@ -154,7 +156,7 @@ export default function OnlinePanel({
                       setHouseRules((rules) => ({ ...rules, startingTilesPerPlayer: Math.min(rules.startingTilesPerPlayer, maximumOpeningTiles(next.tiles.length, Math.max(1, room.players.length + Math.min(bots, Math.max(0, next.maxPlayers - room.players.length))))) }));
                       requestAnimationFrame(() => previewRef.current?.scrollIntoView({ behavior: 'smooth', block: 'nearest' }));
                     }}>{MAP_SEAT_TIERS.map((seats) => <optgroup key={seats} label={`Up to ${seats} players`}>
-                      {MAPS.filter((map) => map.maxPlayers === seats).map((map) => <option key={map.id} value={map.id} disabled={(map.maxPlayers > 6 && !room.features?.includes('large-maps-v1')) || (NEW_MAP_IDS.has(map.id) && !room.features?.includes('shaped-maps-v2')) || (CREATIVE_MAP_IDS.has(map.id) && !room.features?.includes('shaped-maps-v3')) || (SMALL_MAP_IDS.has(map.id) && !room.features?.includes('small-tables-v1'))}>{map.name} · {map.tiles.length} tiles · {map.columns}×{map.rows}</option>)}
+                      {MAPS.filter((map) => (map.id !== 'goldspire-kingdom' || (kingdomUnlocked() && room?.features?.includes('kingdom-v1'))) && map.maxPlayers === seats).map((map) => <option key={map.id} value={map.id} disabled={(map.maxPlayers > 6 && !room.features?.includes('large-maps-v1')) || (NEW_MAP_IDS.has(map.id) && !room.features?.includes('shaped-maps-v2')) || (CREATIVE_MAP_IDS.has(map.id) && !room.features?.includes('shaped-maps-v3')) || (SMALL_MAP_IDS.has(map.id) && !room.features?.includes('small-tables-v1'))}>{map.name} · {map.tiles.length} tiles · {map.columns}×{map.rows}</option>)}
                     </optgroup>)}</select>
                     <div ref={previewRef}><MapPreview map={selectedMap} /></div>
                     {room.players.length > selectedMap.maxPlayers && <p className="small muted">This map has {selectedMap.maxPlayers} seats, but {room.players.length} people joined. Choose a larger map.</p>}

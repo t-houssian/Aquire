@@ -80,9 +80,9 @@ export default function Finale({ match, onHome }: { match: MatchSummary; onHome:
       </section>
     </div> : <>
       {storyChapter && <section className="story-result" data-testid="story-result">
-        <span className="eyebrow">CHAPTER {storyChapter.number} · {storyChapter.title}</span>
+        <span className="eyebrow">CHAPTER {storyChapter.chapter} · CHALLENGE {storyChapter.stage} · {storyChapter.title}</span>
         <h2>{storyWon ? storyChapter.number === STORY_CHAPTERS.length ? 'The city is yours.' : 'A new door opens.' : 'The story is not over.'}</h2>
-        <p>{storyWon ? storyChapter.victory : 'This table belonged to someone else today. Your earlier wins are safe. Return to the chapter for a fresh deal and another attempt.'}</p>
+        <p>{storyWon ? storyChapter.victory : 'This table belonged to someone else today. Your earlier wins are safe. Return to the challenge for a fresh deal and another attempt.'}</p>
         <button className="button primary" onClick={onHome}>{storyWon ? 'Continue your story' : 'Return to your chapter'} <ArrowRight size={17} /></button>
       </section>}
       <div className="winner-celebration" aria-label="Winner celebration">
@@ -95,7 +95,7 @@ export default function Finale({ match, onHome }: { match: MatchSummary; onHome:
       <section className="final-standings"><h2>Final standings</h2><div className="final-standings-list">{match.results.map((result) => <div key={result.playerId} className={result.rank === 1 ? 'champion' : ''}>
         <span>{result.rank === 1 ? <Crown size={20} /> : String(result.rank).padStart(2, '0')}</span><strong>{result.name}</strong><small>{money(result.cashBefore)} cash + {money(result.bonuses)} bonuses + {money(result.stocksValue)} stock</small><b>{money(result.total)}</b>
       </div>)}</div></section>
-      <section className="trophy-case"><div className="trophy-title"><Award size={24} /><div><span className="eyebrow">EVERY INVESTOR HAS A STORY</span><h2>The trophy case</h2></div></div><div className="trophy-grid">{match.players.map((player) => <div key={player.id} className="trophy-player"><h3>{player.characterId && <CharacterAvatar characterId={player.characterId} className="finale-cast-avatar" />}{player.name}</h3>{(match.awards.filter((award) => award.playerId === player.id).length ? match.awards.filter((award) => award.playerId === player.id) : [{ playerId: player.id, title: 'Persistent Investor', detail: 'Stayed in the game to the closing bell', icon: 'sparkles' as const }]).map((award) => <div className="trophy-award" key={award.title}><span>🏆</span><div><strong>{award.title}</strong><small>{award.detail}</small></div></div>)}</div>)}</div></section>
+      <section className="trophy-case"><div className="trophy-title"><Award size={24} /><div><span className="eyebrow">EVERY INVESTOR HAS A STORY</span><h2>The trophy case</h2></div></div><div className="trophy-grid">{match.players.map((player) => <div key={player.id} className="trophy-player"><h3>{(player.characterId || player.avatar) && <CharacterAvatar characterId={player.characterId} avatar={player.avatar} name={player.name} className="finale-cast-avatar" />}{player.name}</h3>{(match.awards.filter((award) => award.playerId === player.id).length ? match.awards.filter((award) => award.playerId === player.id) : [{ playerId: player.id, title: 'Persistent Investor', detail: 'Stayed in the game to the closing bell', icon: 'sparkles' as const }]).map((award) => <div className="trophy-award" key={award.title}><span>🏆</span><div><strong>{award.title}</strong><small>{award.detail}</small></div></div>)}</div>)}</div></section>
       <div className="finale-actions">{chains.length > 0 && <button className="button subtle" onClick={() => { setStep(0); setRevealedChain(null); }}><RotateCcw size={16} /> Replay the sell-offs</button>}<button className="button primary" onClick={onHome}>{storyChapter ? 'Back to your story' : 'Back to the clubhouse'} <ArrowRight size={17} /></button></div>
     </>}
   </div>;

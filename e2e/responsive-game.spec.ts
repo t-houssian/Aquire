@@ -268,7 +268,7 @@ test('board focus gives more room while keeping market status, the rack and purc
 });
 
 
-for (const mapId of ['clockwork-keys', 'crystal-cascade', 'max-world-tree', 'max-astral-loom'] as const) {
+for (const mapId of ['clockwork-keys', 'crystal-cascade', 'max-world-tree', 'max-astral-loom', 'goldspire-kingdom'] as const) {
   test(`${mapId} fits portrait and landscape with working rotation, zoom and tile selection`, async ({ page }) => {
     const map = getMap(mapId);
     const game = createGame({ id: `creative-${mapId}`, seed: 42, mapId,

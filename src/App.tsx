@@ -1,3 +1,5 @@
+import AvatarEditor from './components/AvatarEditor';
+import { readProfile, saveProfile } from './lib/profile';
 import { useCallback, useEffect, useRef, useState } from 'react';
 import {
   ArrowDown,
@@ -60,6 +62,7 @@ import Modal from './components/Modal';
 import OnlinePanel from './components/OnlinePanel';
 import TurnRecap from './components/TurnRecap';
 import DiceReveal from './components/DiceReveal';
+import ShareDecisionReveal from './components/ShareDecisionReveal';
 import MergerReveal from './components/MergerReveal';
 import HouseRulesControls from './components/HouseRulesControls';
 import { collectTurnRecaps, type TurnRecapData } from './lib/turnRecaps';
@@ -69,8 +72,9 @@ import './house-rules.css';
 import './exit-game.css';
 type Page = 'story' | 'home' | 'play' | 'learn' | 'history' | 'replay';
 export default function App() {
+  const [profile, setProfile] = useState(readProfile);
   const [page, setPage] = useState<Page>('home');
-  const [modal, setModal] = useState<'solo' | 'local' | 'online' | 'rules' | 'settings' | null>(
+  const [modal, setModal] = useState<'solo' | 'local' | 'online' | 'rules' | 'settings' | 'avatar' | null>(
     null,
   );
   const [localGame, setLocalGame] = useState<GameState | null>(null),
@@ -233,7 +237,7 @@ export default function App() {
       newlyStartedGameId.current = null;
       return;
     }
-    const payouts = game.logs.filter((entry) => entry.payout && entry.id > (previous.logs.at(-1)?.id ?? 0));
+    const payouts = game.logs.filter((entry) => (entry.payout || entry.shareDecision) && entry.id > (previous.logs.at(-1)?.id ?? 0));
     if (payouts.length) setMergerRecaps((pending) => [...pending, ...payouts]);
     const recaps = collectTurnRecaps(
       previous,
@@ -377,10 +381,10 @@ export default function App() {
   };
   const beginStory = (chapterId: string, name: string) => {
     const progress = readStoryProgress();
-    if (!storyChapterUnlocked(progress, chapterId)) { setNotice('Win the previous chapter to open this one.'); return; }
+    if (!storyChapterUnlocked(progress, chapterId)) { setNotice('Win the previous challenge to open this one.'); return; }
     const saved = readGames().find((save) => save.game.campaign?.chapterId === chapterId);
     if (saved) { resume(saved); return; }
-    start(storyGameConfig(chapterId, name, crypto.getRandomValues(new Uint32Array(1))[0]), 'solo');
+    start(storyGameConfig(chapterId, getStoryChapter(chapterId)?.mapId === 'goldspire-kingdom' ? `${profile.royalTitle} ${name}` : name, crypto.getRandomValues(new Uint32Array(1))[0], profile.avatar), 'solo');
   };
   const perform = (action: GameAction) => {
     if (!game || busy || turnRecaps.length || diceRecaps.length || mergerRecaps.length) return;
@@ -539,7 +543,7 @@ export default function App() {
             >
               <Settings2 size={19} />
             </button>
-            <span className="avatar header-avatar">Y</span>
+            <button className="avatar header-avatar" aria-label="Customize your character" onClick={() => setModal('avatar')}><CharacterAvatar name={profile.name} avatar={profile.avatar} /></button>
           </div>
         </header>
         <main>
@@ -607,7 +611,7 @@ export default function App() {
               </div>
               <button className="story-entry" onClick={() => navigate('story')}>
                 <div className="story-entry-faces"><CharacterAvatar characterId="cast-01" /><CharacterAvatar characterId="cast-27" /><CharacterAvatar characterId="cast-56" /></div>
-                <div className="story-entry-copy"><span className="eyebrow">NEW · SOLO STORY</span><strong>The Long Game</strong><p>Twelve chapters. Fifty-six rivals. Build your way from a corner café to the city summit.</p></div><ArrowRight size={21} />
+                <div className="story-entry-copy"><span className="eyebrow">NEW · SOLO STORY</span><strong>The Long Game</strong><p>Seven chapters. Eighty-one challenges. Build your way from a corner café to the city summit.</p></div><ArrowRight size={21} />
               </button>
               <section className="play-section">
                 <div className="section-heading">
@@ -913,6 +917,7 @@ export default function App() {
           </div>
         </Modal>
       )}
+      {modal === 'avatar' && <AvatarEditor profile={profile} onSave={(value) => setProfile(saveProfile(value))} onClose={() => setModal(null)} />}
       {modal === 'settings' && (
         <Modal title="Make yourself at home" onClose={closeModal}>
           <div className="modal-body">
@@ -1011,6 +1016,7 @@ export default function App() {
               <option value={850}>Comfortable · the usual pace</option>
               <option value={220}>Quick · let’s keep things moving</option>
             </select>
+            <button className="button secondary full" onClick={() => setModal('avatar')}>Customize your character</button>
             <HouseRulesControls value={settings.houseRules} onChange={(houseRules) => setSettings((prior) => ({ ...prior, houseRules }))} />
             <div className="inline-note">
               <Check size={18} /> Preferences and local games save automatically.
@@ -1026,6 +1032,7 @@ export default function App() {
         </Modal>
       )}
       {page === 'play' && !modal && game && mergerRecaps[0]?.payout && <MergerReveal key={mergerRecaps[0].id} payout={mergerRecaps[0].payout} game={game} viewerId={privateGate ? '' : viewerId} onContinue={continueAfterMerger} remaining={mergerRecaps.length - 1} />}
+      {page === 'play' && !modal && game && mergerRecaps[0]?.shareDecision && <ShareDecisionReveal key={mergerRecaps[0].id} entry={mergerRecaps[0]} game={game} viewerId={privateGate ? '' : viewerId} onContinue={continueAfterMerger} />}
       {page === 'play' && !modal && !mergerRecaps[0] && turnRecaps[0] && (
         <TurnRecap
           key={turnRecaps[0].id}

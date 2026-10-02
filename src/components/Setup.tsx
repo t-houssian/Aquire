@@ -1,3 +1,5 @@
+import { readProfile } from '../lib/profile';
+import { kingdomUnlocked } from '../lib/campaign';
 import { useRef, useState } from 'react';
 import { ArrowRight, Bot, Users, Landmark, ShieldCheck } from 'lucide-react';
 import type { GameConfig } from '../game/types';
@@ -37,11 +39,12 @@ export default function Setup({
 }) {
   const [kind, setKind] = useState(initialKind),
     [count, setCount] = useState(3);
-  const [names, setNames] = useState(['You', 'Alex', 'Morgan', 'Riley', 'Sam', 'Jordan', 'Casey', 'Drew', 'Taylor', 'Robin', 'Avery', 'Parker']);
+  const profile = readProfile(), royalReward = kingdomUnlocked();
+  const [names, setNames] = useState([profile.name, 'Alex', 'Morgan', 'Riley', 'Sam', 'Jordan', 'Casey', 'Drew', 'Taylor', 'Robin', 'Avery', 'Parker']);
   const [mapId, setMapId] = useState<MapId>('classic');
   const selectedMap = getMap(mapId);
   const [castSeed, setCastSeed] = useState(() => crypto.getRandomValues(new Uint32Array(1))[0]);
-  const opponents = pickCharacters(count - 1, castSeed);
+  const opponents = pickCharacters(count - 1, castSeed, royalReward);
   const previewRef = useRef<HTMLDivElement>(null);
   const [botDifficulty, setBotDifficulty] = useState<BotDifficulty>('standard');
   const [houseRules, setHouseRules] = useState(() => ({ ...(settings?.houseRules ?? DEFAULT_HOUSE_RULES) }));
@@ -58,6 +61,7 @@ export default function Setup({
             kind === 'solo' && i > 0
               ? opponents[i - 1].name
               : names[i].trim() || `Player ${i + 1}`,
+          ...(i === 0 ? { avatar: profile.avatar } : {}),
           isBot: kind === 'solo' && i > 0,
           ...(kind === 'solo' && i > 0 ? { characterId: opponents[i - 1].id } : {}),
         })),
@@ -141,7 +145,7 @@ export default function Setup({
             requestAnimationFrame(() => previewRef.current?.scrollIntoView({ behavior: 'smooth', block: 'nearest' }));
           }}>
             {MAP_SEAT_TIERS.map((seats) => <optgroup key={seats} label={`Up to ${seats} players`}>
-              {MAPS.filter((map) => map.maxPlayers === seats).map((map) => <option key={map.id} value={map.id}>{map.name} · {map.tiles.length} tiles · {map.columns}×{map.rows}</option>)}
+              {MAPS.filter((map) => (map.id !== 'goldspire-kingdom' || royalReward) && map.maxPlayers === seats).map((map) => <option key={map.id} value={map.id}>{map.name} · {map.tiles.length} tiles · {map.columns}×{map.rows}</option>)}
             </optgroup>)}
           </select>
           <div ref={previewRef}><MapPreview map={selectedMap} /></div>

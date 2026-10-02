@@ -279,6 +279,8 @@ test('merger: sell, trade and keep a real seeded holding, then privately hand of
   await page.getByRole('button', { name: 'Trade more shares' }).click();
   await expect(page.locator('.action-footer')).toContainText(`Receive $${fixture.merger!.sharePrice} + 1 survivor shares`);
   await page.getByRole('button', { name: 'Confirm choices' }).click();
+  await expect(page.getByTestId('share-decision-reveal')).toBeVisible();
+  await page.getByTestId('share-decision-reveal').getByRole('button', { name: 'Continue', exact: true }).click();
   await expect(page.locator('.privacy-panel')).toBeVisible();
   const after = await savedGame(page);
   const actualInvestor = after.players.find(player => player.id === actor.id)!;

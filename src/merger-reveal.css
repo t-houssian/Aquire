@@ -29,3 +29,26 @@
   .merger-payout-intro { margin: 8px 0; }
   .merger-payout-row { padding-block: 8px; }
 }
+.modal:has(> .share-decision-reveal) { display:flex; flex-direction:column; overflow:hidden; }
+.modal:has(> .share-decision-reveal) > .modal-header { flex-shrink:0; }
+.share-decision-reveal { min-height:0; overflow:auto; }
+.share-decision-investor { display:flex; align-items:center; gap:16px; }
+.share-decision-investor .character-avatar { width:65px; height:65px; flex-shrink:0; }
+.share-decision-investor h3 { font:32px 'Instrument Serif',serif; margin:6px 0; }
+.share-decision-investor p { color:#849076; font-size:12px; }
+.share-decision-options { display:grid; grid-template-columns:repeat(3,minmax(0,1fr)); gap:9px; margin:20px 0; }
+.share-decision-options article { background:#f1f5e9; border:1px solid #dce5d3; border-radius:12px; padding:18px 9px; text-align:center; }
+.share-decision-options svg { color:#839b65; }
+.share-decision-options strong { display:block; font-size:28px; margin:8px 0; }
+.share-decision-options span, .share-decision-options small { display:block; font-size:11px; line-height:1.6; }
+.share-decision-options small { color:#89967b; }
+@media(max-width:480px) {
+  .share-decision-reveal { padding:14px; }
+  .share-decision-investor { gap:10px; }
+  .share-decision-investor .character-avatar { width:48px; height:48px; }
+  .share-decision-investor h3 { font-size:25px; }
+  .share-decision-options { margin:14px 0; }
+  .share-decision-options article { padding:12px 6px; }
+  .share-decision-options strong { font-size:24px; margin:5px 0; }
+}
+@media(max-height:500px) and (orientation:landscape) { .share-decision-options { margin:10px 0; } .share-decision-options article { padding:8px; } .share-decision-options strong { font-size:22px; margin:3px 0; } }

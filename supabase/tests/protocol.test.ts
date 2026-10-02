@@ -1,4 +1,4 @@
-import { createGame, getMap } from '../functions/_shared/game/engine.ts';
+import { createGame, getMap, getHouseRules } from '../functions/_shared/game/engine.ts';
 import { MAPS } from '../functions/_shared/game/maps.ts';
 import { CHAIN_IDS } from '../functions/_shared/game/types.ts';
 import {
@@ -259,4 +259,23 @@ Deno.test('merger payout snapshots respect private cash and holdings without mut
   assert(report.players[1].bonus === null && report.players[1].shares === null, 'Opponent payout leaked');
   assert(report.majorityIds.length === 0 && report.minorityIds.length === 0, 'Private shareholder rank leaked');
   assert(state.logs.at(-1)!.payout!.players[1].bonus === 2000, 'Redaction mutated the original payout');
+});
+
+Deno.test('tiny human faces are public but private merger decision quantities are redacted', () => {
+  const room = fixture();
+  const state = room.game!;
+  state.players[0].avatar = 'a10100017';
+  state.houseRules = { ...getHouseRules(state), anonymousBuying: true };
+  state.logs.push({ id: 70, turn: 1, type: 'shares', message: 'Bob sold five shares.', playerId: 'bob', chain: 'worldwide', shareDecision: {
+    acquired: 'worldwide', survivor: 'festival', sell: 5, trade: 2, keep: 1, received: 1, cash: 1000, role: 'Majority',
+  } });
+  const view = publicRoom(room, 'alice').game!;
+  assert(view.players[0].avatar === 'a10100017', 'Human face missing');
+  assert(view.logs.at(-1)!.shareDecision!.sell === null && view.logs.at(-1)!.shareDecision!.role === null, 'Private merger quantities leaked');
+  assert(state.logs.at(-1)!.shareDecision!.sell === 5, 'Redaction mutated stored choice');
+  const own = publicRoom(room, 'bob').game!.logs.at(-1)!.shareDecision!;
+  assert(own.sell === 5 && own.cash === 1000, 'Own merger choice missing');
+  state.houseRules.anonymousBuying = false; state.houseRules.hiddenMoney = true;
+  const cashOnly = publicRoom(room, 'alice').game!.logs.at(-1)!.shareDecision!;
+  assert(cashOnly.sell === 5 && cashOnly.cash === null, 'Cash hiding also hid public stock choices');
 });

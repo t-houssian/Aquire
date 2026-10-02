@@ -13,7 +13,7 @@ test('story chapters are gated, introduce original rivals, and resume the same s
   await page.addInitScript(() => localStorage.setItem('aquire.settings.v1', JSON.stringify({ sound: false, speed: 1400, houseRules: { startingCash: 99900, dividends: true } })));
   await openStory(page);
   await expect(page.locator('.story-chapter')).toHaveCount(12);
-  await expect(page.getByRole('button', { name: /Chapter 2:/ })).toBeDisabled();
+  await expect(page.getByRole('button', { name: /Challenge 2:/ })).toBeDisabled();
   for (const [width, height] of [[1440, 900], [393, 700], [844, 390], [320, 568]]) {
     await page.setViewportSize({ width, height });
     expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth + 1)).toBe(true);
@@ -24,7 +24,7 @@ test('story chapters are gated, introduce original rivals, and resume the same s
   await expect(briefing).toContainText('Penny Pinch');
   await expect(briefing.getByRole('img', { name: /Penny Pinch/ })).toBeVisible();
   await briefing.getByLabel('Your name').fill('Alex');
-  await briefing.getByRole('button', { name: 'Play this chapter' }).click();
+  await briefing.getByRole('button', { name: 'Play this challenge' }).click();
   await expect(page.locator('.board-card')).toHaveAttribute('data-map', 'duo-pocket-square');
   const original = await page.evaluate(() => JSON.parse(localStorage.getItem('aquire.games.v2')!)[0].game as GameState);
   expect(original.players).toHaveLength(2);
@@ -35,8 +35,8 @@ test('story chapters are gated, introduce original rivals, and resume the same s
   expect(original.botDifficulty).toBe('strategist');
   // Reload simulates returning later; the chapter card must use its existing snapshot.
   await openStory(page);
-  await page.getByRole('button', { name: 'Continue your chapter' }).click();
-  await page.getByRole('button', { name: 'Resume chapter', exact: true }).click();
+  await page.getByRole('button', { name: 'Continue your challenge' }).click();
+  await page.getByRole('button', { name: 'Resume challenge', exact: true }).click();
   await expect(page.locator('.board-card')).toHaveAttribute('data-map', 'duo-pocket-square');
   expect(await page.evaluate(() => JSON.parse(localStorage.getItem('aquire.games.v2')!)[0].game.id)).toBe(original.id);
   expect(await page.evaluate(() => JSON.parse(localStorage.getItem('aquire.games.v2')!).length)).toBe(1);
@@ -58,29 +58,29 @@ for (const win of [true, false]) test(`story ${win ? 'victory opens the next cha
     localStorage.setItem('aquire.games.v2', JSON.stringify([{ game, kind: 'solo', updatedAt: new Date().toISOString() }]));
   }, game);
   await openStory(page);
-  await page.getByRole('button', { name: 'Continue your chapter' }).click();
-  await page.getByRole('button', { name: 'Resume chapter', exact: true }).click();
+  await page.getByRole('button', { name: 'Continue your challenge' }).click();
+  await page.getByRole('button', { name: 'Resume challenge', exact: true }).click();
   await page.getByRole('button', { name: 'Declare the final turn' }).click();
   await page.getByRole('button', { name: /Skip buying/ }).click();
   await page.getByRole('button', { name: 'Reveal final scores' }).click();
   await expect(page.getByTestId('story-result')).toContainText(win ? 'A new door opens.' : 'The story is not over.');
   await page.getByRole('button', { name: win ? 'Continue your story' : 'Return to your chapter' }).click();
-  const next = page.getByRole('button', { name: /Chapter 2:/ });
+  const next = page.getByRole('button', { name: /Challenge 2:/ });
   if (win) await expect(next).toBeEnabled(); else await expect(next).toBeDisabled();
-  await page.getByRole('button', { name: /Chapter 1:/ }).click();
-  await expect(page.getByRole('button', { name: win ? 'Replay chapter' : 'Try this chapter again' })).toBeVisible();
+  await page.getByRole('button', { name: /Challenge 1:/ }).click();
+  await expect(page.getByRole('button', { name: win ? 'Replay challenge' : 'Try this challenge again' })).toBeVisible();
 });
 
 test('the final invitation seats eleven distinct Strategists with faces', async ({ page }, info) => {
   const chapters = Object.fromEntries(STORY_CHAPTERS.slice(0, -1).map((chapter) => [chapter.id, { won: true, attempts: 1, best: 20000, lastGameId: chapter.id, lastOutcome: 'won' }]));
   await page.addInitScript((chapters) => localStorage.setItem('aquire.story.v1', JSON.stringify({ version: 1, chapters })), chapters);
   await openStory(page);
-  await page.getByRole('button', { name: /Chapter 12:/ }).click();
+  await page.getByRole('button', { name: /Challenge 81:/ }).click();
   await expect(page.locator('.story-opponents article')).toHaveCount(11);
   await expect(page.locator('.story-opponents .character-avatar')).toHaveCount(11);
   if (info.project.name === 'chromium') await page.getByRole('dialog').screenshot({ path: 'artifacts/story/final-invitation.png' });
-  await page.getByRole('button', { name: 'Play this chapter' }).click();
-  await expect(page.locator('.board-card')).toHaveAttribute('data-map', 'max-world-tree');
+  await page.getByRole('button', { name: 'Play this challenge' }).click();
+  await expect(page.locator('.board-card')).toHaveAttribute('data-map', 'goldspire-kingdom');
   const state = await page.evaluate(() => JSON.parse(localStorage.getItem('aquire.games.v2')!)[0].game as GameState);
   expect(state.players.filter((player) => player.isBot)).toHaveLength(11);
   expect(new Set(state.players.filter((player) => player.isBot).map((player) => player.characterId)).size).toBe(11);
@@ -118,8 +118,8 @@ test('character turns keep their portrait, move, and Continue usable on phones a
     localStorage.setItem('aquire.settings.v1', JSON.stringify({ speed: 220, sound: false }));
   }, game);
   await openStory(page);
-  await page.getByRole('button', { name: 'Continue your chapter' }).click();
-  await page.getByRole('button', { name: 'Resume chapter', exact: true }).click();
+  await page.getByRole('button', { name: 'Continue your challenge' }).click();
+  await page.getByRole('button', { name: 'Resume challenge', exact: true }).click();
   const recap = page.getByTestId('turn-recap');
   await expect(recap).toBeVisible();
   await expect(recap.getByRole('img', { name: /Penny Pinch/ })).toBeVisible();
@@ -132,4 +132,49 @@ test('character turns keep their portrait, move, and Continue usable on phones a
   }
   await recap.getByRole('button', { name: 'Continue', exact: true }).click();
   await expect(recap).toHaveCount(0);
+});
+
+test('later chapters explain fixed settings and royal rewards stay locked until the final victory', async ({ page }) => {
+  const progress = Object.fromEntries(STORY_CHAPTERS.slice(0, 12).map((challenge) => [challenge.id, { won: true, attempts: 1, best: 20000, lastGameId: challenge.id, lastOutcome: 'won' }]));
+  await page.addInitScript((chapters) => localStorage.setItem('aquire.story.v1', JSON.stringify({ version: 1, chapters })), progress);
+  await openStory(page);
+  await expect(page.locator('.story-book-tabs button')).toHaveCount(7);
+  await expect(page.locator('.story-chapter')).toHaveCount(13);
+  await page.getByRole('button', { name: /Challenge 13:/ }).click();
+  const rules = page.getByRole('region', { name: 'Challenge rules' });
+  await expect(rules).toContainText('Hotel roster and certificates');
+  await expect(rules).toContainText('Opening and cash');
+  await expect(rules).toContainText('Construction and demolition');
+  await expect(rules).toContainText('Buying and selling');
+  await expect(rules).toContainText('Market prices');
+  await expect(rules).toContainText('Dividends');
+  await page.getByRole('button', { name: 'Close dialog' }).click();
+  await page.goto('/');
+  await page.getByRole('button', { name: /Let’s play/ }).first().click();
+  await expect(page.getByLabel('City map').locator('option[value="goldspire-kingdom"]')).toHaveCount(0);
+  await page.getByRole('button', { name: 'Close dialog' }).click();
+  await page.evaluate((ids) => {
+    const chapters = Object.fromEntries(ids.map((id) => [id, { won: true, attempts: 1, best: 20000, lastGameId: id, lastOutcome: 'won' }]));
+    localStorage.setItem('aquire.story.v1', JSON.stringify({ version: 1, chapters }));
+  }, STORY_CHAPTERS.map((challenge) => challenge.id));
+  await page.getByRole('button', { name: /Let’s play/ }).first().click();
+  await expect(page.getByLabel('City map').locator('option[value="goldspire-kingdom"]')).toHaveCount(1);
+});
+
+test('a custom face and name survive reload and join new games', async ({ page }) => {
+  await page.goto('/');
+  await page.getByRole('button', { name: 'Customize your character' }).click();
+  const editor = page.getByRole('dialog', { name: 'Meet your next tycoon.' });
+  await editor.getByLabel('Your name').fill('Madame Pickle');
+  await editor.getByRole('combobox', { name: 'accessory', exact: true }).selectOption('3');
+  await editor.getByRole('combobox', { name: 'Royal title' }).selectOption('Queen');
+  await editor.getByRole('button', { name: 'Save my character' }).click();
+  await page.reload();
+  await expect(page.getByRole('button', { name: 'Customize your character' }).getByRole('img')).toHaveAttribute('aria-label', 'Madame Pickle, custom face');
+  await page.getByRole('button', { name: /Let’s play/ }).first().click();
+  await expect(page.getByLabel('Your name')).toHaveValue('Madame Pickle');
+  await page.getByRole('button', { name: /Let’s build something/ }).click();
+  await expect(page.locator('.player-chip').first().getByRole('img')).toHaveAttribute('aria-label', 'Madame Pickle, custom face');
+  const result = await page.evaluate(() => ({ profile: JSON.parse(localStorage.getItem('aquire.profile.v1')!), game: JSON.parse(localStorage.getItem('aquire.games.v2')!)[0].game }));
+  expect(result.profile.avatar).toHaveLength(9); expect(result.game.players[0].avatar).toBe(result.profile.avatar);
 });

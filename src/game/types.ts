@@ -40,6 +40,7 @@ export type MapId =
   | 'duo-coral-comb' | 'duo-lemon-bow' | 'duo-velvet-rail' | 'duo-pebble-isle' | 'duo-jellybean'
   | 'four-market-square' | 'four-amber-court' | 'four-sailmakers' | 'four-paper-lantern' | 'four-crescent-pier'
   | 'four-foxglove' | 'four-copper-coil' | 'four-blue-hour' | 'four-honey-arcade' | 'four-pistachio-park'
+  | 'goldspire-kingdom'
   | 'four-vinyl-club' | 'four-tulip-terminal' | 'four-kite-festival' | 'four-snowglobe' | 'four-rooftop-radio';
 export type BotDifficulty = 'casual' | 'standard' | 'strategist';
 export type MarketMode = 'off' | 'market' | 'crazy';
@@ -69,12 +70,14 @@ export interface PlayerConfig {
   name: string;
   isBot?: boolean;
   characterId?: string;
+  avatar?: string;
 }
 export interface Player {
   id: string;
   name: string;
   isBot: boolean;
   characterId?: string;
+  avatar?: string;
   cash: number;
   hand: Tile[];
   stocks: Stocks;
@@ -138,6 +141,11 @@ export interface GameLog {
   tile?: Tile;
   /** One snapshot per acquisition, kept within the existing bounded move log. */
   payout?: MergerPayout;
+  shareDecision?: {
+    acquired: ChainId; survivor: ChainId; sell: number | null; trade: number | null;
+    keep: number | null; received: number | null; cash: number | null;
+    role: 'Majority' | 'Minority' | 'Shareholder' | null;
+  };
 }
 export interface MergerState {
   tile: Tile;

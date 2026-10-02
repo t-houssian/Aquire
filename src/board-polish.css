@@ -237,3 +237,15 @@
   .finale-reveal.board-open .settlement-card { display: none; }
   .final-board-tile { font-size: clamp(7px, 2.4vw, 17px); }
 }
+/* Buying uses the existing order area, leaving the board/action proportions alone. */
+.order-summary.order-with-rack { flex-direction:row; flex-wrap:wrap; align-items:center; gap:8px; padding:8px 12px; }
+.buy-rack { display:flex; gap:8px; flex-wrap:wrap; align-items:center; }
+.buy-rack > strong { font-size:10px; color:#536b41; }
+.buy-rack > div { display:flex; gap:4px; flex-wrap:wrap; }
+.buy-rack span { display:flex; align-items:center; justify-content:center; min-width:25px; height:24px; padding:0 4px; background:#fafcf5; border:1px solid #bfd1a5; border-radius:5px; font-size:11px; font-weight:600; color:#456637; }
+.buy-rack em { font-size:10px; }
+.order-summary-total { margin-left:auto; display:flex; justify-content:space-between; gap:8px; align-items:center; }
+.merger-decisions { margin:7px 0; padding:6px 8px; border-radius:7px; background:#f1f5eb; font-size:10px; line-height:1.5; }
+.merger-decisions summary { cursor:pointer; font-weight:600; }
+.merger-decisions ol { padding-left:15px; margin:5px 0 0; }
+@media(max-height:500px) and (orientation:landscape) { .order-summary.order-with-rack { gap:5px; padding:6px; } .buy-rack > strong { font-size:9px; } .buy-rack span { min-width:20px; height:21px; font-size:10px; } .merger-decisions { max-height:54px; overflow:auto; flex-shrink:0; } }

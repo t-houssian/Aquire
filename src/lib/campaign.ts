@@ -1,5 +1,5 @@
 import { STORY_CHAPTERS, getStoryChapter } from '../game/campaign';
-import { DEFAULT_HOUSE_RULES, getHouseRules } from '../game/engine';
+import { validateHouseRules, getHouseRules } from '../game/engine';
 import type { GameState } from '../game/types';
 
 export interface ChapterProgress {
@@ -36,7 +36,7 @@ export function recordStoryResult(game: GameState): StoryProgress {
     || game.players.filter((player) => !player.isBot).length !== 1
     || !game.players.some((player) => player.id === run.playerId && !player.isBot)
     || game.players.filter((player) => player.isBot).map((player) => player.characterId).sort().join() !== [...chapter.opponents].sort().join()
-    || JSON.stringify(getHouseRules(game)) !== JSON.stringify(DEFAULT_HOUSE_RULES)) return progress;
+    || JSON.stringify(getHouseRules(game)) !== JSON.stringify(validateHouseRules(chapter.houseRules))) return progress;
   const result = game.results.find((entry) => entry.playerId === run.playerId);
   if (!result || game.results.length !== game.players.length || !Number.isFinite(result.total)) return progress;
   const prior = progress.chapters[chapter.id];
@@ -49,4 +49,8 @@ export function recordStoryResult(game: GameState): StoryProgress {
   };
   localStorage.setItem(KEY, JSON.stringify(progress));
   return progress;
+}
+
+export function kingdomUnlocked(progress: StoryProgress = readStoryProgress()): boolean {
+  return STORY_CHAPTERS.every((challenge) => progress.chapters[challenge.id]?.won);
 }

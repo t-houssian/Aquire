@@ -298,4 +298,24 @@ begin
   if not (public.acquire_read_room(host, 'XPT234', 6) ? 'game') then raise exception 'Bot shareholder was skipped'; end if;
 end $$;
 
+-- Avatar RPCs preserve one-write lobby behavior and stay inaccessible to browsers.
+do $$
+declare host uuid := '00000000-0000-4000-8000-000000000071'; guest uuid := '00000000-0000-4000-8000-000000000072'; r jsonb;
+begin
+  if has_function_privilege('anon', 'public.acquire_create_room_with_avatar(uuid,text,text,text,text)', 'execute')
+     or has_function_privilege('authenticated', 'public.acquire_join_room_with_avatar(uuid,text,text,text)', 'execute') then
+    raise exception 'Browser can call avatar RPCs';
+  end if;
+  r := public.acquire_create_room_with_avatar(host, 'Royal host', 'AVA234', 'classic', 'a10100017');
+  if r->'players'->0->>'avatar' <> 'a10100017' then raise exception 'Host face missing'; end if;
+  r := public.acquire_join_room_with_avatar(guest, 'Royal guest', 'AVA234', 'a11210182');
+  if r->'players'->1->>'avatar' <> 'a11210182' then raise exception 'Guest face missing'; end if;
+  if r->>'version' <> '1' then raise exception 'Avatar join used extra writes'; end if;
+  begin
+    perform public.acquire_create_room_with_avatar(host, 'Bad face', 'BAD234', 'classic', 'a1zzzzzzz');
+    raise exception 'Malformed face accepted';
+  exception when others then if sqlerrm <> 'INVALID_AVATAR' then raise; end if; end;
+  perform public.acquire_commit_room(host, 'AVA234', 1, '{"version":2,"ruleset":"2008","mode":"classic","mapId":"goldspire-kingdom"}'::jsonb, r->'players', 'playing');
+end $$;
+
 rollback;

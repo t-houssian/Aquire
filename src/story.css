@@ -66,3 +66,16 @@
 @media (max-width: 1050px) { .story-page { padding: 24px 20px 45px; } .story-hero { padding: 30px; gap: 15px; } .story-chapters { grid-template-columns: repeat(2,minmax(0,1fr)); } }
 @media (max-width: 600px) { .story-page { padding: 18px 12px 32px; } .story-hero { padding: 26px 21px; grid-template-columns: 1fr; gap: 28px; } .story-hero h1 { margin-top: 16px; } .story-hero-cast { max-width: 330px; width: 100%; margin: auto; } .story-hero p { font-size: 14px; } .story-path-heading { display: block; } .story-chapters { grid-template-columns: 1fr; gap: 12px; } .story-chapter { padding: 20px; } .story-chapter .map-choice-preview { height: 135px; } .story-opponents { grid-template-columns: 1fr; } .story-briefing-footer { align-items: stretch; flex-direction: column; } .story-entry { padding: 17px; gap: 12px; } .story-entry-faces .character-avatar { width: 40px; height: 40px; border-radius: 12px; } .story-entry-faces .character-avatar:nth-child(2) { display: none; } .story-entry p { line-height: 1.6; } .story-finished { align-items: start; padding: 20px; } }
 @media (prefers-reduced-motion: reduce) { .story-chapter { transition: none; } }
+
+.story-book-tabs { display:flex; gap:9px; overflow:auto; padding:4px 2px 12px; scroll-snap-type:x proximity; }
+.story-book-tabs button { flex:0 0 175px; padding:13px; border:1px solid #dce3d2; border-radius:12px; background:#fbfcf8; text-align:left; scroll-snap-align:start; }
+.story-book-tabs span, .story-book-tabs small { display:block; font-size:10px; color:#80906f; }
+.story-book-tabs strong { display:block; font-size:12px; margin:6px 0; }
+.story-book-tabs button[aria-pressed=true] { background:#eaf1de; border-color:#92ae70; }
+.story-book-theme { font-size:13px; color:#768668; line-height:1.6; }
+.story-rules { padding:18px; background:#f3f6eb; border:1px solid #dfe6d7; border-radius:13px; margin:22px 0; }
+.story-rules > p { font-size:13px; line-height:1.65; color:#637556; }
+.story-rules dl { margin-bottom:0; }
+.story-rules dl > div { border-top:1px solid #dfe6d7; padding:11px 0; }
+.story-rules dt { font-size:12px; font-weight:700; }
+.story-rules dd { margin:5px 0 0; font-size:12px; line-height:1.65; color:#758169; }

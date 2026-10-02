@@ -1,9 +1,9 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-import { STORY_CHAPTERS, storyGameConfig } from '../game/campaign';
+import { STORY_CHAPTERS, STORY_BOOKS, storyRuleBriefing, storyGameConfig } from '../game/campaign';
 import { CHARACTERS, pickCharacters } from '../game/characters';
-import { applyAction, chooseBotAction, createGame, DEFAULT_HOUSE_RULES, getHouseRules } from '../game/engine';
+import { applyAction, chooseBotAction, createGame, getHouseRules, validateHouseRules } from '../game/engine';
 import { getMap, MAPS } from '../game/maps';
-import { emptyStoryProgress, readStoryProgress, recordStoryResult, storyChapterUnlocked } from './campaign';
+import { kingdomUnlocked, emptyStoryProgress, readStoryProgress, recordStoryResult, storyChapterUnlocked } from './campaign';
 import { readGames, readMatches, saveGame } from './storage';
 
 const memory = new Map<string, string>();
@@ -27,22 +27,26 @@ function completed(outcome: 'win' | 'tie' | 'loss', chapter = 'chapter-1', seed 
 }
 
 describe('The Long Game', () => {
-  it('uses 56 different rivals and grows from a tiny duel to eleven Strategists on the biggest city', () => {
-    expect(STORY_CHAPTERS).toHaveLength(12);
+  it('uses all maps and 399 different rivals and grows from a tiny duel to eleven Strategists on the biggest city', () => {
+    expect(STORY_CHAPTERS).toHaveLength(81);
+    expect(STORY_BOOKS).toHaveLength(7);
+    expect(STORY_CHAPTERS.filter((chapter) => chapter.chapter === 1)).toHaveLength(12);
+    expect(new Set(STORY_CHAPTERS.map((chapter) => chapter.mapId))).toEqual(new Set(MAPS.map((map) => map.id)));
     const cast = STORY_CHAPTERS.flatMap((chapter) => chapter.opponents);
-    expect(cast).toHaveLength(56); expect(new Set(cast).size).toBe(56);
-    expect(new Set(CHARACTERS.map((character) => character.name)).size).toBe(56);
-    expect(new Set(CHARACTERS.map((character) => character.portrait)).size).toBe(56);
+    expect(cast).toHaveLength(399); expect(new Set(cast).size).toBe(399);
+    expect(new Set(CHARACTERS.map((character) => character.name)).size).toBe(399);
+    expect(new Set(CHARACTERS.map((character) => character.portrait)).size).toBe(399);
     expect(STORY_CHAPTERS[0].players).toBe(2);
-    expect(getMap(STORY_CHAPTERS.at(-1)!.mapId).tiles.length).toBe(Math.max(...MAPS.map((map) => map.tiles.length)));
+    expect(STORY_CHAPTERS.at(-1)!.mapId).toBe('goldspire-kingdom');
     expect(STORY_CHAPTERS.at(-1)!.opponents).toHaveLength(11);
     for (const chapter of STORY_CHAPTERS) {
       const game = createGame(storyGameConfig(chapter.id, '  Alex  ', 43));
       expect(game.players).toHaveLength(chapter.players);
       expect(game.botDifficulty).toBe('strategist');
       expect(game.players.filter((player) => player.isBot).map((player) => player.characterId)).toEqual(chapter.opponents);
-      expect(game.players[0].name).toBe('Alex');
-      expect(getHouseRules(game)).toEqual(DEFAULT_HOUSE_RULES);
+      expect(game.players[0].name).toBe(chapter.mapId === 'goldspire-kingdom' ? 'King Alex' : 'Alex');
+      expect(getHouseRules(game)).toEqual(validateHouseRules(chapter.houseRules));
+      expect(storyRuleBriefing(chapter)).toHaveLength(9);
     }
     for (const seed of [0, 1, 56, 4294967295]) expect(new Set(pickCharacters(11, seed).map((character) => character.id)).size).toBe(11);
   });
@@ -90,6 +94,16 @@ describe('The Long Game', () => {
     memory.set('aquire.story.v1', 'not json');
     expect(readStoryProgress()).toEqual(emptyStoryProgress());
   });
+  it('unlocks royal rewards only after every challenge, including the kingdom, is won', () => {
+    expect(kingdomUnlocked()).toBe(false);
+    for (const chapter of STORY_CHAPTERS) {
+      expect(kingdomUnlocked()).toBe(false);
+      recordStoryResult(completed('win', chapter.id, chapter.number));
+    }
+    expect(kingdomUnlocked()).toBe(true);
+    expect(pickCharacters(399, 2)).toHaveLength(388);
+    expect(pickCharacters(399, 2, true).filter((character) => character.royal)).toHaveLength(11);
+  });
   it('finishes every chapter with its actual cast and conserves all tiles and shares', () => {
     for (const chapter of STORY_CHAPTERS) {
       let game = createGame(storyGameConfig(chapter.id, 'Alex', 203));
@@ -100,7 +114,7 @@ describe('The Long Game', () => {
       const inventory = [...Object.keys(game.board), ...game.bag, ...game.discarded, ...game.players.flatMap((player) => player.hand)];
       expect(new Set(inventory).size, chapter.id).toBe(getMap(chapter.mapId).tiles.length);
       expect(inventory.length).toBe(getMap(chapter.mapId).tiles.length);
-      for (const chain of DEFAULT_HOUSE_RULES.hotelChains) expect(game.bank[chain] + game.players.reduce((sum, player) => sum + player.stocks[chain], 0)).toBe(25);
+      for (const chain of getHouseRules(game).hotelChains) expect(game.bank[chain] + game.players.reduce((sum, player) => sum + player.stocks[chain], 0)).toBe(getHouseRules(game).shareSupply[chain] ?? 25);
     }
-  }, 60000);
+  }, 240000);
 });

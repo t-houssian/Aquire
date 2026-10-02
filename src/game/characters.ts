@@ -5,7 +5,7 @@ export const STYLE_NAMES: Record<BotStyle, string> = {
   guardian: 'Cash guardian', raider: 'Majority raider', planner: 'Patient planner',
 };
 export interface Character {
-  id: string; name: string; title: string; quote: string; style: BotStyle; portrait: number;
+  id: string; name: string; title: string; quote: string; style: BotStyle; portrait: number; royal?: boolean;
 }
 const cast: [string, string, string, BotStyle][] = [
   ['Penny Pinch', 'The coupon empress', 'I brought exact change. And a plan.', 'guardian'],
@@ -65,14 +65,38 @@ const cast: [string, string, string, BotStyle][] = [
   ['Queen Quorum', 'The boardroom monarch', 'I believe we have enough votes.', 'raider'],
   ['Grandpa Goldleaf', 'The final landlord', 'I planted this city. Show me what you can grow.', 'builder'],
 ];
-export const CHARACTERS: readonly Character[] = cast.map(([name, title, quote, style], index) => ({
-  id: `cast-${String(index + 1).padStart(2, '0')}`, name, title, quote, style, portrait: index,
+// Each later challenge gets its own cast. Names and faces never repeat in the story.
+const firstNames = ['Agatha', 'Barnaby', 'Cosmo', 'Delia', 'Ernest', 'Flora', 'Gordon', 'Hazel', 'Indigo', 'Jolene', 'Klaus', 'Lottie', 'Magnus', 'Nell', 'Orson', 'Prudence', 'Roscoe', 'Sylvie', 'Tobias', 'Una', 'Winston'];
+const surnames = ['Pickleworth', 'Buttonbean', 'Snickerdoodle', 'Tumbleton', 'Pepperpot', 'Doodlebank', 'Crumpet', 'Fiddlestock', 'Noodlewick', 'Jinglepocket', 'Bumbershoot', 'Snoozewell', 'Wobblebottom', 'Pumpernickel', 'Quackenbush', 'Moonwallet'];
+const styles: BotStyle[] = ['builder', 'broker', 'collector', 'guardian', 'raider', 'planner'];
+const titles = ['The skyline sculptor', 'The takeover tailor', 'The certificate curator', 'The rainy-day banker', 'The chair-stealing bidder', 'The long-range schemer'];
+const quotes = ['I put a rooftop on my rooftop.', 'I brought two shares and a very persuasive hat.', 'My filing cabinet has its own penthouse.', 'My emergency fund has an emergency fund.', 'That majority looked lonely. I joined it.', 'I penciled in your surprise three turns ago.'];
+const laterCast: Character[] = Array.from({ length: 332 }, (_, i) => ({
+  id: `rival-${String(i + 1).padStart(3, '0')}`, name: `${firstNames[i % firstNames.length]} ${surnames[Math.floor(i / firstNames.length)]}`,
+  title: titles[i % 6], quote: quotes[(i + Math.floor(i / 6)) % 6], style: styles[i % 6], portrait: cast.length + i,
 }));
+export const ROYAL_CHARACTERS: readonly Character[] = [
+  ['Queen Aurelia', 'The gilded strategist'], ['King Crumpet III', 'The biscuit throne'],
+  ['Queen Velvetine', 'The velvet veto'], ['King Midas Muffin', 'The golden breakfast'],
+  ['Queen Checkmate', 'The crown collector'], ['King Cedric Cash', 'The royal reserve'],
+  ['Queen Marmalady', 'The sovereign spread'], ['King Quackalot', 'The duck of dividends'],
+  ['Queen Saffron', 'The spice of speculation'], ['King Ledgerloin', 'The knight of numbers'],
+  ['Queen Goldspira', 'The final crown'],
+].map(([name, title], i) => ({ id: `royal-${i + 1}`, name, title, quote: ['The crown comes with a spreadsheet.', 'My moat is made of working capital.', 'Royalty is earned. So is this majority.'][i % 3], style: styles[i % 6], portrait: 388 + i, royal: true }));
+export const CHARACTERS: readonly Character[] = [
+  ...cast.map(([name, title, quote, style], index) => ({ id: `cast-${String(index + 1).padStart(2, '0')}`, name, title, quote, style, portrait: index })),
+  ...laterCast, ...ROYAL_CHARACTERS,
+];
 export const getCharacter = (id?: string) => CHARACTERS.find((character) => character.id === id);
-/** Consecutive coprime steps produce a distinct cast without storing avatar assets. */
-export function pickCharacters(count: number, seed: number): Character[] {
-  const start = (seed >>> 0) % CHARACTERS.length;
-  return Array.from({ length: Math.min(count, CHARACTERS.length) }, (_, i) => CHARACTERS[(start + i * 13) % CHARACTERS.length]);
+/** Shuffle in memory; royal guests only enter free play after the story reward. */
+export function pickCharacters(count: number, seed: number, royalsUnlocked = false): Character[] {
+  const pool = CHARACTERS.filter((character) => royalsUnlocked || !character.royal);
+  let rng = seed >>> 0;
+  for (let i = pool.length - 1; i > 0; i--) {
+    rng = (Math.imul(rng, 1664525) + 1013904223) >>> 0;
+    const j = rng % (i + 1); [pool[i], pool[j]] = [pool[j], pool[i]];
+  }
+  return pool.slice(0, Math.max(0, count));
 }
 export function botPersonality(id?: string) {
   const character = getCharacter(id);

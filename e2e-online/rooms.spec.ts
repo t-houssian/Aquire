@@ -13,6 +13,7 @@ import {
   type GameState,
 } from '../src/game/engine';
 import { getMap } from '../src/game/maps';
+import { DEFAULT_AVATAR, encodeAvatar } from '../src/game/avatars';
 import type { OnlineRoom } from '../src/lib/online';
 import type { HouseRules, MapId } from '../src/game/types';
 
@@ -158,6 +159,7 @@ class MockSupabase {
         operation: string;
         action?: GameAction;
         name?: string;
+        avatar?: string;
         expectedVersion?: number;
         mapId?: MapId;
         botCount?: number;
@@ -181,6 +183,7 @@ class MockSupabase {
       if (body.operation === 'create') {
         this.closed = false;
         this.room.players[0].name = body.name || 'Alex';
+        this.room.players[0].avatar = body.avatar;
       }
       if (body.operation === 'start') this.start(body);
       if (body.operation === 'action') {
@@ -223,6 +226,23 @@ async function expectBoard(page: Page) {
 }
 
 test.describe('online room UI — HTTP-mocked Supabase', () => {
+  test('a customized face accompanies the player into the lobby and game', async ({ page }) => {
+    const avatar = encodeAvatar({ ...DEFAULT_AVATAR, accessory: 5, color: 20 });
+    await page.addInitScript((avatar) => localStorage.setItem('aquire.profile.v1', JSON.stringify({ name: 'Captain Cash', avatar, royalTitle: 'Queen' })), avatar);
+    const backend = new MockSupabase();
+    await backend.install(page);
+    await page.goto('/');
+    await openOnline(page);
+    await expect(page.getByLabel('Your name', { exact: true })).toHaveValue('Captain Cash');
+    await page.getByRole('button', { name: 'Open your table' }).click();
+    await expect(page.locator('.lobby-players .character-avatar').first()).toBeVisible();
+    expect(backend.operations.find((operation) => operation.operation === 'create')).toMatchObject({ name: 'Captain Cash', avatar });
+    await page.getByRole('button', { name: 'Start the game' }).click();
+    await expectBoard(page);
+    const player = backend.fullGame!.players.find((player) => player.id === HOST)!;
+    expect(player.avatar).toBe(avatar);
+    await expect(page.locator('.player-chip').filter({ hasText: 'Captain Cash' }).locator('.character-avatar')).toBeVisible();
+  });
   test('host creates a lobby and starts a playable table', async ({ page }) => {
     const backend = new MockSupabase();
     await backend.install(page);

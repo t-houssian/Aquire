@@ -7,9 +7,9 @@ const players = Array.from({ length: 3 }, (_, i) => ({ id: `p${i}`, name: `Playe
 const game = (mapId: MapId = 'classic', botDifficulty: BotDifficulty = 'standard', seed = 11) => createGame({ players: players.slice(0, getMap(mapId).maxPlayers), mapId, botDifficulty, seed });
 
 describe('optional 2008 city maps', () => {
-  it('keeps all eighty cities connected, distinct and rotationally balanced', () => {
-    expect(MAPS).toHaveLength(80);
-    expect(MAPS.filter((map) => !SMALL_MAP_IDS.has(map.id)).map((map) => map.id)).toEqual([
+  it('keeps all eighty-one cities connected and distinct, with rotational or crown mirror balance', () => {
+    expect(MAPS).toHaveLength(81);
+    expect(MAPS.filter((map) => !SMALL_MAP_IDS.has(map.id) && map.id !== 'goldspire-kingdom').map((map) => map.id)).toEqual([
       'classic', 'corner-plazas', 'riverwalk', 'grand-avenue', 'courtyard', 'peninsulas',
       'hourglass', 'crossroads', 'switchback', 'atoll', 'four-spires',
       'twin-docks', 'obelisk', 'coral-crown', 'lightning-run', 'compass-rose', 'pinwheel', 'starfall-x', 'twin-lagoons',
@@ -25,7 +25,7 @@ describe('optional 2008 city maps', () => {
       'max-world-tree', 'max-astral-loom',
     ]);
     expect(MAPS[0].tiles).toEqual(ALL_TILES);
-    expect(MAPS.filter((map) => !SMALL_MAP_IDS.has(map.id)).map((map) => map.tiles.length)).toEqual([
+    expect(MAPS.filter((map) => !SMALL_MAP_IDS.has(map.id) && map.id !== 'goldspire-kingdom').map((map) => map.tiles.length)).toEqual([
       108, 92, 96, 100, 102, 96, 84, 80, 84, 86, 80,
       108, 139, 136, 118, 127, 136, 115, 144,
       157, 156, 121, 126, 117, 153, 122, 140, 148, 107,
@@ -43,7 +43,7 @@ describe('optional 2008 city maps', () => {
       for (const tile of tiles) {
         const c = Number(tile.slice(0, -1));
         const r = tile.charCodeAt(tile.length - 1) - 65;
-        const opposite = `${map.columns + 1 - c}${String.fromCharCode(65 + map.rows - 1 - r)}`;
+        const opposite = `${map.columns + 1 - c}${String.fromCharCode(65 + (map.id === 'goldspire-kingdom' ? r : map.rows - 1 - r))}`;
         expect(tiles.has(opposite), `${map.id} lacks rotational balance at ${tile}`).toBe(true);
       }
       const visited = new Set([map.tiles[0]]);

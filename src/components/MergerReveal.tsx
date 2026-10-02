@@ -38,7 +38,7 @@ export default function MergerReveal({ payout, game, viewerId, onContinue, remai
           </div>;
         })}
       </div>
-      <div className="merger-payout-footer"><span>{remaining ? `${remaining} more merger${remaining === 1 ? '' : 's'} to see` : 'Bonuses are already in each investor’s cash.'}</span><button className="button primary" onClick={onContinue}>{remaining ? 'Next merger' : 'Continue'} <ArrowRight size={16} /></button></div>
+      <div className="merger-payout-footer"><span>{remaining ? `${remaining} more merger update${remaining === 1 ? '' : 's'} to see` : 'Bonuses are already in each investor’s cash.'}</span><button className="button primary" onClick={onContinue}>{remaining ? 'Next update' : 'Continue'} <ArrowRight size={16} /></button></div>
     </div>
   </Modal>;
 }

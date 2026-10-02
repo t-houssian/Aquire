@@ -499,6 +499,11 @@ export const MAPS: MapDefinition[] = [
       '..#####################..', '.#######################.', '###...................###',
       '##.....................##',
     ], 12, 111),
+  makeSizedMap('goldspire-kingdom', 'Goldspire Kingdom', 'Five golden spires rise above a royal boulevard. Earn this crown by winning every story challenge and defeating the eleven monarchs.', 'The crown at the end of The Long Game',
+    { name: 'Royal gold', canvas: '#faf2dc', frame: '#e0cb8f', tile: '#fffdf4', accent: '#aa7e20', ink: '#655020', void: '#c6a954' },
+    25, 18, 12, 111, (c, r) => r >= 10 ? c >= 1 && c <= 23
+      : [2, 7, 12, 17, 22].some((peak) => Math.abs(c - peak) <= Math.floor(r / 3))),
+
 ];
 /** New map IDs are feature-gated online so an older room function cannot accept a selection it does not know. */
 export const NEW_MAP_IDS: ReadonlySet<MapId> = new Set([
@@ -523,6 +528,6 @@ export const SMALL_MAP_IDS: ReadonlySet<MapId> = new Set([
   'four-vinyl-club', 'four-tulip-terminal', 'four-kite-festival', 'four-snowglobe', 'four-rooftop-radio',
 ]);
 export const MAP_SEAT_TIERS = [2, 4, 6, 8, 10, 12] as const;
-export const getMap = (id: MapId | undefined): MapDefinition => MAPS.find((map) => map.id === id) ?? MAPS[0];
+export const getMap = (id: MapId | undefined): MapDefinition => MAPS.find((map) => map.id === id) ?? MAPS.find((map) => map.id === 'classic')!;
 export const isMapId = (value: unknown): value is MapId => typeof value === 'string' && MAPS.some((map) => map.id === value);
 export const mapHasTile = (id: MapId | undefined, tile: Tile) => getMap(id).tiles.includes(tile);
