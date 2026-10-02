@@ -81,6 +81,7 @@ export default function GameView({
   onRules,
   onSettings,
   onShowMergerPayout,
+  onProfile,
   busy = false,
   hints = true,
   privateGate = false,
@@ -97,6 +98,7 @@ export default function GameView({
   onRules: () => void;
   onSettings: () => void;
   onShowMergerPayout?: (entry: GameState['logs'][number]) => void;
+  onProfile?: () => void;
   busy?: boolean;
   hints?: boolean;
   privateGate?: boolean;
@@ -266,7 +268,7 @@ export default function GameView({
   const action = (a: GameAction) => {
     if (controllable) onAction(a);
   };
-  if (isEnded) return <Finale match={summarizeMatch(game, onlineCode ? 'online' : 'local')} onHome={onHome} />;
+  if (isEnded) return <Finale match={summarizeMatch(game, onlineCode ? 'online' : 'local')} onHome={onHome} onProfile={onProfile} viewerId={viewerId} />;
   return (
     <div className={`game-view ${expansionBoard ? 'expansion-game' : ''} ${isEnded ? 'game-ended' : ''}`} data-phase={game.phase} data-compact-view={compactView} data-board-focused={focusedBoard && compactView === 'board' || undefined} data-portrait-rail={slenderBoard && game.phase === 'place' && compactView === 'board' || undefined}>
       <div className="game-topline">

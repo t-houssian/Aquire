@@ -1,4 +1,5 @@
 import { decodeAvatar } from '../_shared/game/avatars.ts';
+import { validCountry } from '../_shared/countries.ts';
 import { createClient } from '@supabase/supabase-js';
 import {
   applyAction,
@@ -21,6 +22,7 @@ import {
   requireMember,
   requireCurrentRules,
   secureDeal,
+  startingHouseRules,
   type StoredRoom,
 } from './protocol.ts';
 
@@ -32,7 +34,14 @@ const dbMessages: Record<string, [string, number]> = {
     'This room is unavailable. Check the code or ask the host to create a new room.',
     404,
   ],
-  ROOM_FULL: ['This room already has twelve players.', 409],
+  ROOM_FULL: ['All seats at this table have been taken. Try another open table.', 409],
+  LOBBY_EXPIRED: ['This open table expired. Refresh the directory to find another.', 409],
+  PUBLIC_ROOM_LIMIT: ['You already have an open table. Return to it or close it first.', 409],
+  REWARD_LOCKED: ['Win more matches to earn that customization. Choose an unlocked option.', 403],
+  INVALID_AVATAR: ['Choose a valid character face.', 400],
+  INVALID_COUNTRY: ['Choose a country from the list, or leave it unshared.', 400],
+  INVALID_PROGRESS: ['Your story progress is not valid.', 400],
+  INVALID_LOBBY: ['Choose valid table settings.', 400],
   ROOM_STARTED: ['This game has already started.', 409],
   ROOM_FINISHED: ['This game has finished.', 409],
   ROOM_LIMIT: ['You have several recent rooms already. Return to one of those rooms to play.', 429],
@@ -149,8 +158,22 @@ Deno.serve(async (request: Request) => {
       return respond(body.sync === 'delta-v1' && before && body.knownVersion === before.version
         ? makeRoomUpdate(publicRoom(before, userId), view) : view);
     };
-    if ((body.operation === 'create' || body.operation === 'join') && body.avatar !== undefined && !decodeAvatar(body.avatar))
+    const profileOperation = ['create', 'join', 'save-profile'].includes(String(body.operation));
+    if (profileOperation && body.avatar !== undefined && body.avatar !== null && !decodeAvatar(body.avatar))
       throw new RequestError('INVALID_AVATAR', 'Choose a valid character face.');
+    if (profileOperation && !validCountry(body.country ?? '')) throw new RequestError('INVALID_COUNTRY', ...dbMessages.INVALID_COUNTRY);
+    if (profileOperation && (!Number.isInteger(body.storyWins ?? 0) || Number(body.storyWins ?? 0) < 0 || Number(body.storyWins ?? 0) > 81))
+      throw new RequestError('INVALID_PROGRESS', ...dbMessages.INVALID_PROGRESS);
+    const profileArgs = () => ({ p_user_id: userId, p_name: parseName(body.name), p_avatar: body.avatar ?? null,
+      p_country: body.country ?? '', p_story_wins: body.storyWins ?? 0 });
+    if (body.operation === 'profile' || body.operation === 'save-profile' || body.operation === 'list') {
+      if (body.operation === 'profile' && body.profileId !== undefined && (typeof body.profileId !== 'string' || !/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(body.profileId)))
+        throw new RequestError('INVALID_PROFILE', 'Choose an existing guest profile.');
+      const { data, error } = await admin.rpc(body.operation === 'list' ? 'acquire_open_tables' : body.operation === 'profile' ? 'acquire_profile' : 'acquire_save_profile',
+        body.operation === 'list' ? {} : body.operation === 'profile' ? { p_user_id: body.profileId ?? userId } : profileArgs());
+      if (error) dbError(error.message);
+      return respond(body.operation === 'list' ? { tables: data ?? [] } : { profile: data ?? null });
+    }
     if (body.operation === 'create') {
       // Retention still runs on projects without pg_cron. Failure is nonfatal for play.
       const prune = await admin.rpc('acquire_prune_data');
@@ -159,12 +182,11 @@ Deno.serve(async (request: Request) => {
       const mode = body.mode ?? 'classic';
       if (mode !== 'classic') throw new RequestError('INVALID_MODE', ...dbMessages.INVALID_MODE);
       for (let attempt = 0; attempt < 5; attempt++) {
-        const { data, error } = await admin.rpc(body.avatar ? 'acquire_create_room_with_avatar' : 'acquire_create_room', {
-          ...(body.avatar ? { p_avatar: body.avatar } : {}),
-          p_user_id: userId,
-          p_name: name,
+        const visibility = body.visibility ?? 'private';
+        if (!['public', 'private'].includes(String(visibility))) throw new RequestError('INVALID_VISIBILITY', 'Choose an open or private table.');
+        const { data, error } = await admin.rpc('acquire_create_social_room', {
+          ...profileArgs(), p_name: name, p_visibility: visibility,
           p_code: roomCode(),
-          p_mode: mode,
         });
         if (error?.code === '23505') continue;
         if (error) dbError(error.message);
@@ -186,10 +208,8 @@ Deno.serve(async (request: Request) => {
     }
     const code = parseCode(body.code);
     if (body.operation === 'join') {
-      const room = await rpc(body.avatar ? 'acquire_join_room_with_avatar' : 'acquire_join_room', {
-        ...(body.avatar ? { p_avatar: body.avatar } : {}),
-        p_user_id: userId,
-        p_name: parseName(body.name),
+      const room = await rpc('acquire_join_social_room', {
+        ...profileArgs(),
         p_code: code,
       });
       await notifyRoom(room);
@@ -235,16 +255,30 @@ Deno.serve(async (request: Request) => {
       });
       room = { ...committed, game: state };
     };
-    if (body.operation === 'start') {
+    if (body.operation === 'configure') {
+      const options = body.options as StoredRoom['lobby_options'];
+      if (!options || !isMapId(options.mapId) || !Number.isInteger(options.seatLimit) || options.seatLimit < 2 || options.seatLimit > getMap(options.mapId).maxPlayers
+        || !['casual', 'standard', 'strategist'].includes(options.botDifficulty)) throw new RequestError('INVALID_LOBBY', ...dbMessages.INVALID_LOBBY);
+      if (options.mapId === 'goldspire-kingdom' && body.royalsUnlocked !== true) throw new RequestError('STORY_LOCKED', 'Win every story challenge to host Goldspire Kingdom.');
+      let houseRules;
+      try { houseRules = validateHouseRules(options.houseRules); }
+      catch (error) { throw new RequestError('INVALID_HOUSE_RULES', error instanceof Error ? error.message : 'Choose valid house rules.'); }
+      if (options.seatLimit * (houseRules.startingTilesPerPlayer + 6) > getMap(options.mapId).tiles.length)
+        throw new RequestError('INVALID_HOUSE_RULES', 'This city cannot fit the selected opening for every seat.');
+      if (!Number.isInteger(body.expectedVersion)) throw new RequestError('VERSION_CONFLICT', ...dbMessages.VERSION_CONFLICT);
+      room = await rpc('acquire_configure_lobby', { p_user_id: userId, p_code: code, p_expected_version: body.expectedVersion,
+        p_visibility: body.visibility, p_options: { mapId: options.mapId, seatLimit: options.seatLimit, botDifficulty: options.botDifficulty, houseRules } });
+    } else if (body.operation === 'start') {
       if (room.host_id !== userId)
         throw new RequestError('HOST_ONLY', 'Only the host can start the game.', 403);
       if (room.status !== 'lobby')
         throw new RequestError('ROOM_STARTED', 'This game has already started.', 409);
       const botCount = body.botCount ?? 0;
-      const mapId = body.mapId ?? 'classic';
-      const botDifficulty = body.botDifficulty ?? 'standard';
+      const published = room.visibility === 'public' ? room.lobby_options : undefined;
+      const mapId = published?.mapId ?? body.mapId ?? 'classic';
+      const botDifficulty = published?.botDifficulty ?? body.botDifficulty ?? 'standard';
       let houseRules;
-      try { houseRules = validateHouseRules(body.houseRules as Parameters<typeof validateHouseRules>[0]); }
+      try { houseRules = startingHouseRules(room, body.houseRules); }
       catch (error) { throw new RequestError('INVALID_HOUSE_RULES', error instanceof Error ? error.message : 'Choose valid house rules.'); }
       if (!isMapId(mapId)) throw new RequestError('INVALID_MAP', 'Choose an available city map.');
       if (!['casual', 'standard', 'strategist'].includes(String(botDifficulty)))
@@ -262,7 +296,7 @@ Deno.serve(async (request: Request) => {
           characterId: cast[i].id,
           isBot: true,
         });
-      if (players.length < 2 || players.length > getMap(mapId).maxPlayers)
+      if (players.length < 2 || players.length > (published?.seatLimit ?? getMap(mapId).maxPlayers))
         throw new RequestError('PLAYER_COUNT', ...dbMessages.PLAYER_COUNT);
       if (players.length * (houseRules.startingTilesPerPlayer + 6) > getMap(mapId).tiles.length)
         throw new RequestError('INVALID_HOUSE_RULES', 'This map cannot fit the selected opening and six private tiles per investor.');

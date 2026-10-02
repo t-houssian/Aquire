@@ -1,4 +1,5 @@
 import { PGlite } from '@electric-sql/pglite';
+import { AVATAR_OPTIONS, COSMETIC_REWARDS, DEFAULT_AVATAR, encodeAvatar } from '../functions/_shared/game/avatars.ts';
 
 // Executes the actual migration and access/concurrency regression checks against
 // embedded PostgreSQL. Hosted Auth and the Supabase gateway still require an
@@ -20,6 +21,21 @@ Deno.test(
       }
       const checks = await Deno.readTextFile(new URL('./database.sql', import.meta.url));
       await db.exec(checks);
+      await db.exec(await Deno.readTextFile(new URL('./social.sql', import.meta.url)));
+      // Exercise the actual SQL gates against the canonical frontend milestones.
+      for (const reward of COSMETIC_REWARDS) {
+        const code = encodeAvatar({ ...DEFAULT_AVATAR, [reward.key]: reward.value });
+        const story = reward.source === 'story' ? reward.wins : 0;
+        const online = reward.source === 'online' ? reward.wins : 0;
+        await db.query('select private.acquire_validate_avatar($1,$2,$3)', [code, story, online]);
+        let rejected = false;
+        try { await db.query('select private.acquire_validate_avatar($1,$2,$3)', [code, Math.max(0,story-1), Math.max(0,online-1)]); }
+        catch (error) { rejected = error instanceof Error && error.message.includes('REWARD_LOCKED'); }
+        if (!rejected) throw new Error(`SQL reward gate drifted: ${reward.name}`);
+      }
+      for (const [key,count] of Object.entries(AVATAR_OPTIONS)) {
+        await db.query('select private.acquire_validate_avatar($1,81,25)', [encodeAvatar({ ...DEFAULT_AVATAR, [key]: count-1 })]);
+      }
     } finally {
       await db.close();
     }

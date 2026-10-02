@@ -1,5 +1,5 @@
-import { getCurrentActor, getHouseRules } from '../_shared/game/engine.ts';
-import { CHAIN_IDS, type GameAction, type GameState } from '../_shared/game/types.ts';
+import { getCurrentActor, getHouseRules, validateHouseRules } from '../_shared/game/engine.ts';
+import { CHAIN_IDS, type GameAction, type GameState, type HouseRules, type MapId, type BotDifficulty } from '../_shared/game/types.ts';
 
 export interface RoomPlayer {
   id: string;
@@ -7,6 +7,7 @@ export interface RoomPlayer {
   isBot: boolean;
   characterId?: string;
   avatar?: string;
+  country?: string;
 }
 export interface StoredRoom {
   id: string;
@@ -19,6 +20,8 @@ export interface StoredRoom {
   players: RoomPlayer[];
   game: GameState | null;
   updated_at: string;
+  visibility?: 'private' | 'public';
+  lobby_options?: { mapId: MapId; seatLimit: number; botDifficulty: BotDifficulty; houseRules?: HouseRules };
 }
 export class RequestError extends Error {
   constructor(
@@ -140,6 +143,11 @@ export function requireActor(room: StoredRoom, userId: string, action: GameActio
     throw new RequestError('NOT_YOUR_TURN', 'Wait for your decision before making a move.', 403);
 }
 
+/** A fresh public listing advertises printed defaults until the host publishes other rules. */
+export function startingHouseRules(room: StoredRoom, requested: unknown): HouseRules {
+  return validateHouseRules((room.visibility === 'public' ? room.lobby_options?.houseRules : requested) as Partial<HouseRules> | undefined);
+}
+
 export function publicRoom(room: StoredRoom, userId: string) {
   requireMember(room, userId);
   requireCurrentRules(room);
@@ -243,7 +251,9 @@ export function publicRoom(room: StoredRoom, userId: string) {
     game,
     viewerId: userId,
     updatedAt: room.updated_at,
-    features: ['kingdom-v1', 'avatars-v1', 'merger-decisions-v1', 'maps-v1', 'large-maps-v1', 'shaped-maps-v2', 'shaped-maps-v3', 'small-tables-v1', 'difficulty-v1', 'match-history-v1', 'house-rules-v1', 'hotel-roster-v1', 'hotel-stock-v1', 'market-frequency-v1', 'room-notifications-v1', 'room-deltas-v1'],
+    visibility: room.visibility ?? 'private',
+    lobbyOptions: room.lobby_options,
+    features: ['profiles-v1', 'public-lobbies-v1', 'avatars-v2', 'kingdom-v1', 'avatars-v1', 'merger-decisions-v1', 'maps-v1', 'large-maps-v1', 'shaped-maps-v2', 'shaped-maps-v3', 'small-tables-v1', 'difficulty-v1', 'match-history-v1', 'house-rules-v1', 'hotel-roster-v1', 'hotel-stock-v1', 'market-frequency-v1', 'room-notifications-v1', 'room-deltas-v1'],
   };
 }
 

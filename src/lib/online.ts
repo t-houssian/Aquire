@@ -1,7 +1,14 @@
-import { readProfile } from './profile';
-import { kingdomUnlocked } from './campaign';
+import { readProfile, type PlayerProfile } from './profile';
+import { kingdomUnlocked, storyWins } from './campaign';
 import { createClient, FunctionsHttpError, type SupabaseClient } from '@supabase/supabase-js';
-import type { BotDifficulty, GameAction, GameMode, GameState, HouseRules, MapId } from '../game/types';
+import type {
+  BotDifficulty,
+  GameAction,
+  GameMode,
+  GameState,
+  HouseRules,
+  MapId,
+} from '../game/types';
 import type { LeaderboardEntry, MatchSummary } from './matches';
 import publicProject from './supabase-public.json';
 import { watchOnlineRoom } from './online-watch';
@@ -13,6 +20,34 @@ export interface OnlinePlayer {
   isBot: boolean;
   characterId?: string;
   avatar?: string;
+  country?: string;
+}
+export interface OnlineProfile {
+  id: string;
+  name: string;
+  avatar: string | null;
+  country: string;
+  storyWins: number;
+  games: number;
+  wins: number;
+  ties: number;
+  placementSum: number;
+  podiums: number;
+  bestFinish: number | null;
+  bestScore: number;
+}
+export interface LobbyOptions {
+  mapId: MapId;
+  seatLimit: number;
+  botDifficulty: BotDifficulty;
+  houseRules?: HouseRules;
+}
+export interface OpenTable {
+  code: string;
+  host: OnlinePlayer;
+  playerCount: number;
+  options: LobbyOptions;
+  updatedAt: string;
 }
 export interface OnlineRoom {
   id: string;
@@ -28,17 +63,29 @@ export interface OnlineRoom {
   viewerId: string;
   updatedAt: string;
   features?: string[];
+  visibility?: 'private' | 'public';
+  lobbyOptions?: LobbyOptions;
 }
 
 // Public browser credentials. Explicit env overrides must supply their own key
 // so a fork/test project never receives the production project's key.
 const hasOverride = import.meta.env.VITE_SUPABASE_URL !== undefined;
 const url = hasOverride ? import.meta.env.VITE_SUPABASE_URL.trim() : publicProject.url;
-const key =
-  (hasOverride ? (
-    import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY ?? import.meta.env.VITE_SUPABASE_ANON_KEY
-  )?.trim() ?? '' : publicProject.publishableKey);
-const configuredBaseUrl = (() => { try { const parsed = new URL(url); return /^https?:$/.test(parsed.protocol) && parsed.pathname === '/' && !parsed.search && !parsed.hash; } catch { return false; } })();
+const key = hasOverride
+  ? ((
+      import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY ?? import.meta.env.VITE_SUPABASE_ANON_KEY
+    )?.trim() ?? '')
+  : publicProject.publishableKey;
+const configuredBaseUrl = (() => {
+  try {
+    const parsed = new URL(url);
+    return (
+      /^https?:$/.test(parsed.protocol) && parsed.pathname === '/' && !parsed.search && !parsed.hash
+    );
+  } catch {
+    return false;
+  }
+})();
 export const onlineConfigured = configuredBaseUrl && key.length > 20 && !key.includes('your-');
 export const onlineSetupMessage = url.includes('/functions/')
   ? 'Use your Supabase project base URL in VITE_SUPABASE_URL, ending in .supabase.co. Remove /functions/v1/acquire-room, then restart the app.'
@@ -50,7 +97,11 @@ let sessionRequest: Promise<{ id: string }> | undefined;
 let cachedRoom: OnlineRoom | undefined;
 const roomListeners = new Set<(room: OnlineRoom) => void>();
 function rememberRoom(room: OnlineRoom): OnlineRoom {
-  if (cachedRoom?.id === room.id && cachedRoom.viewerId === room.viewerId && cachedRoom.version > room.version)
+  if (
+    cachedRoom?.id === room.id &&
+    cachedRoom.viewerId === room.viewerId &&
+    cachedRoom.version > room.version
+  )
     return cachedRoom;
   cachedRoom = room;
   roomListeners.forEach((listener) => listener(room));
@@ -110,8 +161,13 @@ export async function hasOnlineSession(): Promise<boolean> {
 
 async function invoke<T>(body: Record<string, unknown>): Promise<T> {
   const user = await getOnlineUser();
-  const base = cachedRoom && cachedRoom.code === body.code && cachedRoom.viewerId === user.id ? cachedRoom : undefined;
-  const incremental = ['action', 'start'].includes(String(body.operation)) && base?.features?.includes('room-deltas-v1');
+  const base =
+    cachedRoom && cachedRoom.code === body.code && cachedRoom.viewerId === user.id
+      ? cachedRoom
+      : undefined;
+  const incremental =
+    ['action', 'start'].includes(String(body.operation)) &&
+    base?.features?.includes('room-deltas-v1');
   let { data, error } = await getClient().functions.invoke('acquire-room', {
     body: incremental && base ? { ...body, sync: 'delta-v1', knownVersion: base.version } : body,
   });
@@ -138,7 +194,9 @@ async function invoke<T>(body: Record<string, unknown>): Promise<T> {
   // A web/native upgrade may precede deployment of its server. Never let the
   // 2008 UI interpret an earlier room or a different generation of game state.
   if (
-    !['leave', 'end', 'history', 'leaderboard'].includes(String(body.operation)) &&
+    !['leave', 'end', 'history', 'leaderboard', 'profile', 'save-profile', 'list'].includes(
+      String(body.operation),
+    ) &&
     !(body.operation === 'get' && data.unchanged === true && Number.isInteger(data.version)) &&
     (data.ruleset !== '2008' ||
       data.mode !== 'classic' ||
@@ -153,11 +211,55 @@ async function invoke<T>(body: Record<string, unknown>): Promise<T> {
       'OLD_RULESET',
     );
   }
-  return (data.viewerId === user.id && data.id && data.code ? rememberRoom(data as OnlineRoom) : data) as T;
+  return (
+    data.viewerId === user.id && data.id && data.code ? rememberRoom(data as OnlineRoom) : data
+  ) as T;
 }
 
-export function createRoom(name: string, mode: GameMode = 'classic'): Promise<OnlineRoom> {
-  return invoke({ operation: 'create', name, mode, avatar: readProfile().avatar });
+const profileBody = (profile = readProfile()) => ({
+  avatar: profile.avatar,
+  country: profile.country ?? '',
+  storyWins: storyWins(),
+});
+export function createRoom(
+  name: string,
+  mode: GameMode = 'classic',
+  visibility: 'private' | 'public' = 'private',
+): Promise<OnlineRoom> {
+  return invoke({ operation: 'create', name, mode, visibility, ...profileBody() });
+}
+export async function getOnlineProfile(profileId?: string): Promise<OnlineProfile | null> {
+  const result = await invoke<{ profile: OnlineProfile | null }>({
+    operation: 'profile',
+    ...(profileId ? { profileId } : {}),
+  });
+  return result.profile;
+}
+export async function saveOnlineProfile(profile: PlayerProfile): Promise<OnlineProfile> {
+  const result = await invoke<{ profile: OnlineProfile }>({
+    operation: 'save-profile',
+    name: profile.name,
+    ...profileBody(profile),
+  });
+  return result.profile;
+}
+export async function listOpenTables(): Promise<OpenTable[]> {
+  const result = await invoke<{ tables: OpenTable[] }>({ operation: 'list' });
+  return result.tables;
+}
+export function configureLobby(
+  room: OnlineRoom,
+  visibility: 'private' | 'public',
+  options: LobbyOptions,
+): Promise<OnlineRoom> {
+  return invoke({
+    operation: 'configure',
+    code: room.code,
+    expectedVersion: room.version,
+    visibility,
+    options,
+    royalsUnlocked: kingdomUnlocked(),
+  });
 }
 export function getOnlineHistory(): Promise<MatchSummary[]> {
   return invoke({ operation: 'history' });
@@ -166,13 +268,27 @@ export function getOnlineLeaderboard(): Promise<(LeaderboardEntry & { id: string
   return invoke({ operation: 'leaderboard' });
 }
 export function joinRoom(code: string, name: string): Promise<OnlineRoom> {
-  return invoke({ operation: 'join', code: code.trim().toUpperCase(), name, avatar: readProfile().avatar });
+  return invoke({ operation: 'join', code: code.trim().toUpperCase(), name, ...profileBody() });
 }
 export function getRoom(code: string): Promise<OnlineRoom> {
   return invoke({ operation: 'get', code: code.trim().toUpperCase() });
 }
-export function startRoom(code: string, botCount = 0, mapId: MapId = 'classic', botDifficulty: BotDifficulty = 'standard', houseRules?: Partial<HouseRules>): Promise<OnlineRoom> {
-  return invoke({ operation: 'start', code, botCount, mapId, botDifficulty, houseRules, royalsUnlocked: kingdomUnlocked() });
+export function startRoom(
+  code: string,
+  botCount = 0,
+  mapId: MapId = 'classic',
+  botDifficulty: BotDifficulty = 'standard',
+  houseRules?: Partial<HouseRules>,
+): Promise<OnlineRoom> {
+  return invoke({
+    operation: 'start',
+    code,
+    botCount,
+    mapId,
+    botDifficulty,
+    houseRules,
+    royalsUnlocked: kingdomUnlocked(),
+  });
 }
 export function sendRoomAction(
   code: string,
@@ -202,28 +318,55 @@ export function watchRoom(
       const supabase = getClient();
       let cancelled = false;
       const deltas = room.features?.includes('room-deltas-v1');
-      const channel = supabase.channel(`acquire:${room.id}${deltas ? `:${room.viewerId}` : ''}`, { config: { private: true } });
-      void supabase.realtime.setAuth().then(() => {
-        if (cancelled) return;
-        channel.on('broadcast', { event: deltas ? 'state' : 'changed' }, ({ payload }) => {
+      const channel = supabase.channel(`acquire:${room.id}${deltas ? `:${room.viewerId}` : ''}`, {
+        config: { private: true },
+      });
+      void supabase.realtime
+        .setAuth()
+        .then(() => {
           if (cancelled) return;
-          if (deltas && payload && ['patch', 'snapshot', 'closed'].includes(payload.kind)) onUpdate(payload);
-          else if (payload && Number.isInteger(payload.version)) onChange(payload.version, payload.closed === true);
-        }).subscribe((status) => { if (!cancelled) onConnection(status === 'SUBSCRIBED'); });
-      }).catch(() => { if (!cancelled) onConnection(false); });
-      return () => { cancelled = true; void supabase.removeChannel(channel); };
+          channel
+            .on('broadcast', { event: deltas ? 'state' : 'changed' }, ({ payload }) => {
+              if (cancelled) return;
+              if (deltas && payload && ['patch', 'snapshot', 'closed'].includes(payload.kind))
+                onUpdate(payload);
+              else if (payload && Number.isInteger(payload.version))
+                onChange(payload.version, payload.closed === true);
+            })
+            .subscribe((status) => {
+              if (!cancelled) onConnection(status === 'SUBSCRIBED');
+            });
+        })
+        .catch(() => {
+          if (!cancelled) onConnection(false);
+        });
+      return () => {
+        cancelled = true;
+        void supabase.removeChannel(channel);
+      };
     },
     listen: (accept) => {
-      const listener = (next: OnlineRoom) => { if (next.id === initialRoom.id && next.viewerId === initialRoom.viewerId) accept(next); };
+      const listener = (next: OnlineRoom) => {
+        if (next.id === initialRoom.id && next.viewerId === initialRoom.viewerId) accept(next);
+      };
       roomListeners.add(listener);
       if (cachedRoom) listener(cachedRoom);
-      return () => { roomListeners.delete(listener); };
+      return () => {
+        roomListeners.delete(listener);
+      };
     },
     onRoom: (next) => onRoom(rememberRoom(next)),
     onError: (error) => {
-      const code = error && typeof error === 'object' && 'code' in error && typeof error.code === 'string' ? error.code : undefined;
+      const code =
+        error && typeof error === 'object' && 'code' in error && typeof error.code === 'string'
+          ? error.code
+          : undefined;
       if (code === 'ROOM_NOT_FOUND' && cachedRoom?.id === initialRoom.id) cachedRoom = undefined;
-      onError?.(error instanceof OnlineError ? error : new OnlineError(error instanceof Error ? error.message : String(error), code));
+      onError?.(
+        error instanceof OnlineError
+          ? error
+          : new OnlineError(error instanceof Error ? error.message : String(error), code),
+      );
     },
   });
 }

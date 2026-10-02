@@ -9,8 +9,21 @@ import {
   requireActor,
   requireCurrentRules,
   secureDeal,
+  startingHouseRules,
   type StoredRoom,
 } from '../functions/acquire-room/protocol.ts';
+
+Deno.test('public starts use advertised defaults or published rules even when a client requests different rules', () => {
+  const room=fixture(); room.visibility='public';
+  room.lobby_options={mapId:'classic',seatLimit:6,botDifficulty:'standard'};
+  const defaults=startingHouseRules(room,{startingCash:99000,trading:true});
+  assert(defaults.startingCash===6000&&!defaults.trading,'Fresh listing changed its advertised defaults');
+  const published={...defaults,startingCash:12000,dividends:true};
+  room.lobby_options.houseRules=published;
+  assert(JSON.stringify(startingHouseRules(room,{startingCash:0}))===JSON.stringify(published),'Public published rules were overridden');
+  room.visibility='private';
+  assert(startingHouseRules(room,{startingCash:3300}).startingCash===3300,'Private table options stopped working');
+});
 
 function assert(condition: unknown, message: string): asserts condition {
   if (!condition) throw new Error(message);

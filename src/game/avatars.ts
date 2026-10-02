@@ -1,17 +1,142 @@
-/** Seven tiny base-36 choices; no images, URLs or database profile rows. */
-export interface AvatarSpec { skin: number; hair: number; cut: number; eyes: number; mouth: number; accessory: number; color: number }
-export const AVATAR_OPTIONS = { skin: 7, hair: 8, cut: 4, eyes: 3, mouth: 3, accessory: 9, color: 24 } as const;
-export const DEFAULT_AVATAR: AvatarSpec = { skin: 0, hair: 0, cut: 1, eyes: 0, mouth: 0, accessory: 1, color: 7 };
+/** Fourteen base-36 choices; old nine-character faces remain valid. No image blobs. */
+export interface AvatarSpec {
+  skin: number;
+  hair: number;
+  cut: number;
+  eyes: number;
+  mouth: number;
+  accessory: number;
+  color: number;
+  shape: number;
+  nose: number;
+  facialHair: number;
+  outfit: number;
+  background: number;
+  earrings: number;
+  badge: number;
+}
+export const AVATAR_OPTIONS = {
+  skin: 9,
+  hair: 16,
+  cut: 12,
+  eyes: 7,
+  mouth: 7,
+  accessory: 23,
+  color: 24,
+  shape: 5,
+  nose: 5,
+  facialHair: 8,
+  outfit: 10,
+  background: 10,
+  earrings: 6,
+  badge: 8,
+} as const;
+export const DEFAULT_AVATAR: AvatarSpec = {
+  skin: 0,
+  hair: 0,
+  cut: 1,
+  eyes: 0,
+  mouth: 0,
+  accessory: 1,
+  color: 7,
+  shape: 0,
+  nose: 0,
+  facialHair: 0,
+  outfit: 0,
+  background: 0,
+  earrings: 0,
+  badge: 0,
+};
+const legacyOptions = {
+  skin: 7,
+  hair: 8,
+  cut: 4,
+  eyes: 3,
+  mouth: 3,
+  accessory: 9,
+  color: 24,
+} as const;
 export function encodeAvatar(spec: AvatarSpec): string {
-  return 'a1' + (Object.keys(AVATAR_OPTIONS) as (keyof AvatarSpec)[]).map((key) => {
-    const value = spec[key];
-    if (!Number.isInteger(value) || value < 0 || value >= AVATAR_OPTIONS[key]) throw new Error('Choose a valid face option.');
-    return value.toString(36);
-  }).join('');
+  return (
+    'a2' +
+    (Object.keys(AVATAR_OPTIONS) as (keyof AvatarSpec)[])
+      .map((key) => {
+        const value = spec[key];
+        if (!Number.isInteger(value) || value < 0 || value >= AVATAR_OPTIONS[key])
+          throw new Error('Choose a valid face option.');
+        return value.toString(36);
+      })
+      .join('')
+  );
 }
 export function decodeAvatar(value?: unknown): AvatarSpec | null {
-  if (typeof value !== 'string' || !/^a1[0-9a-z]{7}$/.test(value)) return null;
-  const spec = Object.fromEntries(Object.keys(AVATAR_OPTIONS).map((key, i) => [key, parseInt(value[i + 2], 36)])) as unknown as AvatarSpec;
-  return (Object.keys(AVATAR_OPTIONS) as (keyof AvatarSpec)[]).every((key) => spec[key] < AVATAR_OPTIONS[key]) ? spec : null;
+  if (
+    typeof value !== 'string' ||
+    (value.length !== 9 && value.length !== 16) ||
+    !/^(a1[0-9a-z]{7}|a2[0-9a-z]{14})$/.test(value)
+  )
+    return null;
+  const options = value.startsWith('a1') ? legacyOptions : AVATAR_OPTIONS;
+  const spec = {
+    ...DEFAULT_AVATAR,
+    ...Object.fromEntries(Object.keys(options).map((key, i) => [key, parseInt(value[i + 2], 36)])),
+  } as AvatarSpec;
+  return (Object.keys(options) as (keyof typeof options)[]).every((key) => spec[key] < options[key])
+    ? spec
+    : null;
 }
-export const royalAvatar = (value?: string) => encodeAvatar({ ...(decodeAvatar(value) ?? DEFAULT_AVATAR), accessory: 7 });
+export const royalAvatar = (value?: string) =>
+  encodeAvatar({ ...(decodeAvatar(value) ?? DEFAULT_AVATAR), accessory: 7 });
+
+export interface CosmeticProgress {
+  storyWins: number;
+  onlineWins: number;
+}
+export interface CosmeticReward {
+  key: keyof AvatarSpec;
+  value: number;
+  name: string;
+  source: 'story' | 'online';
+  wins: number;
+}
+export const COSMETIC_REWARDS: readonly CosmeticReward[] = [
+  { key: 'badge', value: 1, name: 'The first key', source: 'story', wins: 1 },
+  { key: 'accessory', value: 16, name: 'Space investor helmet', source: 'story', wins: 5 },
+  { key: 'background', value: 8, name: 'City skyline', source: 'story', wins: 5 },
+  { key: 'outfit', value: 6, name: 'Starlight jacket', source: 'story', wins: 10 },
+  { key: 'accessory', value: 17, name: 'Dragon horns', source: 'story', wins: 12 },
+  { key: 'badge', value: 2, name: 'The first ledger', source: 'story', wins: 12 },
+  { key: 'badge', value: 3, name: 'Story star', source: 'story', wins: 25 },
+  { key: 'accessory', value: 18, name: 'The sovereign crown', source: 'story', wins: 81 },
+  { key: 'outfit', value: 7, name: 'Royal cape', source: 'story', wins: 81 },
+  { key: 'badge', value: 4, name: 'Kingdom seal', source: 'story', wins: 81 },
+  { key: 'accessory', value: 19, name: 'Winner’s laurels', source: 'online', wins: 1 },
+  { key: 'badge', value: 5, name: 'First online trophy', source: 'online', wins: 1 },
+  { key: 'accessory', value: 20, name: 'Diamond monocle', source: 'online', wins: 5 },
+  { key: 'background', value: 9, name: 'Golden confetti', source: 'online', wins: 5 },
+  { key: 'accessory', value: 21, name: 'Champion’s cap', source: 'online', wins: 10 },
+  { key: 'outfit', value: 8, name: 'Champion’s jacket', source: 'online', wins: 10 },
+  { key: 'badge', value: 6, name: 'Ten-win laurels', source: 'online', wins: 10 },
+  { key: 'accessory', value: 22, name: 'Diamond top hat', source: 'online', wins: 25 },
+  { key: 'outfit', value: 9, name: 'Platinum pinstripes', source: 'online', wins: 25 },
+  { key: 'badge', value: 7, name: 'Diamond investor', source: 'online', wins: 25 },
+];
+export const rewardUnlocked = (reward: CosmeticReward, progress: CosmeticProgress) =>
+  (reward.source === 'story' ? progress.storyWins : progress.onlineWins) >= reward.wins;
+export function optionUnlocked(
+  key: keyof AvatarSpec,
+  value: number,
+  progress: CosmeticProgress,
+): boolean {
+  const reward = COSMETIC_REWARDS.find((item) => item.key === key && item.value === value);
+  return !reward || rewardUnlocked(reward, progress);
+}
+export function avatarUnlocked(avatar: string, progress: CosmeticProgress): boolean {
+  const spec = decodeAvatar(avatar);
+  return (
+    !!spec &&
+    (Object.keys(AVATAR_OPTIONS) as (keyof AvatarSpec)[]).every((key) =>
+      optionUnlocked(key, spec[key], progress),
+    )
+  );
+}

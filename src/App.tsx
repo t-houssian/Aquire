@@ -664,9 +664,9 @@ export default function App() {
                       <span className="card-tag">NEAR OR FAR</span>
                     </div>
                     <h3>Across the city</h3>
-                    <p>A private table for friends, wherever opportunity finds them.</p>
+                    <p>Find an open table or invite friends to build a city together.</p>
                     <div className="card-bottom">
-                      <span>Online · Private rooms</span>
+                      <span>Online · Open tables &amp; friends</span>
                       <span className="round-arrow">
                         <ArrowUpRight size={20} />
                       </span>
@@ -757,6 +757,7 @@ export default function App() {
                 onRules={() => setModal('rules')}
                 onSettings={() => setModal('settings')}
                 onShowMergerPayout={(entry) => setMergerRecaps([entry])}
+                onProfile={() => setModal('avatar')}
                 hints={settings.hints}
                 hideOpponentHoldings={settings.hideOpponentHoldings}
                 hideStockAvailability={settings.hideStockAvailability}

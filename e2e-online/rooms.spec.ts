@@ -14,7 +14,7 @@ import {
 } from '../src/game/engine';
 import { getMap } from '../src/game/maps';
 import { DEFAULT_AVATAR, encodeAvatar } from '../src/game/avatars';
-import type { OnlineRoom } from '../src/lib/online';
+import type { LobbyOptions, OnlineProfile, OnlineRoom } from '../src/lib/online';
 import type { HouseRules, MapId } from '../src/game/types';
 
 const HOST = '11111111-1111-4111-8111-111111111111';
@@ -27,6 +27,7 @@ class MockSupabase {
   operations: Record<string, unknown>[] = [];
   closed = false;
   authCalls = 0;
+  profile: OnlineProfile = { id: HOST, name: 'Alex', avatar: null, country: 'US', storyWins: 0, games: 4, wins: 1, ties: 1, placementSum: 9, podiums: 3, bestFinish: 1, bestScore: 25400 };
   holdNextPoll = false;
   heldPoll: { route: Route; snapshot: OnlineRoom } | null = null;
   constructor(readonly viewerId = HOST) {
@@ -45,7 +46,7 @@ class MockSupabase {
       game: null,
       viewerId,
       updatedAt: new Date().toISOString(),
-      features: ['maps-v1', 'large-maps-v1', 'shaped-maps-v2', 'shaped-maps-v3', 'small-tables-v1', 'difficulty-v1', 'match-history-v1', 'house-rules-v1', 'hotel-roster-v1', 'hotel-stock-v1', 'market-frequency-v1'],
+      features: ['profiles-v1', 'public-lobbies-v1', 'avatars-v2', 'maps-v1', 'large-maps-v1', 'shaped-maps-v2', 'shaped-maps-v3', 'small-tables-v1', 'difficulty-v1', 'match-history-v1', 'house-rules-v1', 'hotel-roster-v1', 'hotel-stock-v1', 'market-frequency-v1'],
     };
   }
   snapshot(): OnlineRoom {
@@ -160,6 +161,10 @@ class MockSupabase {
         action?: GameAction;
         name?: string;
         avatar?: string;
+        country?: string;
+        storyWins?: number;
+        visibility?: 'private' | 'public';
+        options?: LobbyOptions;
         expectedVersion?: number;
         mapId?: MapId;
         botCount?: number;
@@ -167,6 +172,12 @@ class MockSupabase {
         botDifficulty?: 'standard' | 'strategist';
       };
       this.operations.push(body);
+      if(body.operation==='profile')return this.respond(route,{profile:this.profile});
+      if(body.operation==='save-profile'){
+        this.profile={...this.profile,name:body.name!,avatar:body.avatar!,country:body.country!,storyWins:Math.max(this.profile.storyWins,body.storyWins??0)};
+        return this.respond(route,{profile:this.profile});
+      }
+      if(body.operation==='list')return this.respond(route,{tables:this.room.visibility==='public'&&this.room.status==='lobby'&&this.room.players.length<(this.room.lobbyOptions?.seatLimit??6)?[{code:CODE,host:this.room.players[0],playerCount:this.room.players.length,options:this.room.lobbyOptions,updatedAt:this.room.updatedAt}]:[]});
       if (body.operation === 'history' || body.operation === 'leaderboard')
         return this.respond(route, []);
       if (this.closed && body.operation !== 'create')
@@ -184,8 +195,14 @@ class MockSupabase {
         this.closed = false;
         this.room.players[0].name = body.name || 'Alex';
         this.room.players[0].avatar = body.avatar;
+        this.room.players[0].country=body.country;
+        this.room.visibility=body.visibility??'private';
+        this.room.lobbyOptions={mapId:'classic',seatLimit:6,botDifficulty:'standard'};
       }
-      if (body.operation === 'start') this.start(body);
+      if(body.operation==='configure'){
+        this.room.visibility=body.visibility;this.room.lobbyOptions=body.options;this.room.version++;
+      }
+      if (body.operation === 'start') this.start(this.room.visibility==='public'?{...body,...this.room.lobbyOptions}:body);
       if (body.operation === 'action') {
         if (body.expectedVersion !== this.room.version)
           return this.respond(
@@ -663,4 +680,73 @@ test('an older online server keeps small cities and two-seat starts disabled', a
   await expect(page.locator('option[value="four-market-square"]')).toBeDisabled();
   await page.locator('#bot-seats').selectOption('1');
   await expect(page.getByRole('button', { name: 'Start the game' })).toBeDisabled();
+});
+
+test('public host publishes map and seats before starting with the advertised rules', async ({page}) => {
+  const backend=new MockSupabase();await backend.install(page);await page.goto('/');await openOnline(page);
+  await page.getByLabel('Who can join?').selectOption('public');await page.getByRole('button',{name:'Open your table'}).click();
+  await expect(page.getByRole('dialog',{name:'Your open table'})).toBeVisible();
+  expect(backend.operations.find((op)=>op.operation==='create')).toMatchObject({visibility:'public',country:'',storyWins:0});
+  await page.getByLabel('City map',{exact:true}).selectOption('duo-pocket-square');
+  await expect(page.getByRole('button',{name:'Publish table settings'})).toBeVisible();
+  await page.getByRole('button',{name:'Publish table settings'}).click();
+  await expect(page.getByRole('button',{name:'Refresh public listing'})).toBeVisible();
+  expect(backend.room.lobbyOptions).toMatchObject({mapId:'duo-pocket-square',seatLimit:2,houseRules:{startingCash:6000}});
+  backend.room.players.push({id:GUEST,name:'Morgan',isBot:false});backend.room.version++;
+  await expect(page.locator('.lobby-players')).toContainText('Morgan');
+  await page.getByRole('button',{name:'Start the game'}).click();
+  await expect(page.locator('.board-card')).toHaveAttribute('data-map','duo-pocket-square');
+  expect(backend.fullGame!.players).toHaveLength(2);
+});
+
+test('open tables show rules, guest profiles, and a working join action', async ({page}) => {
+  const backend=new MockSupabase(GUEST);backend.room.visibility='public';
+  backend.room.lobbyOptions={mapId:'classic',seatLimit:6,botDifficulty:'strategist'};
+  backend.room.players[0].country='US';await backend.install(page);await page.goto('/');await openOnline(page);
+  await page.getByRole('button',{name:'Open tables',exact:true}).click();
+  await expect(page.locator('.open-table-card')).toContainText('Alex’s table');
+  await expect(page.locator('.open-table-card')).toContainText('United States');
+  await page.getByText('See the city and rules',{exact:true}).click();
+  await expect(page.locator('.open-table-card')).toContainText('Your rack always stays private');
+  await page.getByRole('button',{name:'View Alex’s profile'}).click();
+  await expect(page.getByRole('dialog',{name:'Alex’s profile'})).toBeVisible();
+  await expect(page.locator('.profile-stats')).toContainText('25.0%');
+  await expect(page.locator('.profile-stats')).toContainText('2.25');
+  await page.getByRole('button',{name:'Back to the tables'}).click();
+  await page.getByRole('button',{name:'Join Alex',exact:true}).click();
+  await expect(page.locator('.lobby-players')).toContainText('Morgan');
+  expect(backend.operations.find((op)=>op.operation==='join')).toMatchObject({code:CODE});
+});
+
+test('online record unlocks earned cosmetics and profile save sends no client statistics', async ({page}) => {
+  const backend=new MockSupabase();await backend.install(page);await page.goto('/');await openOnline(page);
+  await page.getByRole('button',{name:'Open your table'}).click();await page.getByRole('button',{name:'Close dialog'}).click();
+  await page.getByRole('button',{name:'Customize your character'}).click();
+  await page.getByRole('button',{name:'Online record',exact:true}).click();
+  await expect(page.locator('.profile-stats')).toContainText('25.0%');
+  await page.getByRole('button',{name:'Win rewards',exact:true}).click();
+  const laurels=page.getByRole('button',{name:/Winner’s laurels Earned/});await expect(laurels).toBeEnabled();
+  await expect(page.getByRole('button',{name:/Diamond monocle 1\/5/})).toBeDisabled();
+  await laurels.click();await expect(page.getByRole('combobox',{name:'accessory',exact:true})).toHaveValue('19');
+  await page.getByLabel('Country · optional').selectOption('CA');await page.getByRole('button',{name:'Save my character'}).click();
+  await expect(page.getByRole('dialog')).toHaveCount(0);
+  const request=backend.operations.find((op)=>op.operation==='save-profile')!;
+  expect(request).toMatchObject({country:'CA',storyWins:0});expect(request.wins).toBeUndefined();expect(request.games).toBeUndefined();
+  expect(backend.profile.avatar).toBe(encodeAvatar({...DEFAULT_AVATAR,accessory:19}));
+});
+
+test('public directory, rules and long guest profiles fit portrait and landscape phones', async({page})=>{
+ const backend=new MockSupabase(GUEST);backend.room.visibility='public';backend.room.players[0].name='WWWWWWWWWWWWWWWWWWWWWWWW';
+ backend.room.lobbyOptions={mapId:'classic',seatLimit:6,botDifficulty:'standard'};
+ await backend.install(page);await page.goto('/');await openOnline(page);await page.getByRole('button',{name:'Open tables',exact:true}).click();
+ const dialog=page.getByRole('dialog');await expect(dialog.locator('.open-table-card')).toHaveCount(1);
+ for(const [width,height] of [[320,568],[393,700],[852,320]]){
+  await page.setViewportSize({width,height});
+  expect(await dialog.evaluate(el=>el.scrollWidth<=el.clientWidth+1)).toBe(true);
+ }
+ await page.getByRole('button',{name:/View WWWW/}).click();
+ for(const [width,height] of [[320,568],[393,700],[852,320]]){
+  await page.setViewportSize({width,height});
+  expect(await dialog.evaluate(el=>el.scrollWidth<=el.clientWidth+1)).toBe(true);
+ }
 });

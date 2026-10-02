@@ -54,3 +54,5 @@ export function recordStoryResult(game: GameState): StoryProgress {
 export function kingdomUnlocked(progress: StoryProgress = readStoryProgress()): boolean {
   return STORY_CHAPTERS.every((challenge) => progress.chapters[challenge.id]?.won);
 }
+/** Reward progress counts different won challenges, never repeat wins on one level. */
+export const storyWins = (progress: StoryProgress = readStoryProgress()) => STORY_CHAPTERS.filter((challenge) => progress.chapters[challenge.id]?.won).length;

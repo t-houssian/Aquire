@@ -176,5 +176,42 @@ test('a custom face and name survive reload and join new games', async ({ page }
   await page.getByRole('button', { name: /Let’s build something/ }).click();
   await expect(page.locator('.player-chip').first().getByRole('img')).toHaveAttribute('aria-label', 'Madame Pickle, custom face');
   const result = await page.evaluate(() => ({ profile: JSON.parse(localStorage.getItem('aquire.profile.v1')!), game: JSON.parse(localStorage.getItem('aquire.games.v2')!)[0].game }));
-  expect(result.profile.avatar).toHaveLength(9); expect(result.game.players[0].avatar).toBe(result.profile.avatar);
+  expect(result.profile.avatar).toHaveLength(16); expect(result.game.players[0].avatar).toBe(result.profile.avatar);
+});
+
+test('expanded wardrobe stays usable across phone sizes and free choices persist', async ({page}, info) => {
+  await page.goto('/');await page.getByRole('button',{name:'Customize your character'}).click();
+  const dialog=page.getByRole('dialog');await expect(dialog.getByRole('combobox')).toHaveCount(15);
+  await dialog.getByLabel('Your name',{exact:true}).fill('WWWWWWWWWWWWWWWWWWWWWWWW');
+  await dialog.getByRole('combobox',{name:'skin',exact:true}).selectOption('8');
+  await dialog.getByRole('combobox',{name:'hair',exact:true}).selectOption('15');
+  await dialog.getByRole('combobox',{name:'cut',exact:true}).selectOption('10');
+  await dialog.getByRole('combobox',{name:'facialHair',exact:true}).selectOption('5');
+  await dialog.getByRole('combobox',{name:'outfit',exact:true}).selectOption('5');
+  await dialog.getByRole('combobox',{name:'earrings',exact:true}).selectOption('4');
+  await dialog.getByLabel('Country · optional').selectOption('GB');
+  await expect(dialog.getByRole('combobox',{name:'accessory',exact:true}).locator('option[value="19"]')).toHaveAttribute('disabled', '');
+  for(const [width,height] of [[393,700],[844,320],[320,568],[1440,900]]){
+    await page.setViewportSize({width,height});
+    expect(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth+1)).toBe(true);
+    expect(await dialog.evaluate((el)=>el.scrollWidth<=el.clientWidth+1)).toBe(true);
+    if(width===393)await page.screenshot({path:`artifacts/social/profile-${info.project.name}.png`});
+  }
+  await dialog.getByRole('button',{name:'Win rewards',exact:true}).click();
+  await expect(dialog.locator('.wardrobe-reward')).toHaveCount(20);await expect(dialog.locator('.wardrobe-reward:enabled')).toHaveCount(0);
+  await dialog.getByRole('button',{name:'Your character',exact:true}).click();await dialog.getByRole('button',{name:'Save my character'}).click();
+  const profile=await page.evaluate(()=>JSON.parse(localStorage.getItem('aquire.profile.v1')!));
+  expect(profile.avatar).toHaveLength(16);expect(profile.country).toBe('GB');
+});
+
+test('five unique story wins earn the helmet and skyline without a guest account', async ({page}) => {
+  await page.addInitScript((ids)=>localStorage.setItem('aquire.story.v1',JSON.stringify({version:1,chapters:Object.fromEntries(ids.map((id)=>[id,{won:true,attempts:4,best:20000,lastGameId:id,lastOutcome:'won'}]))})),STORY_CHAPTERS.slice(0,5).map((c)=>c.id));
+  await page.goto('/');await page.getByRole('button',{name:'Customize your character'}).click();
+  await page.getByRole('button',{name:'Win rewards',exact:true}).click();
+  await expect(page.getByText('5 story challenges won',{exact:true})).toBeVisible();
+  const helmet=page.getByRole('button',{name:/Space investor helmet Earned/});await expect(helmet).toBeEnabled();
+  await expect(page.getByRole('button',{name:/Dragon horns 5\/12/})).toBeDisabled();await helmet.click();
+  await expect(page.getByRole('combobox',{name:'accessory',exact:true})).toHaveValue('16');
+  await page.getByRole('button',{name:'Save my character'}).click();
+  expect(await page.evaluate(()=>localStorage.getItem('aquire.online.auth'))).toBeNull();
 });

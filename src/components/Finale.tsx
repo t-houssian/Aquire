@@ -30,7 +30,7 @@ function FinalMarketRoll({ settlement, name, onReveal }: { settlement: FinalChai
   </div>;
 }
 
-export default function Finale({ match, onHome }: { match: MatchSummary; onHome: () => void }) {
+export default function Finale({ match, onHome, onProfile, viewerId }: { match: MatchSummary; onHome: () => void; onProfile?: () => void; viewerId?: string }) {
   const [step, setStep] = useState(0);
   const [revealedChain, setRevealedChain] = useState<string | null>(null);
   const [boardOpen, setBoardOpen] = useState(false);
@@ -79,6 +79,7 @@ export default function Finale({ match, onHome }: { match: MatchSummary; onHome:
       </>}
       </section>
     </div> : <>
+      {onProfile&&match.winnerIds.length===1&&match.winnerIds[0]===viewerId&&(match.campaign||(match.source==='online'&&match.players.filter((p)=>!p.isBot).length>=2))&&<section className="story-result wardrobe-win"><span className="eyebrow">A WIN WITH A LITTLE EXTRA FLAIR</span><h2>Your wardrobe is growing.</h2><p>{match.campaign?'Story challenge wins earn new accessories, outfits and badges.':'Online wins against other people earn laurels, champion outfits and more.'}</p><button className="button secondary" onClick={onProfile}>Explore your win rewards <Award size={16}/></button></section>}
       {storyChapter && <section className="story-result" data-testid="story-result">
         <span className="eyebrow">CHAPTER {storyChapter.chapter} · CHALLENGE {storyChapter.stage} · {storyChapter.title}</span>
         <h2>{storyWon ? storyChapter.number === STORY_CHAPTERS.length ? 'The city is yours.' : 'A new door opens.' : 'The story is not over.'}</h2>

@@ -168,7 +168,7 @@ export function storyGameConfig(chapterId: string, name: string, seed: number, a
     })],
   };
 }
-export function storyRuleBriefing(challenge: StoryChapter): { title: string; detail: string }[] {
+export function storyRuleBriefing(challenge: Pick<StoryChapter, 'houseRules' | 'mapId' | 'players'>): { title: string; detail: string }[] {
   const rules = validateHouseRules(challenge.houseRules), map = getMap(challenge.mapId);
   const names = rules.hotelChains.map((id) => CHAINS.find((chain) => chain.id === id)!.name);
   const frequency = { round: 'after each complete round', turn: 'before each player’s turn', 'two-rounds': 'after every two rounds', 'three-rounds': 'after every three rounds' };
@@ -180,7 +180,7 @@ export function storyRuleBriefing(challenge: StoryChapter): { title: string; det
     { title: 'Buying and selling', detail: `Buy up to ${rules.buyLimit} shares. ${rules.trading ? 'Sell up to three shares at current prices, earning one extra purchase per share sold. Reinvest in the same turn.' : 'Ordinary stock selling is off; merger sales and trades still apply.'}` },
     { title: 'Market prices', detail: rules.marketMode === 'off' ? 'Printed prices; no market rolls.' : `${rules.marketMode === 'crazy' ? 'Crazy market moves prices by up to two rows' : 'Market moves prices by up to one row'} ${frequency[rules.marketFrequency]}. Buying, selling, bonuses and dividends use that market. Every active chain rolls separately at final sale.` },
     { title: 'Dividends', detail: rules.dividends ? 'After every round, dice select only an active chain. Complete price-tier groups of active hotels determine the dividend success chance. A successful roll pays one share price per three shares held; tiles surrounded on all eight sides by that chain return to the bag. No active chain means no selection or payment.' : 'Round-end dividends are off.' },
-    { title: 'Information and time', detail: `${rules.anonymousBuying ? 'Other players’ purchases, holdings, bank counts and cash stay private until final scoring; merger quantities are announced privately.' : rules.hiddenMoney ? 'Other players’ cash is hidden; stock decisions remain public.' : 'Public cash and market decisions. Your rack always stays private.'} No turn timer: take time to plan. CPUs use the same information rules.` },
+    { title: 'Information and time', detail: `${rules.anonymousBuying ? 'Other players’ purchases, holdings, bank counts and cash stay private until final scoring; merger quantities are announced privately.' : rules.hiddenMoney ? 'Other players’ cash is hidden; stock decisions remain public.' : 'Public cash and market decisions. Your rack always stays private.'} ${rules.turnTimerSeconds ? `${rules.turnTimerSeconds}-second turn timer; unfinished decisions resolve automatically.` : 'No turn timer: take time to plan.'} CPUs use the same information rules.` },
     { title: 'Merger and rack rules', detail: '11+ tiles makes a chain safe. Two safe chains cannot merge. Merger bonuses pay first, then shareholders decide clockwise from the mover: sell, trade two acquired shares for one survivor share, or keep. Permanently blocked tiles may be retired. At the beginning of a turn, an entirely unplayable six-tile rack may be exchanged, including temporary blocks.' },
   ];
 }
