@@ -120,8 +120,10 @@ describe('The Long Game', () => {
     expect(pickCharacters(399, 2)).toHaveLength(388);
     expect(pickCharacters(399, 2, true).filter((character) => character.royal)).toHaveLength(11);
   });
-  it('finishes every chapter with its actual cast and conserves all tiles and shares', () => {
-    for (const chapter of STORY_CHAPTERS) {
+  // Keep every Strategist simulation, but time and report each city separately.
+  // Running all 81 inside one test exceeded its shared timeout on GitHub runners.
+  for (const chapter of STORY_CHAPTERS) {
+    it(`finishes ${chapter.id} (${chapter.mapId}) with its actual cast and conserves all tiles and shares`, () => {
       let game = createGame(storyGameConfig(chapter.id, 'Alex', 203));
       let steps = 0;
       while (game.phase !== 'ended' && steps++ < 6500) game = applyAction(game, chooseBotAction(game));
@@ -131,6 +133,6 @@ describe('The Long Game', () => {
       expect(new Set(inventory).size, chapter.id).toBe(getMap(chapter.mapId).tiles.length);
       expect(inventory.length).toBe(getMap(chapter.mapId).tiles.length);
       for (const chain of getHouseRules(game).hotelChains) expect(game.bank[chain] + game.players.reduce((sum, player) => sum + player.stocks[chain], 0)).toBe(getHouseRules(game).shareSupply[chain] ?? 25);
-    }
-  }, 240000);
+    }, 120000);
+  }
 });
