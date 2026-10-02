@@ -47,7 +47,8 @@ import {
   type SavedGame,
 } from './lib/storage';
 import { makeLeaderboard, type MatchSummary } from './lib/matches';
-import { endRoom, getOnlineHistory, getOnlineLeaderboard, getRoom, hasOnlineSession, leaveRoom, onlineConfigured, sendRoomAction, watchRoom, type OnlineRoom } from './lib/online';
+import { endRoom, getOnlineHistory, getOnlineLeaderboard, getOnlineProfile, getRoom, hasOnlineSession, leaveRoom, onlineConfigured, sendRoomAction, watchRoom, type OnlineRoom } from './lib/online';
+import { trackOnlineMatchRewards } from './lib/cosmetic-rewards';
 import CityScene from './components/CityScene';
 import Setup from './components/Setup';
 import StoryMode from './components/StoryMode';
@@ -74,7 +75,7 @@ type Page = 'story' | 'home' | 'play' | 'learn' | 'history' | 'replay';
 export default function App() {
   const [profile, setProfile] = useState(readProfile);
   const [page, setPage] = useState<Page>('home');
-  const [modal, setModal] = useState<'solo' | 'local' | 'online' | 'rules' | 'settings' | 'avatar' | null>(
+  const [modal, setModal] = useState<'solo' | 'local' | 'online' | 'rules' | 'settings' | 'avatar' | 'wardrobe' | null>(
     null,
   );
   const [localGame, setLocalGame] = useState<GameState | null>(null),
@@ -201,6 +202,20 @@ export default function App() {
       setMatches(readMatches());
     } catch { /* The completed online game remains on the server. */ }
   }, [room?.game?.id, room?.game?.phase]);
+  useEffect(() => {
+    if (!room?.game || !room.features?.includes('profiles-v1')) return;
+    let cancelled = false;
+    const current = room.game;
+    const currentViewer = room.viewerId;
+    void trackOnlineMatchRewards(current, currentViewer, async () => {
+      const profile = await getOnlineProfile();
+      return profile?.id === currentViewer ? profile.wins : null;
+    })
+      .then(() => {
+        if (!cancelled && current.phase === 'ended') setMatches(readMatches());
+      }).catch(() => { /* Reward notices are optional when offline. */ });
+    return () => { cancelled = true; };
+  }, [room?.game?.id, room?.game?.phase === 'ended', room?.viewerId, room?.features?.includes('profiles-v1')]);
   useEffect(() => {
     if (page !== 'history') return;
     let cancelled = false;
@@ -757,7 +772,7 @@ export default function App() {
                 onRules={() => setModal('rules')}
                 onSettings={() => setModal('settings')}
                 onShowMergerPayout={(entry) => setMergerRecaps([entry])}
-                onProfile={() => setModal('avatar')}
+                onProfile={() => setModal('wardrobe')}
                 hints={settings.hints}
                 hideOpponentHoldings={settings.hideOpponentHoldings}
                 hideStockAvailability={settings.hideStockAvailability}
@@ -918,7 +933,7 @@ export default function App() {
           </div>
         </Modal>
       )}
-      {modal === 'avatar' && <AvatarEditor profile={profile} onSave={(value) => setProfile(saveProfile(value))} onClose={() => setModal(null)} />}
+      {(modal === 'avatar' || modal === 'wardrobe') && <AvatarEditor profile={profile} initialTab={modal === 'wardrobe' ? 'rewards' : 'character'} onSave={(value) => setProfile(saveProfile(value))} onClose={() => setModal(null)} />}
       {modal === 'settings' && (
         <Modal title="Make yourself at home" onClose={closeModal}>
           <div className="modal-body">

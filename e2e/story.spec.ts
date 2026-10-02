@@ -42,8 +42,8 @@ test('story chapters are gated, introduce original rivals, and resume the same s
   expect(await page.evaluate(() => JSON.parse(localStorage.getItem('aquire.games.v2')!).length)).toBe(1);
 });
 
-function finishable(win: boolean) {
-  const game = createGame(storyGameConfig('chapter-1', 'Alex', 884));
+function finishable(win: boolean, chapterId = 'chapter-1') {
+  const game = createGame(storyGameConfig(chapterId, 'Alex', 884));
   const tiles = getMap(game.mapId).tiles;
   game.board = Object.fromEntries(tiles.slice(0, 21).map((tile) => [tile, 'worldwide']));
   game.players[0].hand = tiles.slice(21, 27); game.players[1].hand = tiles.slice(27, 33); game.bag = tiles.slice(33);
@@ -62,13 +62,61 @@ for (const win of [true, false]) test(`story ${win ? 'victory opens the next cha
   await page.getByRole('button', { name: 'Resume challenge', exact: true }).click();
   await page.getByRole('button', { name: 'Declare the final turn' }).click();
   await page.getByRole('button', { name: /Skip buying/ }).click();
+  await page.evaluate(() => window.scrollTo(0, document.documentElement.scrollHeight));
   await page.getByRole('button', { name: 'Reveal final scores' }).click();
   await expect(page.getByTestId('story-result')).toContainText(win ? 'A new door opens.' : 'The story is not over.');
+  await expect(page.locator('.winner-celebration h1')).toBeInViewport();
+  const order = await page.locator('.finale').evaluate((el) => [...el.children].map((child) => child.className));
+  expect(order[1]).toBe('winner-celebration');
+  const rewards = page.getByTestId('match-rewards');
+  if (win) {
+    await expect(rewards).toContainText('The first key');
+    expect(order.indexOf('story-result wardrobe-win')).toBeLessThan(order.indexOf('story-result'));
+    await rewards.getByRole('button', { name: 'Try on your rewards' }).click();
+    await expect(page.getByRole('dialog', { name: 'Meet your next tycoon.' })).toBeVisible();
+    await page.getByRole('button', { name: /The first key Earned/ }).click();
+    await expect(page.getByRole('combobox', { name: 'badge', exact: true })).toHaveValue('1');
+    await page.getByRole('button', { name: 'Close dialog' }).click();
+  } else await expect(rewards).toHaveCount(0);
   await page.getByRole('button', { name: win ? 'Continue your story' : 'Return to your chapter' }).click();
   const next = page.getByRole('button', { name: /Challenge 2:/ });
   if (win) await expect(next).toBeEnabled(); else await expect(next).toBeDisabled();
   await page.getByRole('button', { name: /Challenge 1:/ }).click();
   await expect(page.getByRole('button', { name: win ? 'Replay challenge' : 'Try this challenge again' })).toBeVisible();
+});
+
+for (const scenario of [
+  { name: 'fifth unique win names both new items', chapterId: 'chapter-5', priorWins: 4, rewards: ['Space investor helmet', 'City skyline'] },
+  { name: 'second unique win hides the wardrobe', chapterId: 'chapter-2', priorWins: 1, rewards: [] },
+  { name: 'repeat challenge win hides the wardrobe', chapterId: 'chapter-1', priorWins: 1, rewards: [] },
+]) test(`winner page ${scenario.name}`, async ({ page }, info) => {
+  const game = finishable(true, scenario.chapterId);
+  const chapters = Object.fromEntries(STORY_CHAPTERS.slice(0, scenario.priorWins).map((chapter) => [chapter.id, { won: true, attempts: 1, best: 7000, lastGameId: `older-${chapter.id}`, lastOutcome: 'won' }]));
+  await page.addInitScript(({ game, chapters }) => {
+    localStorage.setItem('aquire.story.v1', JSON.stringify({ version: 1, chapters }));
+    localStorage.setItem('aquire.games.v2', JSON.stringify([{ game, kind: 'solo', updatedAt: new Date().toISOString() }]));
+  }, { game, chapters });
+  await openStory(page);
+  await page.getByRole('button', { name: 'Continue your challenge' }).click();
+  await page.getByRole('button', { name: 'Resume challenge', exact: true }).click();
+  await page.getByRole('button', { name: 'Declare the final turn' }).click();
+  await page.getByRole('button', { name: /Skip buying/ }).click();
+  await page.getByRole('button', { name: 'Reveal final scores' }).click();
+  await expect(page.getByRole('heading', { name: 'Alex takes the crown.' })).toBeVisible();
+  const rewards = page.getByTestId('match-rewards');
+  if (scenario.rewards.length) {
+    await expect(rewards.locator('li')).toHaveCount(scenario.rewards.length);
+    for (const name of scenario.rewards) await expect(rewards.locator('strong').filter({ hasText: name })).toBeVisible();
+  } else await expect(rewards).toHaveCount(0);
+  for (const [width, height] of [[393, 700], [852, 320], [320, 568], [1440, 900]]) {
+    await page.setViewportSize({ width, height });
+    await page.locator('.finale').evaluate((el) => { el.scrollTop = 0; });
+    await page.evaluate(() => { document.querySelector('main')!.scrollTop = 0; });
+    await expect(page.getByRole('heading', { name: 'Alex takes the crown.' })).toBeInViewport();
+    expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth + 1)).toBe(true);
+    expect(await page.locator('.finale').evaluate((el) => el.scrollWidth <= el.clientWidth + 1)).toBe(true);
+    if (scenario.rewards.length && width === 393) await page.screenshot({ path: `artifacts/winner-page/${info.project.name}.png`, fullPage: true, animations: 'disabled' });
+  }
 });
 
 test('the final invitation seats eleven distinct Strategists with faces', async ({ page }, info) => {

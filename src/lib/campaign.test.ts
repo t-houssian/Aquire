@@ -27,6 +27,22 @@ function completed(outcome: 'win' | 'tie' | 'loss', chapter = 'chapter-1', seed 
 }
 
 describe('The Long Game', () => {
+  it('records exact new wardrobe items for unique wins and clears the notice on a different replay', () => {
+    const first = completed('win');
+    saveGame(first, 'solo');
+    expect(readStoryProgress().chapters['chapter-1'].earnedCosmetics).toEqual(['badge:1']);
+    saveGame(first, 'solo');
+    expect(readStoryProgress().chapters['chapter-1'].earnedCosmetics).toEqual(['badge:1']);
+    saveGame(completed('win', 'chapter-1', 99), 'solo');
+    expect(readStoryProgress().chapters['chapter-1'].earnedCosmetics).toBeUndefined();
+    for (const chapter of STORY_CHAPTERS.slice(1, 5)) {
+      saveGame(completed('win', chapter.id, chapter.number), 'solo');
+      expect(readStoryProgress().chapters[chapter.id].earnedCosmetics).toEqual(chapter.number === 5 ? ['accessory:16', 'background:8'] : undefined);
+    }
+    saveGame(completed('loss', 'chapter-5', 98), 'solo');
+    expect(readStoryProgress().chapters['chapter-5'].earnedCosmetics).toBeUndefined();
+    expect(readStoryProgress().chapters['chapter-5'].won).toBe(true);
+  });
   it('uses all maps and 399 different rivals and grows from a tiny duel to eleven Strategists on the biggest city', () => {
     expect(STORY_CHAPTERS).toHaveLength(81);
     expect(STORY_BOOKS).toHaveLength(7);

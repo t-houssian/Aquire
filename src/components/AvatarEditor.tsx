@@ -187,16 +187,18 @@ export default function AvatarEditor({
   profile,
   onSave,
   onClose,
+  initialTab = 'character',
 }: {
   profile: PlayerProfile;
   onSave: (profile: PlayerProfile) => void;
   onClose: () => void;
+  initialTab?: 'character' | 'rewards' | 'record';
 }) {
   const [name, setName] = useState(profile.name),
     [face, setFace] = useState(decodeAvatar(profile.avatar) ?? DEFAULT_AVATAR),
     [royalTitle, setTitle] = useState(profile.royalTitle);
   const [country, setCountry] = useState(profile.country ?? ''),
-    [tab, setTab] = useState<'character' | 'rewards' | 'record'>('character');
+    [tab, setTab] = useState<'character' | 'rewards' | 'record'>(initialTab);
   const [record, setRecord] = useState<OnlineProfile | null>(null),
     [loading, setLoading] = useState(true),
     [busy, setBusy] = useState(false),

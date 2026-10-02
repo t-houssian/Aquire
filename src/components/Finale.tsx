@@ -1,10 +1,13 @@
-import { useEffect, useState, type CSSProperties } from 'react';
+import { useEffect, useRef, useState, type CSSProperties } from 'react';
 import { ArrowLeft, ArrowRight, Award, Crown, RotateCcw, Sparkles, Trophy } from 'lucide-react';
 import { CHAINS } from '../game/engine';
 import type { MatchSummary } from '../lib/matches';
 import { money } from '../lib/storage';
 import FinalBoard from './FinalBoard';
 import CharacterAvatar from './CharacterAvatar';
+import { decodeAvatar, DEFAULT_AVATAR, encodeAvatar } from '../game/avatars';
+import { readStoryProgress } from '../lib/campaign';
+import { cosmeticsFromIds, readOnlineMatchRewards } from '../lib/cosmetic-rewards';
 import { getStoryChapter, STORY_CHAPTERS } from '../game/campaign';
 import '../story.css';
 import { MarketResult, RollDie } from './DiceReveal';
@@ -34,29 +37,44 @@ export default function Finale({ match, onHome, onProfile, viewerId }: { match: 
   const [step, setStep] = useState(0);
   const [revealedChain, setRevealedChain] = useState<string | null>(null);
   const [boardOpen, setBoardOpen] = useState(false);
+  const finale = useRef<HTMLDivElement>(null);
   const storyChapter = getStoryChapter(match.campaign?.chapterId);
   const storyWon = match.winnerIds.length === 1 && match.winnerIds[0] === match.campaign?.playerId;
   const chains = match.finalSettlements ?? [];
   const standings = step >= chains.length;
   const settlement = chains[step];
   const chain = CHAINS.find((item) => item.id === settlement?.chain);
+  const chapterProgress = match.campaign ? readStoryProgress().chapters[match.campaign.chapterId] : undefined;
+  const earnedRewards = viewerId && match.winnerIds.length === 1 && match.winnerIds[0] === viewerId
+    ? match.campaign
+      ? chapterProgress?.lastGameId === match.id ? cosmeticsFromIds(chapterProgress.earnedCosmetics, 'story') : []
+      : match.source === 'online' ? readOnlineMatchRewards(match.id, viewerId) : []
+    : [];
+  const rewardFace = decodeAvatar(match.players.find((player) => player.id === viewerId)?.avatar) ?? DEFAULT_AVATAR;
   useEffect(() => { setStep(0); setBoardOpen(false); setRevealedChain(null); }, [match.id]);
+  useEffect(() => {
+    if (!standings) return;
+    if (finale.current) finale.current.scrollTop = 0;
+    const main = finale.current?.closest('main');
+    if (main) main.scrollTop = 0;
+    window.scrollTo({ top: 0, left: 0, behavior: 'instant' });
+  }, [match.id, standings]);
   const rollRevealed = !settlement?.marketDie || revealedChain === settlement.chain;
   const nextStep = () => { setStep((value) => value + 1); setRevealedChain(null); setBoardOpen(false); };
-  return <div className="finale" data-stage={standings ? 'standings' : 'settlement'}>
+  return <div ref={finale} className="finale" data-stage={standings ? 'standings' : 'settlement'}>
     <div className="finale-top">
       <button className="text-button" onClick={onHome}><ArrowLeft size={16} /> {storyChapter ? 'The Long Game' : 'The clubhouse'}</button>
       <span className="eyebrow">THE CLOSING BELL · TURN {match.turn}</span>
     </div>
-    <div className="finale-hero">
+    {!standings && <div className="finale-hero">
       <div className="finale-glow" />
-      <span className="eyebrow">{standings ? 'THE FINAL FORTUNES' : `FINAL SALE ${step + 1} OF ${chains.length}`}</span>
-      <h1>{standings ? 'A city to remember.' : `${chain?.name ?? 'Hotel'} takes the stage.`}</h1>
-      <p>{standings ? match.endReason : settlement?.marketDie ? 'A fresh market roll for each hotel. Then bonuses and the final sale.' : 'Shareholder bonuses are paid, then every share is sold to the bank.'}</p>
+      <span className="eyebrow">FINAL SALE {step + 1} OF {chains.length}</span>
+      <h1>{chain?.name ?? 'Hotel'} takes the stage.</h1>
+      <p>{settlement?.marketDie ? 'A fresh market roll for each hotel. Then bonuses and the final sale.' : 'Shareholder bonuses are paid, then every share is sold to the bank.'}</p>
       {chains.length > 0 && <div className="finale-progress" aria-label={`${Math.min(step + 1, chains.length)} of ${chains.length} chains revealed`}>
         {chains.map((item, i) => <span key={item.chain} className={i <= step ? 'lit' : ''} style={{ '--progress-color': CHAINS.find((c) => c.id === item.chain)?.color } as CSSProperties} />)}
       </div>}
-    </div>
+    </div>}
     {!standings && settlement && chain ? <div className={`finale-reveal ${boardOpen ? 'board-open' : ''}`}>
       <button className="button subtle finale-board-toggle" onClick={() => setBoardOpen((value) => !value)}>{boardOpen ? 'See the payouts' : 'See the board'} <ArrowRight size={15} /></button>
       <FinalBoard match={match} featuredChain={settlement.chain} />
@@ -79,20 +97,31 @@ export default function Finale({ match, onHome, onProfile, viewerId }: { match: 
       </>}
       </section>
     </div> : <>
-      {onProfile&&match.winnerIds.length===1&&match.winnerIds[0]===viewerId&&(match.campaign||(match.source==='online'&&match.players.filter((p)=>!p.isBot).length>=2))&&<section className="story-result wardrobe-win"><span className="eyebrow">A WIN WITH A LITTLE EXTRA FLAIR</span><h2>Your wardrobe is growing.</h2><p>{match.campaign?'Story challenge wins earn new accessories, outfits and badges.':'Online wins against other people earn laurels, champion outfits and more.'}</p><button className="button secondary" onClick={onProfile}>Explore your win rewards <Award size={16}/></button></section>}
+      <section className="winner-celebration" aria-label="Winner celebration">
+        {Array.from({ length: 24 }, (_, i) => <i key={i} style={{ '--i': i, '--hue': (i * 47) % 360 } as CSSProperties} />)}
+        <span className="winner-crown"><Trophy size={40} aria-hidden="true" /></span>
+        <span className="eyebrow">THE CITY CHAMPION{match.winnerIds.length > 1 ? 'S' : ''}</span>
+        <h1>{match.results.filter((result) => result.rank === 1).map((result) => result.name).join(' & ')} {match.winnerIds.length > 1 ? 'share the crown.' : 'takes the crown.'}</h1>
+        <strong>{money(match.results.find((result) => result.rank === 1)?.total ?? 0)}</strong>
+      </section>
+      {earnedRewards.length > 0 && <section className="story-result wardrobe-win" aria-label="New wardrobe rewards" data-testid="match-rewards">
+        <span className="eyebrow">EARNED IN THIS MATCH</span>
+        <h2>{earnedRewards.length === 1 ? 'A new wardrobe unlock.' : 'New wardrobe unlocks.'}</h2>
+        <ul className="match-reward-list">
+          {earnedRewards.map((reward) => <li key={`${reward.key}:${reward.value}`}>
+            <CharacterAvatar avatar={encodeAvatar({ ...rewardFace, [reward.key]: reward.value })} name={reward.name} />
+            <div><strong>{reward.name}</strong><span>{reward.key === 'background' ? 'Avatar background' : reward.key === 'badge' ? 'Profile badge' : reward.key === 'outfit' ? 'Outfit' : 'Accessory'}</span></div>
+          </li>)}
+        </ul>
+        <p>Yours to wear in free play and online.</p>
+        {onProfile && <button className="button secondary" onClick={onProfile}>Try on your rewards <Award size={16} /></button>}
+      </section>}
       {storyChapter && <section className="story-result" data-testid="story-result">
         <span className="eyebrow">CHAPTER {storyChapter.chapter} · CHALLENGE {storyChapter.stage} · {storyChapter.title}</span>
         <h2>{storyWon ? storyChapter.number === STORY_CHAPTERS.length ? 'The city is yours.' : 'A new door opens.' : 'The story is not over.'}</h2>
         <p>{storyWon ? storyChapter.victory : 'This table belonged to someone else today. Your earlier wins are safe. Return to the challenge for a fresh deal and another attempt.'}</p>
         <button className="button primary" onClick={onHome}>{storyWon ? 'Continue your story' : 'Return to your chapter'} <ArrowRight size={17} /></button>
       </section>}
-      <div className="winner-celebration" aria-label="Winner celebration">
-        {Array.from({ length: 24 }, (_, i) => <i key={i} style={{ '--i': i, '--hue': (i * 47) % 360 } as CSSProperties} />)}
-        <span className="winner-crown"><Trophy size={40} /></span>
-        <span className="eyebrow">THE CITY CHAMPION{match.winnerIds.length > 1 ? 'S' : ''}</span>
-        <h2>{match.results.filter((result) => result.rank === 1).map((result) => result.name).join(' & ')} {match.winnerIds.length > 1 ? 'share the crown.' : 'takes the crown.'}</h2>
-        <strong>{money(match.results[0]?.total ?? 0)}</strong>
-      </div>
       <section className="final-standings"><h2>Final standings</h2><div className="final-standings-list">{match.results.map((result) => <div key={result.playerId} className={result.rank === 1 ? 'champion' : ''}>
         <span>{result.rank === 1 ? <Crown size={20} /> : String(result.rank).padStart(2, '0')}</span><strong>{result.name}</strong><small>{money(result.cashBefore)} cash + {money(result.bonuses)} bonuses + {money(result.stocksValue)} stock</small><b>{money(result.total)}</b>
       </div>)}</div></section>

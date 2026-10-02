@@ -1,9 +1,12 @@
 import { STORY_CHAPTERS, getStoryChapter } from '../game/campaign';
 import { validateHouseRules, getHouseRules } from '../game/engine';
 import type { GameState } from '../game/types';
+import { cosmeticRewardId, newlyEarnedCosmetics } from './cosmetic-rewards';
 
 export interface ChapterProgress {
   won: boolean; attempts: number; best: number; lastGameId: string; lastOutcome: 'won' | 'lost';
+  /** Items newly earned by lastGameId; repeat challenge wins earn nothing new. */
+  earnedCosmetics?: string[];
 }
 export interface StoryProgress { version: 1; chapters: Record<string, ChapterProgress> }
 const KEY = 'aquire.story.v1';
@@ -41,12 +44,15 @@ export function recordStoryResult(game: GameState): StoryProgress {
   if (!result || game.results.length !== game.players.length || !Number.isFinite(result.total)) return progress;
   const prior = progress.chapters[chapter.id];
   if (prior?.lastGameId === game.id) return progress;
+  const winsBefore = storyWins(progress);
   const won = game.winnerIds.length === 1 && game.winnerIds[0] === run.playerId
     && game.results.every((entry) => entry.playerId === run.playerId || entry.total < result.total);
   progress.chapters[chapter.id] = {
     won: Boolean(prior?.won || won), attempts: (prior?.attempts ?? 0) + 1,
     best: Math.max(prior?.best ?? 0, result.total), lastGameId: game.id, lastOutcome: won ? 'won' : 'lost',
   };
+  const earned = newlyEarnedCosmetics('story', winsBefore, storyWins(progress));
+  if (earned.length) progress.chapters[chapter.id].earnedCosmetics = earned.map(cosmeticRewardId);
   localStorage.setItem(KEY, JSON.stringify(progress));
   return progress;
 }

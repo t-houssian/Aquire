@@ -495,6 +495,7 @@ test.describe('online room UI — HTTP-mocked Supabase', () => {
     await page.goto('/');
     await join(page);
     await expect(page.getByRole('heading', { name: 'Alex takes the crown.' })).toBeVisible();
+    await expect(page.getByTestId('match-rewards')).toHaveCount(0);
     await page.getByRole('button', { name: /Back to the clubhouse/ }).click();
     await openOnline(page);
     await expect(page.getByRole('button', { name: 'Find another table' })).toBeVisible();
@@ -652,6 +653,45 @@ test.describe('online room UI — HTTP-mocked Supabase', () => {
       0,
     );
   });
+});
+
+for (const [before, names] of [
+  [0, ['Winner’s laurels', 'First online trophy']],
+  [1, []],
+  [4, ['Diamond monocle', 'Golden confetti']],
+] as const) test(`winner page only announces newly earned online rewards after win ${before + 1}`, async ({ page }) => {
+  const backend = new MockSupabase();
+  backend.profile.wins = before;
+  backend.start();
+  await backend.install(page);
+  await page.goto('/');
+  await join(page);
+  await expectBoard(page);
+  await expect.poll(() => backend.operations.filter((op) => op.operation === 'profile').length).toBe(1);
+  backend.finish();
+  backend.profile.wins = before + 1;
+  // A foreground resume fetches the changed room without adding gameplay polling.
+  await page.evaluate(() => window.dispatchEvent(new Event('focus')));
+  await expect(page.getByRole('heading', { name: 'Alex takes the crown.' })).toBeVisible();
+  await expect.poll(() => backend.operations.filter((op) => op.operation === 'profile').length).toBe(2);
+  const rewards = page.getByTestId('match-rewards');
+  if (names.length) {
+    await expect(rewards.locator('li')).toHaveCount(names.length);
+    for (const name of names) await expect(rewards.locator('strong').filter({ hasText: name })).toBeVisible();
+    expect(await page.locator('.finale').evaluate((el) => el.children[1].className)).toBe('winner-celebration');
+  } else await expect(rewards).toHaveCount(0);
+  // The receipt survives reload; viewing the finished room does not earn the items again.
+  await page.reload();
+  await openOnline(page);
+  await page.getByRole('button', { name: 'Return to your game' }).click();
+  await expect(page.getByRole('heading', { name: 'Alex takes the crown.' })).toBeVisible();
+  await expect(rewards.locator('li')).toHaveCount(names.length);
+  expect(backend.operations.filter((op) => op.operation === 'profile')).toHaveLength(2);
+  if (names.length) {
+    await rewards.getByRole('button', { name: 'Try on your rewards' }).click();
+    await page.getByRole('button', { name: new RegExp(`${names[0]} Earned`) }).click();
+    await expect(page.getByRole('combobox', { name: 'accessory', exact: true })).toHaveValue(before === 0 ? '19' : '20');
+  }
 });
 
 
