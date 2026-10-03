@@ -17,6 +17,7 @@ async function openSavedTable(page: Page, game: GameState) {
   await page.locator('.saved-game-main').first().click();
   await page.locator('.privacy-panel').getByRole('button').click();
   await expect(page.getByRole('heading', { name: 'The boardroom.' })).toBeVisible();
+  await page.evaluate(() => document.fonts.ready);
 }
 
 async function assertScreenFit(page: Page, width: number, height: number) {

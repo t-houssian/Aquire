@@ -257,6 +257,19 @@
 .merger-decisions ol, .merger-decision-order ol { padding-left:15px; margin:5px 0 0; }
 .merger-decision-order p { margin:5px 0 0; }
 .merger-decision-order [aria-current="step"] { color:#284234; font-weight:700; }
+/* Keep the merger context beside the heading and rack rather than stacking
+   three information rows above the controls and squeezing the desktop board. */
+@media (min-width: 1060px) and (max-width: 1599px) and (min-height: 650px) {
+  .game-view[data-phase='merger-shares'] .action-card:not(:has(.privacy-panel)) { row-gap: 4px; }
+  .game-view[data-phase='merger-shares'] .merger-intro { display: contents; }
+  .game-view[data-phase='merger-shares'] .action-heading { grid-column: 1; grid-row: 1; }
+  .game-view[data-phase='merger-shares'] .action-description { grid-column: 2; grid-row: 1; }
+  .game-view[data-phase='merger-shares'] .merger-decision-order { grid-column: 1; grid-row: 2; margin: 0; padding: 4px 6px; max-height: 80px; overflow: auto; }
+  .game-view[data-phase='merger-shares'] .merger-rack { grid-column: 2; grid-row: 2; }
+  .game-view[data-phase='merger-shares'] .merger-decisions { grid-column: 1 / -1; margin: 0; max-height: 72px; overflow: auto; }
+  .game-view[data-phase='merger-shares'] .merger-controls,
+  .game-view[data-phase='merger-shares'] .action-footer { margin-top: 0; }
+}
 @media(max-height:500px) and (orientation:landscape) {
   .merger-decision-order { margin:4px 0; padding:3px 6px; }
 }
