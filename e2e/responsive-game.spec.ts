@@ -107,7 +107,10 @@ test('merger shares, tile rack and confirmation fit a landscape phone', async ({
   for (const [width, height] of [[667, 375], [844, 390]]) {
     await page.setViewportSize({ width, height });
     await expect(page.locator('.merger-rack')).toBeVisible();
-    await expect(page.getByRole('button', { name: 'Confirm choices' })).toBeInViewport();
+    await expect(page.getByRole('button', { name: 'Confirm choices' })).toBeInViewport({ ratio: 1 });
+    for (const control of await page.locator('.merger-controls button, .merger-rack-tile, .action-footer > span').all()) {
+      await expect(control).toBeInViewport({ ratio: 1 });
+    }
     const action = await page.locator('.action-card').evaluate((element) => ({ scroll: element.scrollHeight, visible: element.clientHeight }));
     expect(action.scroll, `${width}×${height} merger controls`).toBeLessThanOrEqual(action.visible + 1);
     await assertScreenFit(page, width, height);

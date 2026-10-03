@@ -595,6 +595,13 @@
   .playing-game .rack-tile { width: 100%; height: 39px; }
   .playing-game .action-description { margin-top: 5px; }
   .playing-game .action-footer { margin-top: 7px; padding-top: 6px; }
+  /* Text widths differ across browser platforms. Reserve the confirmation
+     column so a wider payout summary cannot push the button onto a new row. */
+  .playing-game .game-view[data-phase='merger-shares'] .action-footer {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) auto;
+    gap: 8px;
+  }
   .playing-game .merger-controls { margin-top: 5px; }
 }
 
