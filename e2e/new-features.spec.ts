@@ -7,6 +7,7 @@ test('new table choices apply a variant map, strategic computers, and private ho
   await page.getByRole('button', { name: /Let’s play/ }).first().click();
   const dialog = page.getByRole('dialog', { name: 'A new opportunity' });
   await expect(dialog).toBeVisible();
+  await dialog.locator('summary').filter({ hasText: 'Privacy & hints' }).click();
   await expect(dialog.getByLabel('Hide opponents’ holdings after moves')).toBeChecked();
   await dialog.getByLabel('City map').selectOption('courtyard');
   await dialog.getByLabel('Computer difficulty').selectOption('strategist');
@@ -45,6 +46,7 @@ test('five new shapes preview their own palettes and place the correct tiles on 
   await expect(board).toHaveAttribute('data-map', 'four-spires');
   await expect(board.locator('.board-tile.map-void')).toHaveCount(28);
   await expect(board.locator('.tiles-count')).toContainText('/ 80');
+  await page.getByRole('button', { name: 'Switch to flat board' }).click();
   const contrast = await board.locator('.game-board').evaluate((element) => {
     const sample = (color: string) => {
       const canvas = document.createElement('canvas'); canvas.width = canvas.height = 1;

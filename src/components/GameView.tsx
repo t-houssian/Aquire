@@ -1,5 +1,5 @@
 import { shareDecisionText } from './ShareDecisionReveal';
-import { useEffect, useRef, useState, type CSSProperties } from 'react';
+import { lazy, Suspense, useEffect, useMemo, useRef, useState, type CSSProperties } from 'react';
 import {
   ArrowLeft,
   ArrowRight,
@@ -27,6 +27,7 @@ import {
   RotateCw,
   Maximize2,
   Minimize2,
+  Box,
 } from 'lucide-react';
 import {
   CHAINS,
@@ -49,6 +50,7 @@ import Finale from './Finale';
 import CharacterAvatar from './CharacterAvatar';
 import { getCharacter } from '../game/characters';
 import { mapThemeStyle } from './MapPreview';
+const CityScene = lazy(() => import('./CityScene'));
 const colors = [
   '#8eab6b', '#dc9f7a', '#8d9fb8', '#bfa0bf', '#bcb06c', '#85b6b0',
   '#b28f70', '#7a9fa0', '#ba8298', '#8a9d6a', '#9c88b2', '#c29b67',
@@ -124,6 +126,8 @@ export default function GameView({
     [trade, setTrade] = useState(0),
     [enlargedBoard, setEnlargedBoard] = useState(false),
     [focusedBoard, setFocusedBoard] = useState(false),
+    [cityReady, setCityReady] = useState(false),
+    [cityView, setCityView] = useState(true),
     [boardRotation, setBoardRotation] = useState<boolean | null>(null),
     [boardFit, setBoardFit] = useState({ compact: false, rotated: false }),
     [compactView, setCompactView] = useState<'board' | 'market'>(game.phase === 'buy' ? 'market' : 'board'),
@@ -131,14 +135,44 @@ export default function GameView({
       game.phase === 'ended' ? 'results' : 'market',
     );
   const boardStage = useRef<HTMLDivElement>(null);
-  const rotatedBoard = boardFit.compact && (boardRotation ?? boardFit.rotated);
+  const rotatedBoard = boardRotation ?? (boardFit.compact && boardFit.rotated);
   const boardColumns = rotatedBoard ? cityMap.rows : cityMap.columns;
   const boardRows = rotatedBoard ? cityMap.columns : cityMap.rows;
-  const boardTiles = rotatedBoard ? Array.from({ length: cityMap.gridTiles.length }, (_, i) => {
+  const boardTiles = useMemo(() => rotatedBoard ? Array.from({ length: cityMap.gridTiles.length }, (_, i) => {
     const column = Math.floor(i / cityMap.rows);
     const row = cityMap.rows - 1 - i % cityMap.rows;
     return cityMap.gridTiles[row * cityMap.columns + column];
-  }) : cityMap.gridTiles;
+  }) : cityMap.gridTiles, [rotatedBoard, cityMap]);
+  useEffect(() => {
+    const stage = boardStage.current;
+    if (!stage || !enlargedBoard) return;
+    let drag: { x: number; y: number; left: number; top: number; moved: boolean; id: number } | null = null;
+    let suppressClick = false;
+    const down = (event: PointerEvent) => {
+      if (event.pointerType !== 'mouse' || event.button !== 0) return;
+      suppressClick = false;
+      drag = { x: event.clientX, y: event.clientY, left: stage.scrollLeft, top: stage.scrollTop, moved: false, id: event.pointerId };
+    };
+    const move = (event: PointerEvent) => {
+      if (!drag) return;
+      const dx = event.clientX - drag.x, dy = event.clientY - drag.y;
+      if (Math.hypot(dx, dy) > 5) {
+        drag.moved = true;
+        stage.setPointerCapture(drag.id);
+        stage.classList.add('is-dragging');
+        stage.scrollLeft = drag.left - dx; stage.scrollTop = drag.top - dy;
+      }
+    };
+    const up = () => {
+      if (drag) { suppressClick = drag.moved; if (stage.hasPointerCapture(drag.id)) stage.releasePointerCapture(drag.id); }
+      drag = null; stage.classList.remove('is-dragging');
+    };
+    const click = (event: MouseEvent) => { if (suppressClick) { event.preventDefault(); event.stopImmediatePropagation(); suppressClick = false; } };
+    stage.addEventListener('pointerdown', down); stage.addEventListener('pointermove', move);
+    window.addEventListener('pointerup', up); stage.addEventListener('pointercancel', up);
+    stage.addEventListener('click', click, true);
+    return () => { stage.removeEventListener('pointerdown', down); stage.removeEventListener('pointermove', move); window.removeEventListener('pointerup', up); stage.removeEventListener('pointercancel', up); stage.removeEventListener('click', click, true); stage.classList.remove('is-dragging'); };
+  }, [enlargedBoard]);
   useEffect(() => {
     const stage = boardStage.current;
     if (!stage) return;
@@ -249,6 +283,15 @@ export default function GameView({
         ? 'Available'
         : 'Sold out'
       : `${game.bank[chain]} available`;
+  const sceneTiles = useMemo(() => {
+    const spaces = new Set(cityMap.tiles);
+    return boardTiles.map(tile => {
+      const chain = game.board[tile];
+      return { id: tile, void: !spaces.has(tile), occupied: Boolean(chain), color: CHAINS.find(c => c.id === chain)?.color,
+        selected: tile === selected || tile === selectedRemoval,
+        inHand: !privateGate && player.hand.includes(tile) && legal.includes(tile) };
+    });
+  }, [boardTiles, cityMap, game.board, selected, selectedRemoval, privateGate, player.hand, legal.join(',')]);
   const headquarters: Partial<Record<ChainId, Tile>> = Object.fromEntries(
     game.logs
       .filter((log) => log.type === 'found' && log.chain && log.tile)
@@ -379,6 +422,7 @@ export default function GameView({
                 <span className="muted small">{cityMap.palette.name}</span>
               </div>
               <div className="board-tools">
+                <button type="button" className="board-render-toggle" aria-label={cityView ? 'Switch to flat board' : 'Switch to 3D city'} title={cityView ? 'Switch to flat board' : 'Switch to 3D city'} aria-pressed={cityView} onClick={() => { setCityView(value => !value); setCityReady(false); }}><Box size={14} /><span>{cityView ? '3D' : '2D'}</span></button>
                 <span className="tiles-count">
                   <Layers3 size={14} />
                   <span>{Object.keys(game.board).length} / {cityMap.tiles.length}</span><span className="board-stock-count"> · Rack {player.hand.length} · Bag {game.bag.length}</span>
@@ -395,7 +439,7 @@ export default function GameView({
                 </button>
               </div>
             </div>
-            <div className="board-stage" ref={boardStage}>
+            <div className="board-stage" ref={boardStage} tabIndex={0} aria-label={enlargedBoard ? "City board. Drag or use arrow keys to explore." : "City board"}>
               <div className="board-wrap">
                 <div className="board-columns">
                   {Array.from({ length: boardColumns }, (_, i) => (
@@ -408,7 +452,8 @@ export default function GameView({
                       <span key={l}>{l}</span>
                     ))}
                   </div>
-                  <div className="game-board" role="group" aria-label="Acquire game board">
+                  <div className={`game-board ${cityView && cityReady ? 'city-rendered' : ''}`} role="group" aria-label="Acquire game board">
+                    {cityView && <Suspense fallback={null}><CityScene tiles={sceneTiles} columns={boardColumns} rows={boardRows} onReady={() => setCityReady(true)} onUnavailable={() => setCityReady(false)} /></Suspense>}
                     {boardTiles.map((tile) => {
                       const chain = game.board[tile];
                       const isPlayableSpace = playableSpaces.has(tile);
@@ -492,6 +537,7 @@ export default function GameView({
                   </span>
                   <h3>{privateGate ? 'A little privacy, please.' : phaseNames[game.phase]}</h3>
                 </div>
+                <div className="turn-track" aria-label="Turn progress"><span className={game.phase === 'place' ? 'current' : 'complete'} title="Place a tile">1<span>Build</span></span><i /><span className={game.phase === 'buy' ? 'current' : game.phase === 'place' ? '' : 'pending'} title="Resolve chains and invest">2<span>Invest</span></span><i /><span title="Refill your rack and end the turn">3<span>Draw</span></span></div>
                 {game.turnDeadlineAt && <span className={`turn-timer ${game.turnDeadlineAt - clockNow <= 10000 ? 'urgent' : ''}`} aria-label="Turn time remaining">
                   {Math.floor(Math.max(0, Math.ceil((game.turnDeadlineAt - clockNow) / 1000)) / 60)}:{String(Math.max(0, Math.ceil((game.turnDeadlineAt - clockNow) / 1000)) % 60).padStart(2, '0')}
                 </span>}

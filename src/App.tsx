@@ -2,11 +2,9 @@ import AvatarEditor from './components/AvatarEditor';
 import { readProfile, saveProfile } from './lib/profile';
 import { useCallback, useEffect, useRef, useState } from 'react';
 import {
-  ArrowDown,
   ArrowRight,
   ArrowUpRight,
   BookOpen,
-  Bot,
   Building2,
   Check,
   ChevronRight,
@@ -18,20 +16,16 @@ import {
   Menu,
   PanelLeftClose,
   PanelLeftOpen,
-  Play,
   Settings2,
   ShieldCheck,
   Sparkles,
-  Sprout,
   Trophy,
-  TrendingUp,
-  Users,
   Volume2,
   X,
 } from 'lucide-react';
 import { Capacitor } from '@capacitor/core';
 import { Haptics, ImpactStyle } from '@capacitor/haptics';
-import { applyAction, CHAINS, chooseBotAction, createGame, expireTurn, getCurrentActor, getHouseRules } from './game/engine';
+import { applyAction, chooseBotAction, createGame, expireTurn, getCurrentActor, getHouseRules } from './game/engine';
 import type { DiceRollReport, GameAction, GameConfig, GameState } from './game/types';
 import {
   money,
@@ -49,7 +43,7 @@ import {
 import { makeLeaderboard, type MatchSummary } from './lib/matches';
 import { endRoom, getOnlineHistory, getOnlineLeaderboard, getOnlineProfile, getRoom, hasOnlineSession, leaveRoom, onlineConfigured, sendRoomAction, watchRoom, type OnlineRoom } from './lib/online';
 import { trackOnlineMatchRewards } from './lib/cosmetic-rewards';
-import CityScene from './components/CityScene';
+import Lobby from './components/Lobby';
 import Setup from './components/Setup';
 import StoryMode from './components/StoryMode';
 import CharacterAvatar from './components/CharacterAvatar';
@@ -58,7 +52,7 @@ import { readStoryProgress, storyChapterUnlocked } from './lib/campaign';
 import './story.css';
 import GameView from './components/GameView';
 import Finale from './components/Finale';
-import Rulebook, { RULEBOOK_URL } from './components/Rulebook';
+import Rulebook from './components/Rulebook';
 import Modal from './components/Modal';
 import OnlinePanel from './components/OnlinePanel';
 import TurnRecap from './components/TurnRecap';
@@ -466,10 +460,10 @@ export default function App() {
             <PanelLeftClose size={18} />
           </button>
         </div>
-        <span className="nav-label">YOUR CLUBHOUSE</span>
+        <span className="nav-label">LET’S BUILD SOMETHING</span>
         <nav>
           <button className={page === 'home' ? 'active' : ''} onClick={() => navigate('home')}>
-            <Home size={19} /> Overview
+            <Home size={19} /> The lobby
           </button>
           <button
             className={page === 'play' ? 'active' : ''}
@@ -501,9 +495,9 @@ export default function App() {
             <Settings2 size={18} /> Table preferences
           </button>
           <div className="profile">
-            <span className="avatar profile-avatar">Y</span>
+            <span className="avatar profile-avatar"><CharacterAvatar name={profile.name} avatar={profile.avatar} /></span>
             <div>
-              <strong>Your corner of the city</strong>
+              <strong>{profile.name}</strong>
               <span>Ready when you are</span>
             </div>
             <ShieldCheck size={16} />
@@ -539,7 +533,7 @@ export default function App() {
             <ChevronRight size={13} />
             <strong>
               {page === 'home'
-                ? 'Overview'
+                ? 'The lobby'
                 : page === 'play'
                   ? 'The boardroom'
                   : page === 'story' ? 'The Long Game'
@@ -562,201 +556,7 @@ export default function App() {
           </div>
         </header>
         <main>
-          {page === 'home' && (
-            <div className="home-page">
-              <section className="hero">
-                <div className="hero-copy">
-                  <span className="eyebrow">
-                    <span className="live-dot" /> 2008 EDITION · THE CITY IS YOURS
-                  </span>
-                  <h1>
-                    A little vision.
-                    <br />A lasting <em>empire.</em>
-                  </h1>
-                  <p>
-                    Build iconic hotels. Make shrewd investments.
-                    <br className="desktop-break" /> Turn your next move into something remarkable.
-                  </p>
-                  <div className="hero-buttons">
-                    <button className="button primary" onClick={() => setModal('solo')}>
-                      Let’s play <ArrowRight size={17} />
-                    </button>
-                    <button className="button subtle" onClick={() => navigate('learn')}>
-                      <BookOpen size={17} /> Learn the game
-                    </button>
-                  </div>
-                  <div className="hero-caption">
-                    <span className="mini-avatars">
-                      <i>A</i>
-                      <i>M</i>
-                      <i>J</i>
-                    </span>
-                    <span>2–12 investors across classic and expansion cities.</span>
-                  </div>
-                </div>
-                <div className="hero-art">
-                  <CityScene />
-                  <div className="scene-callout scene-callout-strategy">
-                    <span className="scene-callout-icon"><TrendingUp size={23} strokeWidth={1.9} /></span>
-                    <span className="scene-callout-copy">
-                      <small>BUILT ON STRATEGY</small>
-                      <strong>A brighter outlook.</strong>
-                    </span>
-                  </div>
-                  <div className="scene-callout scene-callout-growth">
-                    <span className="scene-callout-icon"><Sprout size={20} strokeWidth={1.9} /></span>
-                    <strong>Room to grow.</strong>
-                  </div>
-                  <span className="art-caption">GREAT THINGS START WITH A SINGLE TILE.</span>
-                </div>
-              </section>
-              <div className="chain-ticker">
-                <span className="chain-ticker-intro">
-                  THE HOTEL COLLECTION
-                  <strong>{CHAINS.length} chains to choose from.</strong>
-                </span>
-                {CHAINS.map((c) => (
-                  <div key={c.id}>
-                    <span className="ticker-symbol" style={{ color: c.color }}>
-                      {c.abbreviation}
-                    </span>
-                    <strong>{c.name}</strong>
-                  </div>
-                ))}
-              </div>
-              <button className="story-entry" onClick={() => navigate('story')}>
-                <div className="story-entry-faces"><CharacterAvatar characterId="cast-01" /><CharacterAvatar characterId="cast-27" /><CharacterAvatar characterId="cast-56" /></div>
-                <div className="story-entry-copy"><span className="eyebrow">NEW · SOLO STORY</span><strong>The Long Game</strong><p>Seven chapters. Eighty-one challenges. Build your way from a corner café to the city summit.</p></div><ArrowRight size={21} />
-              </button>
-              <section className="play-section">
-                <div className="section-heading">
-                  <div>
-                    <span className="eyebrow">MAKE YOUR NEXT MOVE</span>
-                    <h2>A table for every kind of player.</h2>
-                  </div>
-                  <span className="small muted">
-                    <span className="live-dot" /> No account needed for local play
-                  </span>
-                </div>
-                <div className="play-cards">
-                  <button className="play-card solo-card" onClick={() => setModal('solo')}>
-                    <div className="play-card-top">
-                      <span className="feature-icon">
-                        <Bot size={25} />
-                      </span>
-                      <span className="card-tag">YOUR PACE</span>
-                    </div>
-                    <h3>Against the house</h3>
-                    <p>Sharpen your instincts against thoughtful computer opponents.</p>
-                    <div className="card-bottom">
-                      <span>Solo · 1–11 opponents</span>
-                      <span className="round-arrow">
-                        <ArrowUpRight size={20} />
-                      </span>
-                    </div>
-                  </button>
-                  <button className="play-card" onClick={() => setModal('local')}>
-                    <div className="play-card-top">
-                      <span className="feature-icon peach">
-                        <Users size={24} />
-                      </span>
-                      <span className="card-tag">GOOD COMPANY</span>
-                    </div>
-                    <h3>Around the table</h3>
-                    <p>One device. Your favorite people. A little friendly competition.</p>
-                    <div className="card-bottom">
-                      <span>Pass & play · 2–12 players</span>
-                      <span className="round-arrow">
-                        <ArrowUpRight size={20} />
-                      </span>
-                    </div>
-                  </button>
-                  <button className="play-card" onClick={() => setModal('online')}>
-                    <div className="play-card-top">
-                      <span className="feature-icon blue">
-                        <Globe2 size={24} />
-                      </span>
-                      <span className="card-tag">NEAR OR FAR</span>
-                    </div>
-                    <h3>Across the city</h3>
-                    <p>Find an open table or invite friends to build a city together.</p>
-                    <div className="card-bottom">
-                      <span>Online · Open tables &amp; friends</span>
-                      <span className="round-arrow">
-                        <ArrowUpRight size={20} />
-                      </span>
-                    </div>
-                  </button>
-                </div>
-              </section>
-              {lastSave && (
-                <section className="resume-card">
-                  <div className="feature-icon">
-                    <Clock3 size={24} />
-                  </div>
-                  <div>
-                    <span className="eyebrow">YOUR CITY IS WAITING</span>
-                    <h3>Pick up where you left off.</h3>
-                    <p>
-                      Turn {lastSave.game.turn} · {lastSave.game.players.length} investors · 2008
-                      rules
-                    </p>
-                  </div>
-                  <button className="button primary" onClick={() => resume(lastSave)}>
-                    Continue game <Play size={15} />
-                  </button>
-                </section>
-              )}
-              <section className="bottom-feature">
-                <div className="quote-panel">
-                  <span className="eyebrow">SIMPLE MOVES. LASTING POSSIBILITIES.</span>
-                  <h2>
-                    It’s not just what you build.
-                    <br />
-                    It’s <em>when you make your move.</em>
-                  </h2>
-                  <p>Easy to learn. Endlessly rewarding to master.</p>
-                  <button className="text-button" onClick={() => navigate('learn')}>
-                    Discover the strategy <ArrowRight size={16} />
-                  </button>
-                  <span className="quote-decoration">
-                    <Building2 />
-                  </span>
-                </div>
-                <div className="quick-guide">
-                  <span className="eyebrow">YOUR TURN, AT A GLANCE</span>
-                  {[
-                    {
-                      n: '01',
-                      title: 'Build a little.',
-                      text: 'Place a tile. Watch the city grow.',
-                    },
-                    { n: '02', title: 'Invest wisely.', text: 'Buy shares in a promising future.' },
-                    {
-                      n: '03',
-                      title: 'Think ahead.',
-                      text: 'Draw a tile. Find your next opportunity.',
-                    },
-                  ].map((s) => (
-                    <div key={s.n}>
-                      <span>{s.n}</span>
-                      <div>
-                        <strong>{s.title}</strong>
-                        <p>{s.text}</p>
-                      </div>
-                      <ArrowDown size={16} />
-                    </div>
-                  ))}
-                </div>
-              </section>
-              <footer className="home-footer">
-                <span>Inspired by the timeless game of Acquire, created by Sid Sackson.</span>
-                <a href={RULEBOOK_URL} target="_blank" rel="noreferrer">
-                  Official rulebook <ArrowUpRight size={12} />
-                </a>
-              </footer>
-            </div>
-          )}
+          {page === 'home' && <Lobby onPlay={setModal} onLearn={() => navigate('learn')} onStory={() => navigate('story')} onResume={resume} lastSave={lastSave} progress={storyProgress} />}
           {page === 'play' && game && (
             <div
               className="game-screen"

@@ -12,6 +12,7 @@ test('hotel roster and per-chain share supplies persist into a playable game', a
   await preferences.getByRole('button', { name: /Just right/ }).click();
   await page.getByRole('button', { name: /Let’s play/ }).first().click();
   const setup = page.getByRole('dialog', { name: 'A new opportunity' });
+  await setup.locator('summary').filter({ hasText: 'Customize house rules' }).click();
   await setup.getByLabel('Your name', { exact: true }).fill('Avery');
   await expect(setup.locator('.hotel-choice').filter({ hasText: 'Goldspire' }).locator('input[type="checkbox"]')).toBeChecked();
   await expect(setup.locator('.hotel-choice').filter({ hasText: 'Sackson' }).locator('input[type="checkbox"]')).not.toBeChecked();
@@ -38,6 +39,7 @@ test('all twelve hotels remain reachable in a compact desktop market', async ({ 
   await page.goto('/');
   await page.getByRole('button', { name: /Let’s play/ }).first().click();
   const setup = page.getByRole('dialog', { name: 'A new opportunity' });
+  await setup.locator('summary').filter({ hasText: 'Customize house rules' }).click();
   await setup.getByLabel('Your name', { exact: true }).fill('Avery');
   for (const name of ['Budgeton', 'Heritage', 'Riviera', 'Monarch', 'Goldspire'])
     await setup.locator('.hotel-choice').filter({ hasText: name }).locator('input[type="checkbox"]').check();
@@ -66,6 +68,7 @@ test('house-rule defaults live in preferences and can be changed for a new table
   await preferences.getByRole('button', { name: /Just right/ }).click();
   await page.getByRole('button', { name: /Let’s play/ }).first().click();
   const setup = page.getByRole('dialog', { name: 'A new opportunity' });
+  await setup.locator('summary').filter({ hasText: 'Customize house rules' }).click();
   await expect(setup.getByLabel('Starting cash')).toHaveValue('9000');
   await expect(setup.getByLabel('Tiles to place per turn')).toHaveValue('3');
   await expect(setup.getByLabel('Tiles to remove per turn')).toHaveValue('2');

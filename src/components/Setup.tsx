@@ -69,9 +69,9 @@ export default function Setup({
       kind,
     );
   return (
-    <Modal title="A new opportunity" onClose={onClose}>
+    <Modal title="A new opportunity" onClose={onClose} className="game-setup">
       <div className="modal-body">
-        <p className="muted">Choose your city and set the table rules.</p>
+        <p className="muted">Pick your rivals. Choose a city. Make it yours.</p>
         <div className="segmented">
           <button className={kind === 'solo' ? 'selected' : ''} onClick={() => setKind('solo')}>
             <Bot size={17} /> Against the house
@@ -133,8 +133,7 @@ export default function Setup({
           </div>
         </div>
         <div className="setup-options">
-          <span className="eyebrow">TABLE RULES & OPTIONS</span>
-          <p className="small muted">The 2008 prices, bonuses and turn order stay the same. Custom cities change the footprint and may change the seat limit or end target.</p>
+          <span className="eyebrow">YOUR PLAYGROUND</span>
           <label className="field-label" htmlFor="setup-map">City map</label>
           <select id="setup-map" value={mapId} onChange={(event) => {
             const next = getMap(event.target.value as MapId);
@@ -163,14 +162,16 @@ export default function Setup({
             <div className="field-row"><span className="field-label">Meet the competition</span><button type="button" className="text-button" onClick={() => setCastSeed((seed) => seed + 1)}>Shuffle rivals</button></div>
             <div className="cast-preview">{opponents.map((character) => <div className="cast-preview-item" key={character.id} title={character.quote}><CharacterAvatar characterId={character.id} /><div><strong>{character.name}</strong><small>{STYLE_NAMES[character.style]}</small></div></div>)}</div>
           </div>}
+          <details className="setup-advanced"><summary>Customize house rules <span>Hotels, trading, timers & more</span></summary>
           <HouseRulesControls value={houseRules} onChange={setHouseRules} mapTiles={selectedMap.tiles.length} players={count} />
-          {settings && onSettingsChange && <div className="setup-privacy">
+          </details>
+          {settings && onSettingsChange && <details className="setup-advanced"><summary>Privacy & hints <span>Make the table your own</span></summary><div className="setup-privacy">
             <label><input type="checkbox" checked={settings.hideOpponentHoldings} onChange={(event) => onSettingsChange({ ...settings, hideOpponentHoldings: event.target.checked })} /> Hide opponents’ holdings after moves</label>
             <label><input type="checkbox" checked={settings.hideStockAvailability} onChange={(event) => onSettingsChange({ ...settings, hideStockAvailability: event.target.checked })} /> Show only “available” or “sold out”</label>
             <label><input type="checkbox" checked={settings.hints} onChange={(event) => onSettingsChange({ ...settings, hints: event.target.checked })} /> Show move hints</label>
-          </div>}
+          </div></details>}
         </div>
-        <div className="inline-note">
+        <div className="setup-launch"><div className="inline-note">
           <ShieldCheck size={18} />
           {kind === 'solo'
             ? 'Saved automatically. Pick up where you left off.'
@@ -180,6 +181,7 @@ export default function Setup({
           Let’s build something <ArrowRight size={18} />
         </button>
         {hasSave && <p className="small muted center">Your other games stay safe in My games.</p>}
+        </div>
       </div>
     </Modal>
   );

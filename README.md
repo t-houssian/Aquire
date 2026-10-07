@@ -1,6 +1,6 @@
 # Aquire
 
-A complete playable implementation of **Acquire**, built with **React + TypeScript + Vite + Capacitor + Supabase**. Original architectural artwork, a warm green interface, and the **2008 Avalon Hill edition** rules.
+A complete playable implementation of **Acquire**, built with **React + TypeScript + Vite + Capacitor + Supabase**. An interactive Three.js city board, a teal-and-gold game lobby, and the **2008 Avalon Hill edition** rules.
 
 ## Play now
 
@@ -44,11 +44,19 @@ Ending an unfinished local game removes its save without adding a match result. 
 
 **Live online rooms require a configured Supabase project.** This workspace’s connected project was deployed and tested with real Auth, public tables, private racks, full games, guest records, earned rewards, and cleanup on October 2, 2026. Follow [the Supabase setup guide](docs/ONLINE.md) for another project. Only the public project base URL and publishable key belong in `.env.local`.
 
+## The game interface
+
+The lobby has direct solo, pass-and-play and online entrances, a miniature 3D city, saved-table continuation and actual story challenge progress. Setup keeps the city, seats and rivals visible; expand **Customize house rules** or **Privacy & hints** for optional settings.
+
+The live board renders sculpted tiles and hotel miniatures in Three.js, with a short building animation on placements and chain changes. Native buttons above the scenery preserve tile coordinates, keyboard input, private racks and the existing rules. **3D / 2D** switches the visual renderer without changing the table. If WebGL is unavailable or its context is lost, the flat board remains playable; the lobby has a vector illustration fallback. The renderer is loaded separately, caps pixel density, renders only on changes and during short animations, stops when the page is hidden, and respects reduced motion.
+
+Use **Zoom**, then drag with the mouse or pan by touch to explore the board. **Fit** returns to the whole map, and **Rotate board** changes its orientation while preserving coordinates. Selected rack tiles are brought into view when zoomed. Phones retain the Board/Stocks switch, portrait and landscape layouts, and reachable turn controls. Larger desktop windows keep tall expansion maps beside their action controls.
+
 ## Turn recaps and preferences
 
 On desktop, use **Hide sidebar** beside the logo to reclaim its space, then **Show sidebar** at the top left to restore it. The choice persists across reloads. Desktop game windows at least 1060 × 650 pixels fit all 108 spaces of the printed board, the current action, and all seven market rows without page scrolling. Expansion boards pan inside their own frame so the rest of the game remains in view. A finished game opens the full-screen closing ceremony, with each sell-off revealed in order.
 
-Phone games fill the available browser height, with the turn controls below the board in portrait and in a narrow column in landscape. Board cells adapt to the available frame so every row and column is visible by default. On shaped and larger maps, **Zoom** enlarges the cells for panning and **Fit** returns to the complete city. Selecting a rack tile also brings it into view on a zoomed board. iPhone safe-area padding is applied once, and the layout adjusts when browser toolbars or orientation change.
+Phone games fill the available browser height, with the turn controls below the board in portrait and in a narrow column in landscape. Board cells adapt to the available frame so every row and column is visible by default. On any map, **Zoom** enlarges the cells for panning and **Fit** returns to the complete city. Selecting a rack tile also brings it into view on a zoomed board. iPhone safe-area padding is applied once, and the layout adjusts when browser toolbars or orientation change.
 
 Open **Table preferences** using the sliders button. **Hide opponents’ holdings**, enabled by default, keeps your own portfolio visible but conceals other investors’ stock counts and stock details in the activity history. **Hide remaining stock counts** replaces bank quantities with **Available** or **Sold out**, including during merger trades. These independent preferences save on this device and can be changed before or during a game. Final holdings and payouts are revealed at the closing bell.
 
@@ -126,7 +134,8 @@ Serve `dist/` with a static HTTPS host. Supabase hosts the backend, not the Vite
 | Location           | Responsibility                                                       |
 | ------------------ | -------------------------------------------------------------------- |
 | `src/game/`        | Pure deterministic rules, bot strategy, serializable actions, tests  |
-| `src/components/`  | Board, market, merger decisions, setup, rules, online lobby          |
+| `src/components/`  | Three.js city, lobby, board controls, market, decisions, setup and rules |
+| `src/game-world.css` | Shared game surfaces, lobby, campaign and renderer presentation |
 | `src/game-layout.css`, `src/sidebar.css`, `src/recap-layout.css` | Desktop viewport, collapsible navigation, and recap layout |
 | `src/App.tsx`      | Navigation, persistence, private handoffs, bot scheduling            |
 | `src/lib/`         | Local saves/preferences and authenticated Supabase client            |

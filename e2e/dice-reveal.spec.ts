@@ -69,6 +69,7 @@ test('a new per-turn market game reveals its opening roll', async ({ page }) => 
   await page.getByRole('button', { name: /Let’s play/ }).first().click();
   const setup = page.getByRole('dialog', { name: 'A new opportunity' });
   await setup.getByLabel('Your name', { exact: true }).fill('Avery');
+  await setup.locator('summary').filter({ hasText: 'Customize house rules' }).click();
   await setup.getByLabel('Market fluctuation').selectOption('market');
   await setup.getByLabel('Market roll frequency').selectOption('turn');
   await setup.getByRole('button', { name: /Let’s build something/ }).click();
