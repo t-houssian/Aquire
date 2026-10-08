@@ -1,0 +1,251 @@
+/* The second pass puts a physical Acquire table at the center of the game. */
+:root { --world: #182b3a; --world-deep: #111e2d; --gold: #edbc68; }
+.app-shell { background: radial-gradient(ellipse at 40% 30%, #233e4d, #152635 85%); }
+.app-shell .sidebar { background: #101f2e; }
+.topbar { background: #152735; }
+.button { border-radius: 7px; }
+.primary { background: #edbc68; border-color: #ffdc99; box-shadow: 0 3px 0 #9d7137; }
+/* A short game menu, with the hotel board doing the storytelling. */
+.lobby.home-page { max-width: 1380px; padding-top: 28px; }
+.lobby-hero { grid-template-columns: .9fr 1.1fr; min-height: 360px; background: radial-gradient(ellipse at 75% 40%, #36505c, #1b3040 70%); border-color: #65778970; border-radius: 14px; }
+.lobby-hero::after { background-size: 24px 24px; opacity: .4; }
+.lobby-hero-copy { padding: 40px 0 36px 36px; }
+.lobby-hero-copy h1 { color: #fff5db; font-size: clamp(60px, 7.5vw, 104px); letter-spacing: -.065em; line-height: 1.05; margin-top: 18px; }
+.lobby-hero-copy h1 > span { color: var(--gold); }
+.lobby-hero-copy h2 { font-size: clamp(19px, 2.2vw, 28px); letter-spacing: -.03em; margin-top: 10px; }
+.lobby-hero-copy > p { font-size: 12px; line-height: 1.7; margin-top: 15px; color: #a9bdc7; }
+.lobby-hero-actions { margin-top: 24px; gap: 24px; }
+.lobby-facts { margin-top: 20px; color: #9ab2bf; }
+.city-caption { bottom: 17px; color: #a6bcca; }
+.city-orbit { border-color: #829eae1c; }
+.lobby-modes { margin-top: 17px; gap: 13px; }
+.mode-card { display: flex; flex-direction: row; align-items: center; gap: 13px; padding: 18px; border-radius: 10px; background: #203747; border-color: #51667880; }
+.mode-card:hover { background: #2b4656; border-color: #a6c2c6; transform: translateY(-2px); }
+.mode-icon { width: 43px; height: 43px; margin: 0; border-radius: 9px; background: #35555b; box-shadow: 0 3px #0b1b29; flex-shrink: 0; }
+.mode-copy { display: flex; flex-direction: column; min-width: 0; gap: 3px; }
+.mode-tag { margin: 0; text-transform: uppercase; color: #9fb6c1; font-size: 8px; }
+.mode-name { font-size: 13px; }
+.mode-detail { margin: 0; font-size: 9px; color: #a0b6c2; }
+.mode-arrow { margin-left: auto; color: #d9c598; flex-shrink: 0; }
+.lobby-extras { display: grid; grid-template-columns: 1fr; gap: 14px; margin-top: 18px; }
+.lobby-resume.resume-card { margin: 0; background: #223b48; }
+.lobby-campaign.story-entry { display: flex; flex-direction: row; align-items: center; gap: 19px; padding: 14px 20px; border-radius: 10px; background: linear-gradient(110deg, #303b3c, #273b46); }
+.campaign-cast { height: 60px; margin: 0; width: 123px; flex-shrink: 0; }
+.campaign-cast > svg { width: 43px; height: 49px; }
+.campaign-cast > svg:nth-child(2) { width: 52px; height: 60px; }
+.campaign-copy { display: flex; flex-direction: column; gap: 4px; }
+.campaign-copy strong { font-family: 'DM Sans', sans-serif; font-size: 19px; font-weight: 700; letter-spacing: -.5px; }
+.campaign-copy > span:last-child { color: #b0bbc0; font-size: 10px; }
+.campaign-progress { margin: 0 0 0 auto; min-width: 160px; }
+.lobby-footer { padding-top: 15px; margin-top: 20px; }
+/* Recessed plots, solid hotel pieces and a single camera projection. */
+.playing-game .board-card { background: #1b2e3d; border-color: #64778570; border-radius: 10px; }
+.playing-game .board-title, .playing-game .board-legend { background: #1e3443; }
+.playing-game .board-title { color: #e1e9e8; }
+.playing-game .board-tools button { background: #152937; border-color: #68818b70; color: #c3d8de; }
+.playing-game .board-tools button:hover, .playing-game .board-tools button[aria-pressed='true'] { background: #395865; border-color: #a1b8bd; }
+.playing-game .map-themed .board-stage { background: radial-gradient(ellipse at center, #304b58, #172b3b 80%); }
+.playing-game .board-wrap { background: transparent; border-color: transparent; box-shadow: none; }
+.playing-game .game-board { background: #142938; border-color: #536b76; }
+.playing-game .game-board.city-rendered { background: transparent; border-color: transparent; overflow: visible; }
+.playing-game .game-board .city-canvas { z-index: 0; }
+.playing-game .board-columns, .playing-game .board-rows { color: #e0e9e5; font-size: 11px; font-weight: 700; }
+.playing-game .map-themed .game-board.city-rendered > .board-tile { position: absolute; min-width: 0; min-height: 0; margin: 0; padding: 0; border: 0; border-radius: 0; background: transparent; z-index: 1; outline: none; transition: box-shadow .15s; }
+.playing-game .map-themed .game-board.city-rendered > .board-tile.playable { background: transparent; }
+.playing-game .map-themed .game-board.city-rendered > .board-tile:focus-visible { box-shadow: inset 0 0 0 2px #fff0b5; }
+.playing-game .map-themed .game-board.city-rendered > .board-tile.tile-selected { background: transparent; box-shadow: inset 0 0 0 1px #ffe6a2; }
+.playing-game .map-themed .game-board.city-rendered > .board-tile > .tile-coordinate { color: #94aab3; opacity: 1; font-size: clamp(6px, 25cqi, 12px); font-weight: 500; text-shadow: none; }
+.playing-game .map-themed .game-board.city-rendered > .board-tile:not(.occupied):not(.map-void):not(.playable) > .tile-coordinate { color: #94aab3; }
+.playing-game .map-themed .game-board.city-rendered > .board-tile.playable > .tile-coordinate { color: #092b32; font-weight: 800; font-size: clamp(7px, 30cqi, 14px); }
+.playing-game .map-themed .game-board.city-rendered > .board-tile.occupied > .tile-coordinate,
+.playing-game .map-themed .game-board.city-rendered > .board-tile.tile-selected > .tile-coordinate { inset: auto 2px 2px auto; color: #fff2d0; text-shadow: 0 1px 2px #07101b; font-size: clamp(5px, 21cqi, 10px); }
+.playing-game .map-themed .game-board.city-rendered > .board-tile > .tile-initial { display: none; }
+.playing-game .map-themed .game-board.city-rendered > .board-tile.chain-headquarters > .tile-initial { display: grid; inset: auto auto 1px 2px; width: auto; height: auto; background: transparent; color: white; padding: 0; font-size: clamp(6px, 22cqi, 10px); text-shadow: 0 1px 2px #07101b; }
+.playing-game .map-themed .game-board.city-rendered > .board-tile.last-placed::after { inset: 1px; border: 1px solid #ffd993; border-radius: 0; }
+.playing-game .map-themed .board-tile:not(.occupied):not(.map-void) { background: #263f4e; color: #afc2c8; border-color: #526977; border-radius: 3px; }
+.playing-game .map-themed .board-tile.playable { background: #56bda7; color: #102d37; border-color: #9ee4d1; }
+.playing-game .map-themed .board-tile.tile-selected { background: #edbc68; color: #21303a; }
+.playing-game .board-legend { color: #afc2c7; }
+.playing-game .board-legend i.legend-empty { background: #263f4e; border-color: #65818f; }
+.playing-game .board-legend i.legend-independent { background: #e6e1d0; }
+.playing-game .player-chip { background: #203a49; border-color: #5d76814d; border-radius: 8px; }
+.playing-game .player-chip.current { background: #30554f; border-color: #7ac2a3; }
+/* Rack pieces become hotel permits with an engraved address and a brass edge. */
+.playing-game .rack-tile { position: relative; background: linear-gradient(145deg, #2d4c60, #1a3043); border: 1px solid #6b8590; border-top: 3px solid #ba9a60; border-radius: 5px; box-shadow: 0 3px 0 #0d1b29, inset 0 1px #c5d7de25; color: #f4f0de; }
+.playing-game .rack-tile > span { font-family: 'DM Sans', sans-serif; font-size: 17px; font-weight: 700; letter-spacing: -.5px; }
+.playing-game .rack-tile small { color: #a8c0c7; letter-spacing: 1.1px; font-size: 6px; }
+.playing-game .rack-tile:not(:disabled):hover { background: #3a5d6c; border-color: #89aab4; }
+.playing-game .rack-tile.selected, .playing-game .rack-tile.selected:not(:disabled):hover { background: linear-gradient(145deg, #e5be74, #c4994e); color: #213344; border-color: #ffdda1; border-top-color: #fff1bd; box-shadow: 0 3px 0 #89612c, 0 0 0 2px #dabd7733; }
+.playing-game .rack-tile.selected small { color: #594323; }
+.playing-game .action-card { border-radius: 9px; background: #f2efdf; border-color: #dbd6be; }
+.action-card .step-icon { background: #dce2d5; border-radius: 7px; }
+/* Each chain reads as a share certificate with its own color, name and price. */
+.playing-game .market-panel { border-radius: 10px; background: #eae8da; border-color: #d6d3c0; }
+.playing-game .market-heading { background: #eeedde; }
+.playing-game .stock-list { padding: 0 8px; gap: 5px; background: #dedfd4; }
+.playing-game .stock-list .stock-row { position: relative; background: #f7f5e9; border: 1px solid #d0d1bd; border-left: 4px solid var(--chain); border-radius: 4px; box-shadow: 0 2px 0 #acb5ab40; margin: 0; }
+.playing-game .stock-row.inactive { opacity: .72; }
+.playing-game .stock-main .chain-logo { position: relative; overflow: hidden; border: 1px solid color-mix(in srgb, var(--chain) 50%, transparent); border-radius: 3px; font-family: 'DM Sans', sans-serif; font-weight: 800; font-style: normal; font-size: 12px; box-shadow: inset 0 0 0 2px #fff7; }
+.playing-game .stock-main .chain-logo::after { content: ''; position: absolute; inset: 4px; border: 1px solid currentColor; opacity: .17; }
+.playing-game .stock-name strong { color: #263d48; }
+.playing-game .stock-price strong { color: #263d48; font-size: 14px; }
+.playing-game .market-tabs { background: #dcded2; }
+.playing-game .market-footer { background: #eeecdc; }
+@media (min-width: 1060px) {
+  /* The navigation becomes a small game rail, leaving the city more room. */
+  .playing-game:not(.sidebar-collapsed) > .sidebar { width: 86px; padding-left: 12px; padding-right: 12px; }
+  .playing-game:not(.sidebar-collapsed) > .main-shell { margin-left: 86px; }
+  .playing-game .sidebar-brand-row { flex-direction: column; gap: 12px; margin-bottom: 24px; }
+  .playing-game .sidebar .brand > span:last-child, .playing-game .sidebar .nav-label, .playing-game .sidebar-note { display: none; }
+  .playing-game .sidebar nav button { justify-content: center; height: 45px; padding: 0; gap: 0; font-size: 0; }
+  .playing-game .sidebar nav button svg { width: 21px; height: 21px; }
+  .playing-game .sidebar nav button small, .playing-game .sidebar nav .nav-live, .playing-game .sidebar nav .nav-external { display: none; }
+  .playing-game .sidebar-settings { justify-content: center; font-size: 0; padding: 12px 0; }
+  .playing-game .sidebar .profile { justify-content: center; padding: 17px 0; }
+  .playing-game .sidebar .profile > div, .playing-game .sidebar .profile > svg { display: none; }
+  .playing-game .topbar { height: 39px; min-height: 39px; padding: 0 20px; }
+  .playing-game .topbar-tag { font-size: 7px; }
+  .playing-game .game-view { grid-template-rows: 42px 42px minmax(0, 1fr); gap: 9px 20px; }
+  .playing-game .game-heading h1 { font-size: 25px; }
+  .playing-game .game-layout { grid-template-columns: minmax(0, 1fr) 285px; gap: 12px; }
+  .playing-game .stock-main { padding: 9px 10px; }
+  .playing-game .stock-list { display: flex; flex-direction: column; padding-top: 6px; padding-bottom: 6px; }
+  .playing-game .stock-row { flex: 1; }
+  .playing-game .stock-purchase, .playing-game .stock-sale { margin-left: 10px; margin-right: 10px; }
+}
+@media (min-width: 1060px) and (max-height: 700px) {
+  .playing-game .stock-main { padding: 5px 8px; }
+  .playing-game .stock-list { gap: 3px; padding-top: 4px; padding-bottom: 4px; }
+}
+@media (min-width: 1600px) {
+  .lobby.home-page { padding-top: 45px; }
+  .lobby-hero { min-height: 405px; }
+  .lobby-hero-copy { padding-top: 50px; }
+}
+@media (max-width: 1059px) {
+  .playing-game .stock-list { gap: 4px; padding-top: 4px; padding-bottom: 4px; }
+  .playing-game .stock-main { padding: 6px 8px; }
+  .playing-game .stock-price strong { font-size: 12px; }
+}
+@media (max-width: 900px) {
+  .lobby.home-page { padding: 20px 22px; }
+  .lobby-hero { min-height: 315px; }
+  .lobby-hero-copy { padding: 30px 0 30px 25px; }
+  .lobby-hero-copy h1 { font-size: 69px; }
+  .mode-card { padding: 14px 10px; gap: 9px; }
+  .mode-icon { width: 34px; height: 36px; }
+  .mode-name { font-size: 11px; }
+  .mode-detail { font-size: 8px; }
+  .mode-arrow { width: 13px; }
+}
+@media (max-width: 680px) {
+  .lobby.home-page { padding: 18px 16px 22px; }
+  .lobby-hero { min-height: 0; grid-template-columns: 1fr; }
+  .lobby-hero-copy { padding: 24px 23px 10px; }
+  .lobby-hero-copy h1 { font-size: 68px; margin-top: 12px; }
+  .lobby-hero-copy h2 { font-size: 21px; margin-top: 4px; }
+  .lobby-hero-copy > p { font-size: 11px; margin-top: 11px; }
+  .lobby-hero-actions { margin-top: 17px; gap: 19px; }
+  .lobby-hero-actions .primary { min-width: 140px; min-height: 43px; }
+  .lobby-facts { margin-top: 17px; }
+  .lobby-city { height: 245px; margin-top: -10px; }
+  .city-caption { bottom: 12px; font-size: 6px; }
+  .lobby-modes { grid-template-columns: 1fr; gap: 9px; margin-top: 13px; }
+  .mode-card { padding: 12px 16px; gap: 13px; }
+  .mode-icon { width: 39px; height: 39px; }
+  .mode-name { font-size: 13px; }
+  .mode-detail { font-size: 9px; }
+  .mode-arrow { width: 18px; }
+  .lobby-extras { margin-top: 13px; }
+  .lobby-campaign.story-entry { padding: 13px; gap: 12px; flex-wrap: wrap; }
+  .campaign-cast { width: 80px; height: 52px; }
+  .campaign-cast > svg { width: 30px; height: 39px; }
+  .campaign-cast > svg:nth-child(2) { width: 40px; height: 52px; }
+  .campaign-copy { flex: 1; }
+  .campaign-copy strong { font-size: 18px; }
+  .campaign-copy > span:last-child { font-size: 9px; }
+  .campaign-progress { width: calc(100% - 34px); margin: 3px 0 0; }
+  .lobby-resume.resume-card { padding: 13px; gap: 10px; flex-wrap: wrap; }
+  .lobby-resume .button { min-height: 38px; margin-left: 51px; }
+  .lobby-footer { gap: 10px; font-size: 8px; margin-top: 15px; }
+  .lobby-chain-dots { display: none; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .playing-game .rack-tile, .mode-card { transition: none; }
+}
+.playing-game .city-projected > .board-columns, .playing-game .city-projected .board-rows { visibility: hidden; }
+.city-board-axes { --axis-side-offset: 14px; position: absolute; inset: 0; z-index: 2; pointer-events: none; }
+.city-board-axes > span { position: absolute; transform: translate(-50%, -50%); color: #e0e9e5; font-size: 11px; font-weight: 700; line-height: 1; text-shadow: 0 1px 2px #10212e; }
+.city-board-axes > .city-axis-row { transform: translate(calc(-50% - var(--axis-side-offset)), -50%); }
+@media (min-width: 1060px) and (max-height: 700px) {
+  .playing-game .topbar { height: 32px; min-height: 32px; }
+  .playing-game .game-view { grid-template-rows: 34px 39px minmax(0, 1fr); gap: 7px 20px; }
+  .playing-game .game-heading h1 { font-size: 22px; }
+  .playing-game .board-card { grid-template-rows: 31px minmax(0, 1fr) 21px; }
+  .playing-game .board-title { min-height: 31px; }
+}
+/* Desktop zoom scales from the fitted board, so a wide panel cannot cause a jump. */
+.desktop-board-zoom { display: none; }
+@media (min-width: 1060px) {
+  .city-board-axes { --axis-side-offset: 22px; }
+  .playing-game .desktop-board-zoom { display: inline-flex; align-items: center; gap: 3px; }
+  .playing-game .desktop-board-zoom > button { min-width: 25px; }
+  .playing-game .desktop-board-zoom .board-fit-button { min-width: 66px; font-variant-numeric: tabular-nums; }
+  .playing-game .desktop-board-zoom > button:disabled { opacity: .4; }
+  .playing-game .board-card:not(.expansion-board) .board-scale-toggle,
+  .playing-game .board-tools .board-scale-toggle { display: none; }
+  .playing-game .board-columns { margin-left: 28px; }
+  .playing-game .board-with-rows { grid-template-columns: 28px minmax(0, 1fr); }
+  .playing-game .board-rows { width: 28px; }
+  .playing-game .map-themed .board-wrap,
+  .playing-game .map-themed:not(.expansion-board) .board-wrap,
+  .playing-game .map-themed[data-board-scale='detail'] .board-wrap {
+    --board-fit-width: min(100cqw, calc((100cqh - 31px) * var(--map-ratio) + 43px));
+    width: calc(var(--board-fit-width) * var(--desktop-zoom));
+    max-width: none;
+  }
+  .playing-game .map-themed .board-wrap.city-projected {
+    /* Keep projected labels outside the canvas, inside a dedicated gutter.
+       Scale the gutter with zoom so every step preserves the board's size ratio. */
+    --board-fit-width: min(100cqw, calc((100cqh - 26px) * var(--scene-ratio) + 36px));
+    width: calc(var(--board-fit-width) * var(--desktop-zoom));
+    height: calc(((var(--board-fit-width) - 36px) / var(--scene-ratio) + 26px) * var(--desktop-zoom));
+    min-width: 0;
+    padding: calc(20px * var(--desktop-zoom)) calc(6px * var(--desktop-zoom)) calc(6px * var(--desktop-zoom)) calc(30px * var(--desktop-zoom));
+    border: 0;
+    display: grid;
+    grid-template-rows: minmax(0, 1fr);
+  }
+  .playing-game .city-projected > .board-columns,
+  .playing-game .city-projected .board-rows { display: none; }
+  .playing-game .city-projected .board-with-rows { display: block; min-height: 0; }
+  .playing-game .map-themed .city-projected .game-board { aspect-ratio: auto; height: 100%; padding: 0; border: 0; }
+}
+/* A compact placement dock returns vertical space to the city. Optional rule
+   actions stay on their own rows, and the wide expansion side panel is retained. */
+@media (min-width: 1060px) {
+  .playing-game .game-view .action-card:has(.tile-rack) {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) auto auto;
+    grid-template-rows: auto auto;
+    column-gap: 18px;
+    padding: 10px 13px;
+  }
+  .playing-game .game-view .action-card:has(.tile-rack) > * { grid-column: 1 / -1; }
+  .playing-game .game-view .action-card:has(.tile-rack) .action-heading { grid-column: 1; grid-row: 1; align-self: end; }
+  .playing-game .game-view .action-card:has(.tile-rack) .turn-track { display: none; }
+  .playing-game .game-view .action-card:has(.tile-rack) .action-description { grid-column: 1; grid-row: 2; margin: 3px 0 0; font-size: 10px; align-self: start; }
+  .playing-game .game-view .action-card:has(.tile-rack) .tile-rack { grid-column: 2; grid-row: 1 / 3; margin: 0; align-self: center; flex-wrap: nowrap; justify-content: center; gap: 5px; }
+  .playing-game .game-view .action-card:has(.tile-rack) .action-footer { grid-column: 3; grid-row: 1 / 3; margin: 0; align-self: center; }
+  .playing-game .game-view .action-card:has(.tile-rack) .rack-tile { width: 45px; height: 46px; flex-shrink: 0; }
+}
+@media (min-width: 1060px) and (max-width: 1199px) {
+  .playing-game .game-view .action-card:has(.tile-rack) { column-gap: 10px; }
+  .playing-game .game-view .action-card:has(.tile-rack) .rack-tile { width: 36px; }
+}
+@media (min-width: 1600px) and (min-height: 750px) {
+  .playing-game .game-view.expansion-game .action-card:has(.tile-rack) { display: block; }
+  .playing-game .game-view.expansion-game .action-card:has(.tile-rack) .turn-track { display: flex; }
+  .playing-game .game-view.expansion-game .action-card:has(.tile-rack) .tile-rack { margin-top: 14px; flex-wrap: wrap; justify-content: flex-start; }
+  .playing-game .game-view.expansion-game .action-card:has(.tile-rack) .action-footer { margin-top: 12px; }
+}

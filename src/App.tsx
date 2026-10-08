@@ -462,23 +462,25 @@ export default function App() {
         </div>
         <span className="nav-label">LET’S BUILD SOMETHING</span>
         <nav>
-          <button className={page === 'home' ? 'active' : ''} onClick={() => navigate('home')}>
+          <button title="The lobby" className={page === 'home' ? 'active' : ''} onClick={() => navigate('home')}>
             <Home size={19} /> The lobby
           </button>
           <button
+            title="Play a game"
             className={page === 'play' ? 'active' : ''}
             onClick={() => (game ? navigate('play') : setModal('solo'))}
           >
             <Layers3 size={19} /> Play a game <span className="nav-live" />
           </button>
-          <button className={page === 'story' ? 'active' : ''} onClick={() => navigate('story')}><BookOpen size={19} /> The Long Game <span className="nav-live" /></button>
+          <button title="The Long Game" className={page === 'story' ? 'active' : ''} onClick={() => navigate('story')}><BookOpen size={19} /> The Long Game <span className="nav-live" /></button>
           <button
+            title="My games"
             className={page === 'history' ? 'active' : ''}
             onClick={() => navigate('history')}
           >
             <Clock3 size={19} /> My games {saves.length + (activeOnlineRoom ? 1 : 0) > 0 && <small>{saves.length + (activeOnlineRoom ? 1 : 0)}</small>}
           </button>
-          <button className={page === 'learn' ? 'active' : ''} onClick={() => navigate('learn')}>
+          <button title="How to play" className={page === 'learn' ? 'active' : ''} onClick={() => navigate('learn')}>
             <BookOpen size={19} /> How to play <ArrowUpRight size={13} className="nav-external" />
           </button>
         </nav>

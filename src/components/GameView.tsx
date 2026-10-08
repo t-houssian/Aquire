@@ -1,5 +1,5 @@
 import { shareDecisionText } from './ShareDecisionReveal';
-import { lazy, Suspense, useEffect, useMemo, useRef, useState, type CSSProperties } from 'react';
+import { lazy, Suspense, useEffect, useLayoutEffect, useMemo, useRef, useState, type CSSProperties } from 'react';
 import {
   ArrowLeft,
   ArrowRight,
@@ -50,6 +50,7 @@ import Finale from './Finale';
 import CharacterAvatar from './CharacterAvatar';
 import { getCharacter } from '../game/characters';
 import { mapThemeStyle } from './MapPreview';
+import type { CityTileLayout } from './CityScene';
 const CityScene = lazy(() => import('./CityScene'));
 const colors = [
   '#8eab6b', '#dc9f7a', '#8d9fb8', '#bfa0bf', '#bcb06c', '#85b6b0',
@@ -124,25 +125,59 @@ export default function GameView({
     [clockNow, setClockNow] = useState(Date.now()),
     [sell, setSell] = useState(0),
     [trade, setTrade] = useState(0),
-    [enlargedBoard, setEnlargedBoard] = useState(false),
+    [mobileEnlargedBoard, setMobileEnlargedBoard] = useState(false),
+    [desktopZoom, setDesktopZoom] = useState(1),
     [focusedBoard, setFocusedBoard] = useState(false),
     [cityReady, setCityReady] = useState(false),
     [cityView, setCityView] = useState(true),
+    [cityLayout, setCityLayout] = useState<CityTileLayout[]>([]),
     [boardRotation, setBoardRotation] = useState<boolean | null>(null),
-    [boardFit, setBoardFit] = useState({ compact: false, rotated: false }),
+    [boardFit, setBoardFit] = useState({ compact: false, rotated: false, short: false }),
     [compactView, setCompactView] = useState<'board' | 'market'>(game.phase === 'buy' ? 'market' : 'board'),
     [tab, setTab] = useState<'market' | 'investors' | 'activity' | 'results' | 'rules'>(
       game.phase === 'ended' ? 'results' : 'market',
     );
   const boardStage = useRef<HTMLDivElement>(null);
+  const zoomAnchor = useRef<{ x: number; y: number; offsetX: number; offsetY: number } | null>(null);
+  const enlargedBoard = boardFit.compact ? mobileEnlargedBoard : desktopZoom > 1;
+  const enlargedRef = useRef(enlargedBoard);
+  enlargedRef.current = enlargedBoard;
+  const cameraIncline = boardFit.compact || boardFit.short ? 13 : 19;
   const rotatedBoard = boardRotation ?? (boardFit.compact && boardFit.rotated);
   const boardColumns = rotatedBoard ? cityMap.rows : cityMap.columns;
   const boardRows = rotatedBoard ? cityMap.columns : cityMap.rows;
+  const cameraDistance = Math.hypot(30, cameraIncline);
+  const sceneRatio = (boardColumns + .4) / ((boardRows + .4) * 30 / cameraDistance + 1.38 * cameraIncline / cameraDistance);
+  const projectedTiles = useMemo(() => new Map(cityLayout.map(tile => [tile.id, tile])), [cityLayout]);
   const boardTiles = useMemo(() => rotatedBoard ? Array.from({ length: cityMap.gridTiles.length }, (_, i) => {
     const column = Math.floor(i / cityMap.rows);
     const row = cityMap.rows - 1 - i % cityMap.rows;
     return cityMap.gridTiles[row * cityMap.columns + column];
   }) : cityMap.gridTiles, [rotatedBoard, cityMap]);
+  const changeDesktopZoom = (value: number) => {
+    const next = Math.min(3, Math.max(1, Math.round(value * 100) / 100));
+    if (next === desktopZoom) return;
+    const stage = boardStage.current, wrap = stage?.querySelector<HTMLElement>('.board-wrap');
+    zoomAnchor.current = null;
+    if (next !== 1 && stage && wrap) {
+      const frame = stage.getBoundingClientRect(), board = wrap.getBoundingClientRect();
+      const offsetX = stage.clientWidth / 2, offsetY = stage.clientHeight / 2;
+      zoomAnchor.current = { x: (frame.left + offsetX - board.left) / board.width,
+        y: (frame.top + offsetY - board.top) / board.height, offsetX, offsetY };
+    }
+    setDesktopZoom(next);
+  };
+  useLayoutEffect(() => {
+    const stage = boardStage.current, wrap = stage?.querySelector<HTMLElement>('.board-wrap');
+    if (boardFit.compact || !stage || !wrap) return;
+    if (desktopZoom === 1) { stage.scrollLeft = 0; stage.scrollTop = 0; }
+    else if (zoomAnchor.current) {
+      const anchor = zoomAnchor.current, frame = stage.getBoundingClientRect(), board = wrap.getBoundingClientRect();
+      stage.scrollLeft += board.left + anchor.x * board.width - frame.left - anchor.offsetX;
+      stage.scrollTop += board.top + anchor.y * board.height - frame.top - anchor.offsetY;
+    }
+    zoomAnchor.current = null;
+  }, [desktopZoom, boardFit.compact, cityReady]);
   useEffect(() => {
     const stage = boardStage.current;
     if (!stage || !enlargedBoard) return;
@@ -178,37 +213,47 @@ export default function GameView({
     if (!stage) return;
     const compact = window.matchMedia('(max-width: 1059px)');
     const portrait = window.matchMedia('(orientation: portrait)');
+    const short = window.matchMedia('(max-height: 700px)');
     const update = () => {
       if (!stage.clientWidth || !stage.clientHeight) return;
       const width = stage.clientWidth - 31, height = stage.clientHeight - 31;
       const normalSize = Math.min(width / cityMap.columns, height / cityMap.rows);
       const rotatedSize = Math.min(width / cityMap.rows, height / cityMap.columns);
-      const next = { compact: compact.matches, rotated: expansionBoard && rotatedSize > normalSize * 1.15 };
-      setBoardFit((prior) => prior.compact === next.compact && prior.rotated === next.rotated ? prior : next);
+      const next = { compact: compact.matches, rotated: (expansionBoard || cityView) && rotatedSize > normalSize * 1.15, short: short.matches };
+      setBoardFit((prior) => prior.compact === next.compact && prior.rotated === next.rotated && prior.short === next.short ? prior : next);
     };
     const observer = new ResizeObserver(update);
     observer.observe(stage);
     compact.addEventListener('change', update);
     portrait.addEventListener('change', update);
+    short.addEventListener('change', update);
     update();
     return () => {
       observer.disconnect();
       compact.removeEventListener('change', update);
       portrait.removeEventListener('change', update);
+      short.removeEventListener('change', update);
     };
-  }, [cityMap, expansionBoard]);
+  }, [cityMap, expansionBoard, cityView]);
   useEffect(() => {
-    setEnlargedBoard(false);
+    setMobileEnlargedBoard(false);
+    setDesktopZoom(1);
+    zoomAnchor.current = null;
     setFocusedBoard(false);
     setBoardRotation(null);
   }, [game.id]);
   useEffect(() => {
     const stage = boardStage.current;
-    if (!stage || !enlargedBoard || !selected) return;
-    const observer = new ResizeObserver(() => centerBoardTile(stage, selected));
+    if (!stage || !selected) return;
+    let frame = 0;
+    const observer = new ResizeObserver(() => {
+      if (!enlargedRef.current) return;
+      cancelAnimationFrame(frame);
+      frame = requestAnimationFrame(() => centerBoardTile(stage, selected));
+    });
     observer.observe(stage);
-    return () => observer.disconnect();
-  }, [selected, enlargedBoard, compactView, rotatedBoard]);
+    return () => { observer.disconnect(); cancelAnimationFrame(frame); };
+  }, [selected, mobileEnlargedBoard, compactView, rotatedBoard]);
   useEffect(() => {
     setTab(game.phase === 'ended' ? 'results' : 'market');
   }, [game.id, game.phase === 'ended']);
@@ -287,7 +332,7 @@ export default function GameView({
     const spaces = new Set(cityMap.tiles);
     return boardTiles.map(tile => {
       const chain = game.board[tile];
-      return { id: tile, void: !spaces.has(tile), occupied: Boolean(chain), color: CHAINS.find(c => c.id === chain)?.color,
+      return { id: tile, void: !spaces.has(tile), occupied: Boolean(chain), color: CHAINS.find(c => c.id === chain)?.color, model: CHAINS.findIndex(c => c.id === chain),
         selected: tile === selected || tile === selectedRemoval,
         inHand: !privateGate && player.hand.includes(tile) && legal.includes(tile) };
     });
@@ -414,11 +459,11 @@ export default function GameView({
       </div>
       <div className="game-layout">
         <div className="board-column">
-          <section id="game-board-panel" className={`board-card map-themed ${expansionBoard ? 'expansion-board' : ''}`} style={{ ...mapThemeStyle(cityMap), '--map-columns': boardColumns, '--map-rows': boardRows, '--map-ratio': boardColumns / boardRows, '--map-inverse-ratio': boardRows / boardColumns } as CSSProperties} data-map={cityMap.id} data-board-scale={enlargedBoard ? 'detail' : 'fit'} data-board-rotated={rotatedBoard}>
+          <section id="game-board-panel" className={`board-card map-themed ${expansionBoard ? 'expansion-board' : ''}`} style={{ ...mapThemeStyle(cityMap), '--map-columns': boardColumns, '--map-rows': boardRows, '--map-ratio': boardColumns / boardRows, '--map-inverse-ratio': boardRows / boardColumns, '--scene-ratio': sceneRatio, '--desktop-zoom': desktopZoom } as CSSProperties} data-map={cityMap.id} data-board-scale={enlargedBoard ? 'detail' : 'fit'} data-board-zoom={desktopZoom} data-board-rotated={rotatedBoard}>
             <div className="board-title">
               <div>
                 <span className="live-dot" />
-                <strong>{cityMap.id === 'classic' ? 'The city' : cityMap.name}</strong>
+                <strong>{cityMap.id === 'classic' ? 'Acquire · The city' : cityMap.name}</strong>
                 <span className="muted small">{cityMap.palette.name}</span>
               </div>
               <div className="board-tools">
@@ -430,7 +475,12 @@ export default function GameView({
                 <button type="button" className="board-rotate-toggle" aria-label="Rotate board" title="Rotate board · tile coordinates stay the same" aria-pressed={rotatedBoard} onClick={() => setBoardRotation(!rotatedBoard)}>
                   <RotateCw size={15} />
                 </button>
-                <button type="button" className="board-scale-toggle" aria-label={enlargedBoard ? 'Fit entire board' : 'Enlarge board tiles'} aria-pressed={enlargedBoard} onClick={() => setEnlargedBoard((value) => !value)}>
+                <div className="desktop-board-zoom" role="group" aria-label="Board zoom">
+                  <button type="button" aria-label="Zoom out" title="Zoom out" disabled={desktopZoom <= 1} onClick={() => changeDesktopZoom(desktopZoom - .15)}><Minus size={14} /></button>
+                  <button type="button" className="board-fit-button" aria-label="Fit entire board" title={`Fit entire board · ${Math.round(desktopZoom * 100)}% zoom`} onClick={() => changeDesktopZoom(1)}><Scan size={14} /><span>{Math.round(desktopZoom * 100)}%</span></button>
+                  <button type="button" aria-label="Enlarge board tiles" title="Zoom in" disabled={desktopZoom >= 3} onClick={() => changeDesktopZoom(desktopZoom + .15)}><Plus size={14} /></button>
+                </div>
+                <button type="button" className="board-scale-toggle" aria-label={enlargedBoard ? 'Fit entire board' : 'Enlarge board tiles'} aria-pressed={enlargedBoard} onClick={() => setMobileEnlargedBoard((value) => !value)}>
                   {enlargedBoard ? <Scan size={14} /> : <ZoomIn size={14} />}
                   {enlargedBoard ? 'Fit' : 'Zoom'}
                 </button>
@@ -440,7 +490,7 @@ export default function GameView({
               </div>
             </div>
             <div className="board-stage" ref={boardStage} tabIndex={0} aria-label={enlargedBoard ? "City board. Drag or use arrow keys to explore." : "City board"}>
-              <div className="board-wrap">
+              <div className={`board-wrap ${cityView && cityReady ? 'city-projected' : ''}`}>
                 <div className="board-columns">
                   {Array.from({ length: boardColumns }, (_, i) => (
                     <span key={i}>{rotatedBoard ? String.fromCharCode(65 + cityMap.rows - 1 - i) : i + 1}</span>
@@ -453,7 +503,17 @@ export default function GameView({
                     ))}
                   </div>
                   <div className={`game-board ${cityView && cityReady ? 'city-rendered' : ''}`} role="group" aria-label="Acquire game board">
-                    {cityView && <Suspense fallback={null}><CityScene tiles={sceneTiles} columns={boardColumns} rows={boardRows} onReady={() => setCityReady(true)} onUnavailable={() => setCityReady(false)} /></Suspense>}
+                    {cityView && <Suspense fallback={null}><CityScene tiles={sceneTiles} columns={boardColumns} rows={boardRows} incline={cameraIncline} onLayout={setCityLayout} onReady={() => setCityReady(true)} onUnavailable={() => setCityReady(false)} /></Suspense>}
+                    {cityView && cityReady && <div className="city-board-axes" aria-hidden="true">
+                      {Array.from({ length: boardColumns }, (_, i) => {
+                        const position = projectedTiles.get(boardTiles[i]);
+                        return position && <span className="city-axis-column" key={`column-${i}`} style={{ left: position.left + position.width / 2, top: position.columnLabelTop }}>{rotatedBoard ? String.fromCharCode(65 + cityMap.rows - 1 - i) : i + 1}</span>;
+                      })}
+                      {Array.from({ length: boardRows }, (_, i) => {
+                        const position = projectedTiles.get(boardTiles[i * boardColumns]);
+                        return position && <span className="city-axis-row" key={`row-${i}`} style={{ left: position.left, top: position.top + position.height / 2 }}>{rotatedBoard ? i + 1 : String.fromCharCode(65 + i)}</span>;
+                      })}
+                    </div>}
                     {boardTiles.map((tile) => {
                       const chain = game.board[tile];
                       const isPlayableSpace = playableSpaces.has(tile);
@@ -461,6 +521,7 @@ export default function GameView({
                       const inHand = player.hand.includes(tile) && !privateGate;
                       const enabled = controllable && game.phase === 'place' && (removalMode ? removableTiles.has(tile) : inHand);
                       const foundingHead = def ? headquarters[def.id] : undefined;
+                      const projection = cityView && cityReady ? projectedTiles.get(tile) : undefined;
                       const head =
                         def &&
                         ((foundingHead && game.board[foundingHead] === def.id ? foundingHead : null) ||
@@ -470,14 +531,8 @@ export default function GameView({
                           key={tile}
                           data-tile={tile}
                           className={`board-tile ${!isPlayableSpace ? 'map-void' : ''} ${chain ? 'occupied' : ''} ${chain === 'independent' ? 'independent-tile' : ''} ${def ? 'chain-tile' : ''} ${head ? 'chain-headquarters' : ''} ${!removalMode && inHand && legal.includes(tile) ? `playable${rackPreview ? ' rack-preview' : ''}` : ''} ${removalMode && removableTiles.has(tile) ? 'removal-target' : ''} ${selected === tile || selectedRemoval === tile ? 'tile-selected' : ''} ${game.lastPlacedTile === tile ? 'last-placed' : ''}`}
-                          style={
-                            def
-                              ? ({
-                                  '--chain': def.color,
-                                  '--chain-light': def.light,
-                                } as CSSProperties)
-                              : undefined
-                          }
+                          style={{ ...(def ? { '--chain': def.color, '--chain-light': def.light } : {}),
+                            ...(projection ? { left: projection.left, top: projection.top, width: projection.width, height: projection.height, clipPath: projection.clipPath } : {}) } as CSSProperties}
                           aria-label={`${tile}${!isPlayableSpace ? ', outside this map' : def ? ', ' + def.name : chain ? ', independent hotel' : ''}${inHand ? ', in your hand' : ''}${rackPreview && legal.includes(tile) ? ', legal tile preview, placement disabled' : ''}`}
                           aria-pressed={selected === tile || selectedRemoval === tile}
                           disabled={!enabled || !isPlayableSpace}
@@ -579,7 +634,7 @@ export default function GameView({
                                     : 'A fresh start. Place an independent hotel.'
                               : selection.reason
                             : legal.length
-                              ? 'Choose a tile from your rack or a highlighted space on the board.'
+                              ? 'Choose a tile in your rack or on the board.'
                               : (game.placementsThisTurn ?? 0) > 0
                                 ? 'No more tiles can be placed this turn. Finish placement and continue to investing.'
                                 : game.bag.length && (game.removalsThisTurn ?? 0) === 0
@@ -986,7 +1041,7 @@ export default function GameView({
                     price = getSharePrice(game, c.id),
                     canBuy = controllable && game.phase === 'buy' && size > 0;
                   return (
-                    <div className={`stock-row ${!size ? 'inactive' : ''}`} key={c.id}>
+                    <div className={`stock-row ${!size ? 'inactive' : ''}`} key={c.id} style={{ '--chain': c.color, '--chain-light': c.light } as CSSProperties}>
                       <div className="stock-main">
                         <span
                           className="chain-logo"

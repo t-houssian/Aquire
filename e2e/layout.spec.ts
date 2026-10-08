@@ -208,13 +208,14 @@ test('desktop sidebar releases horizontal space and remembers hiding and restori
   await load(page, fixture(checkpoints[0]));
   const before = await page.locator('.main-shell').boundingBox();
   const boardBefore = await page.locator('.game-layout').boundingBox();
+  const railWidth = (await page.locator('.sidebar').boundingBox())!.width;
   await page.getByRole('button', { name: 'Hide sidebar', exact: true }).click();
   await expect(page.getByRole('button', { name: 'Show sidebar', exact: true })).toBeVisible();
   await expect
     .poll(async () => (await page.locator('.main-shell').boundingBox())!.width)
-    .toBeGreaterThan(before!.width + 100);
+    .toBeGreaterThanOrEqual(before!.width + railWidth - 1);
   expect((await page.locator('.game-layout').boundingBox())!.width).toBeGreaterThan(
-    boardBefore!.width + 100,
+    boardBefore!.width + railWidth - 1,
   );
   expect(
     await page.evaluate(

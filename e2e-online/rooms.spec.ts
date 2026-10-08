@@ -315,7 +315,7 @@ test.describe('online room UI — HTTP-mocked Supabase', () => {
     await expectBoard(page);
     await page.locator('.game-topline').getByRole('button', { name: 'The clubhouse' }).click();
     await page.getByRole('dialog', { name: 'Leave this online game?' }).getByRole('button', { name: 'Leave game' }).click();
-    await expect(page.getByRole('heading', { name: /Make your next move/ })).toBeVisible();
+    await expect(page.getByRole('heading', { name: 'Acquire.', exact: true })).toBeVisible();
     expect(backend.closed).toBe(false);
     expect(backend.operations.some((operation) => operation.operation === 'leave')).toBe(true);
     expect(backend.operations.some((operation) => operation.operation === 'end')).toBe(false);
