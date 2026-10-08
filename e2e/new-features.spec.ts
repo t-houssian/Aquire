@@ -1,6 +1,11 @@
 import { test, expect } from '@playwright/test';
 import { MAPS, CREATIVE_MAP_IDS } from '../src/game/maps';
 import { applyAction, chooseBotAction, createGame } from '../src/game/engine';
+import { freezeGameClock } from './helpers/clock';
+
+test.beforeEach(async ({ page }) => {
+  await freezeGameClock(page);
+});
 
 test('new table choices apply a variant map, strategic computers, and private holdings', async ({ page }) => {
   await page.goto('/');
@@ -14,6 +19,7 @@ test('new table choices apply a variant map, strategic computers, and private ho
   await dialog.getByRole('button', { name: /Let’s build something/ }).click();
   await expect(page.getByRole('heading', { name: 'The boardroom.' })).toBeVisible();
   const state = await page.evaluate(() => JSON.parse(localStorage.getItem('aquire.games.v2') || '[]')[0].game);
+  expect(state.revision).toBe(0);
   expect(state.mapId).toBe('courtyard');
   expect(state.botDifficulty).toBe('strategist');
   expect(Object.keys(state.board).length + state.bag.length + state.players.reduce((sum: number, p: { hand: string[] }) => sum + p.hand.length, 0)).toBe(102);
@@ -60,15 +66,16 @@ test('five new shapes preview their own palettes and place the correct tiles on 
   expect(contrast.tile).toBeGreaterThan(contrast.board);
   expect(contrast.gap).toBe('1px');
   if (process.env.AQUIRE_CAPTURE_MAPS === '1') {
-    await page.waitForTimeout(700);
+    await page.clock.runFor(700);
     await page.screenshot({ path: 'artifacts/map-four-spires-board-20260928.png', fullPage: true });
   }
   const state = await page.evaluate(() => JSON.parse(localStorage.getItem('aquire.games.v2') || '[]')[0].game);
+  expect(state.revision).toBe(0);
   expect(Object.keys(state.board).length + state.bag.length + state.players.reduce((sum: number, player: { hand: string[] }) => sum + player.hand.length, 0)).toBe(80);
 });
 
 test('large map tiers expose 8, 10 and 12 seats and render the full max city', async ({ page }) => {
-  await page.addInitScript(() => localStorage.setItem('aquire.settings.v1', JSON.stringify({ speed: 1400, hints: true })));
+  await page.addInitScript(() => localStorage.setItem('aquire.settings.v1', JSON.stringify({ speed: 220, hints: true })));
   await page.goto('/');
   await page.getByRole('button', { name: /Let’s play/ }).first().click();
   const dialog = page.getByRole('dialog', { name: 'A new opportunity' });
@@ -92,8 +99,10 @@ test('large map tiers expose 8, 10 and 12 seats and render the full max city', a
   const investorColors = await page.locator('.players-bar .avatar').evaluateAll((avatars) => avatars.map((avatar) => getComputedStyle(avatar).backgroundColor));
   expect(new Set(investorColors).size).toBe(12);
   const state = await page.evaluate(() => JSON.parse(localStorage.getItem('aquire.games.v2') || '[]')[0].game);
+  expect(state.revision).toBe(0);
   expect(state.players).toHaveLength(12);
   expect(state.players.every((player: { hand: string[] }) => player.hand.length === 6)).toBe(true);
+  expect(Object.keys(state.board)).toHaveLength(12);
   expect(Object.keys(state.board).length + state.bag.length + state.players.reduce((sum: number, player: { hand: string[] }) => sum + player.hand.length, 0)).toBe(384);
   if ((page.viewportSize()?.width ?? 1000) < 430) {
     const geometry = await page.evaluate(() => {
@@ -105,9 +114,16 @@ test('large map tiers expose 8, 10 and 12 seats and render the full max city', a
     await expect(page.getByRole('button', { name: 'Enlarge board tiles' })).toBeVisible();
   }
   if (process.env.AQUIRE_CAPTURE_MAPS === '1') {
-    await page.waitForTimeout(700);
     await page.screenshot({ path: 'artifacts/max-metropolis-board.png', fullPage: true });
   }
+  // This fixed deal seats a computer first. After inspecting the untouched
+  // opening, exercise its real timer and confirm that it consumes one tile.
+  expect(state.players[state.currentPlayer].isBot).toBe(true);
+  await page.clock.runFor(220);
+  await expect.poll(() => page.evaluate(() => JSON.parse(localStorage.getItem('aquire.games.v2') || '[]')[0].game.revision)).toBe(1);
+  const next = await page.evaluate(() => JSON.parse(localStorage.getItem('aquire.games.v2') || '[]')[0].game);
+  expect(next.players[state.currentPlayer].hand).toHaveLength(5);
+  expect(Object.keys(next.board)).toHaveLength(13);
 });
 
 test('eight new six-seat shapes preview unique dimensions and a tall map plays without page overflow', async ({ page }) => {
@@ -266,7 +282,7 @@ test('completed saves become compact match history with final sell-offs and trop
     await page.getByRole('button', { name: 'See the payouts' }).click();
   }
   if (process.env.AQUIRE_CAPTURE_FINALE === '1') {
-    await page.waitForTimeout(700);
+    await page.clock.runFor(700);
     await page.screenshot({ path: 'artifacts/finale-settlement-20260928.png', fullPage: true });
   }
   for (const settlement of state.finalSettlements!) {
@@ -276,7 +292,7 @@ test('completed saves become compact match history with final sell-offs and trop
   await expect(page.locator('.final-standings-list > div')).toHaveCount(3);
   await expect(page.locator('.trophy-player')).toHaveCount(3);
   if (process.env.AQUIRE_CAPTURE_FINALE === '1') {
-    await page.waitForTimeout(700);
+    await page.clock.runFor(700);
     await page.screenshot({ path: 'artifacts/finale-winner-20260928.png', fullPage: true });
   }
   await page.getByRole('button', { name: 'Replay the sell-offs' }).click();

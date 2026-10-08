@@ -1,10 +1,12 @@
 import { test, expect } from '@playwright/test';
 import { analyzeTile, createGame, getLegalTiles } from '../src/game/engine';
+import { freezeGameClock, GAME_CLOCK_START } from './helpers/clock';
+
+test.beforeEach(async ({ page }) => {
+  await freezeGameClock(page);
+});
 
 test('hotel roster and per-chain share supplies persist into a playable game', async ({ page }) => {
-  // Inspect the opening supplies before a randomly seated computer can use them.
-  await page.clock.install();
-  await page.clock.pauseAt(new Date());
   await page.goto('/');
   await page.getByRole('button', { name: 'Table preferences' }).first().click();
   const preferences = page.getByRole('dialog', { name: 'Make yourself at home' });
@@ -23,6 +25,7 @@ test('hotel roster and per-chain share supplies persist into a playable game', a
   await setup.getByRole('button', { name: /Let’s build something/ }).click();
   await expect(page.locator('.game-view')).toBeVisible();
   const state = await page.evaluate(() => JSON.parse(localStorage.getItem('aquire.games.v2') || '[]')[0].game);
+  expect(state.revision).toBe(0);
   expect(state.houseRules.hotelChains).toContain('goldspire');
   expect(state.houseRules.hotelChains).not.toContain('sackson');
   expect(state.bank.goldspire).toBe(40);
@@ -80,7 +83,9 @@ test('house-rule defaults live in preferences and can be changed for a new table
   await setup.getByLabel('Market roll frequency').selectOption('two-rounds');
   await setup.getByLabel('Starting tiles per player').fill('4');
   await setup.getByRole('button', { name: /Let’s build something/ }).click();
+  await expect(page.locator('.game-view')).toBeVisible();
   const state = await page.evaluate(() => JSON.parse(localStorage.getItem('aquire.games.v2') || '[]')[0].game);
+  expect(state.revision).toBe(0);
   expect(Object.keys(state.board)).toHaveLength(12);
   expect(state.players.every((player: { cash: number }) => player.cash === 9000)).toBe(true);
   expect(state.houseRules).toMatchObject({ startingTilesPerPlayer: 4, placementsPerTurn: 3, removalsPerTurn: 2, buyLimit: 5, anonymousBuying: true, marketMode: 'crazy', marketFrequency: 'two-rounds' });
@@ -136,13 +141,14 @@ test('an expired local turn advances automatically and logs the timeout', async 
   ];
   const state = createGame({ players, seed: 827, houseRules: { turnTimerSeconds: 5 } });
   state.currentPlayer = 0;
-  state.turnDeadlineAt = Date.now() - 1000;
+  state.turnDeadlineAt = Date.parse(GAME_CLOCK_START) - 1000;
   await page.addInitScript((game) => localStorage.setItem('aquire.games.v2', JSON.stringify([{ game, kind: 'solo', updatedAt: new Date().toISOString() }])), state);
   await page.goto('/');
   const menu = page.getByRole('button', { name: 'Open navigation' });
   if (await menu.isVisible()) await menu.click();
   await page.locator('.sidebar nav').getByRole('button', { name: /My games/ }).click();
   await page.locator('.saved-game-main').first().click();
+  await page.clock.runFor(1000);
   await expect.poll(async () => page.evaluate(() => JSON.parse(localStorage.getItem('aquire.games.v2') || '[]')[0]?.game?.turn)).toBeGreaterThan(1);
   const next = await page.evaluate(() => JSON.parse(localStorage.getItem('aquire.games.v2') || '[]')[0].game);
   expect(next.logs.some((log: { type: string }) => log.type === 'timeout')).toBe(true);
