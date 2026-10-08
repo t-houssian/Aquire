@@ -1,6 +1,6 @@
 import AvatarEditor from './components/AvatarEditor';
 import { readProfile, saveProfile } from './lib/profile';
-import { useCallback, useEffect, useRef, useState } from 'react';
+import { useCallback, useEffect, useLayoutEffect, useRef, useState } from 'react';
 import {
   ArrowRight,
   ArrowUpRight,
@@ -235,7 +235,9 @@ export default function App() {
     const timer = setTimeout(() => setNotice(''), 7000);
     return () => clearTimeout(timer);
   }, [notice]);
-  useEffect(() => {
+  // Queue reviews before painting the next turn. A passive effect can leave a
+  // window for the next computer's timer to run on a busy renderer.
+  useLayoutEffect(() => {
     const previous = previousGame.current;
     previousGame.current = game;
     if (page !== 'play' || !game || previous?.id !== game.id) {

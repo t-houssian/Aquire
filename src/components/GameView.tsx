@@ -258,9 +258,12 @@ export default function GameView({
     setTab(game.phase === 'ended' ? 'results' : 'market');
   }, [game.id, game.phase === 'ended']);
   useEffect(() => {
+    // Only the viewer's own decisions navigate the table automatically.
+    // Opponent phase changes must not close rules or portfolios being read.
+    if (actor.id !== viewerId || actor.isBot) return;
     setCompactView(game.phase === 'buy' ? 'market' : 'board');
     if (game.phase === 'buy') setTab('market');
-  }, [game.id, game.phase, game.turn]);
+  }, [game.id, game.phase, game.turn, actor.id, actor.isBot, viewerId]);
   useEffect(() => {
     setSelected(null);
     setCart(emptyCart());

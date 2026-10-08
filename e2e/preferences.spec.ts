@@ -196,8 +196,13 @@ test('the stock-count setting masks only bank quantities and preserves your shar
   await expect(row.locator('.stock-price')).toContainText(`${fixture.players[0].stocks[active]} owned`);
 });
 
-test('each completed computer turn shows its tile and purchase, and pauses the next computer', async ({ page }) => {
+test('each completed computer turn shows its tile and purchase, and pauses the next computer', async ({ page, browserName }) => {
   const fixture = recapFixture(1);
+  // Exercise the pause with a busy renderer, as on a shared CI runner.
+  if (browserName === 'chromium') {
+    const renderer = await page.context().newCDPSession(page);
+    await renderer.send('Emulation.setCPUThrottlingRate', { rate: 4 });
+  }
   await page.clock.install();
   await loadFixture(page, fixture.before);
   await expect(recap(page)).toBeVisible();
@@ -217,6 +222,25 @@ test('each completed computer turn shows its tile and purchase, and pauses the n
   expect((await saved(page)).revision).toBe(paused.revision);
   await recap(page).getByRole('button', { name: 'Continue', exact: true }).click();
   await expect.poll(async () => (await saved(page)).revision).toBeGreaterThan(paused.revision);
+});
+
+test('reading house rules stays open while a computer moves into buying', async ({ page }) => {
+  const fixture = recapFixture(1);
+  await page.clock.install();
+  await page.clock.pauseAt(new Date());
+  await loadFixture(page, fixture.before);
+  const stocksView = page.getByRole('button', { name: 'Stocks', exact: true });
+  if (await stocksView.isVisible()) await stocksView.click();
+  await page.getByRole('button', { name: 'House rules', exact: true }).click();
+  await expect(page.locator('.house-rules-summary')).toBeVisible();
+  for (let step = 0; step < 5 && (await saved(page)).phase !== 'buy'; step++) {
+    const previous = await saved(page);
+    await page.clock.runFor(220);
+    await expect.poll(async () => (await saved(page)).revision).toBeGreaterThan(previous.revision);
+  }
+  expect((await saved(page)).phase).toBe('buy');
+  await expect(page.locator('.house-rules-summary')).toBeVisible();
+  await expect(page.getByRole('button', { name: 'House rules', exact: true })).toHaveClass(/active/);
 });
 
 test('memory play shows purchases once in the recap, hides their history, and does not replay on resume', async ({ page }) => {

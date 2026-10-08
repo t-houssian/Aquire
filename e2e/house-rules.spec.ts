@@ -2,6 +2,9 @@ import { test, expect } from '@playwright/test';
 import { analyzeTile, createGame, getLegalTiles } from '../src/game/engine';
 
 test('hotel roster and per-chain share supplies persist into a playable game', async ({ page }) => {
+  // Inspect the opening supplies before a randomly seated computer can use them.
+  await page.clock.install();
+  await page.clock.pauseAt(new Date());
   await page.goto('/');
   await page.getByRole('button', { name: 'Table preferences' }).first().click();
   const preferences = page.getByRole('dialog', { name: 'Make yourself at home' });
@@ -18,6 +21,7 @@ test('hotel roster and per-chain share supplies persist into a playable game', a
   await expect(setup.locator('.hotel-choice').filter({ hasText: 'Sackson' }).locator('input[type="checkbox"]')).not.toBeChecked();
   await expect(setup.getByRole('spinbutton', { name: 'Goldspire shares available' })).toHaveValue('40');
   await setup.getByRole('button', { name: /Let’s build something/ }).click();
+  await expect(page.locator('.game-view')).toBeVisible();
   const state = await page.evaluate(() => JSON.parse(localStorage.getItem('aquire.games.v2') || '[]')[0].game);
   expect(state.houseRules.hotelChains).toContain('goldspire');
   expect(state.houseRules.hotelChains).not.toContain('sackson');

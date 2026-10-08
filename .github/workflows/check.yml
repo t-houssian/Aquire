@@ -1,22 +1,38 @@
 name: Verify Aquire
 on: [push, pull_request]
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
 jobs:
   verify:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
+    timeout-minutes: 40
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
         with:
           node-version: 24
           cache: npm
-      - run: npm ci
-      - run: npm run check
-      - run: npx playwright install --with-deps chromium webkit
-      - run: npm run test:e2e
-      - run: npm run test:e2e:online
-      - run: npm run test:backend
+      - name: Install locked dependencies
+        run: npm ci
+      - name: Build and test game rules
+        run: npm run check
+      - name: Install browser dependencies
+        run: npx playwright install --with-deps chromium webkit
+      - name: Verify desktop and mobile gameplay
+        run: npm run test:e2e
+      - name: Verify online room UI
+        run: npm run test:e2e:online
+      - name: Verify backend and database migrations
+        run: npm run test:backend
       - uses: actions/upload-artifact@v4
-        if: failure()
+        if: always()
         with:
           name: browser-test-results
-          path: test-results/
+          path: |
+            test-results/
+            test-results-online/
+            playwright-report/
+            playwright-report-online/
+          if-no-files-found: ignore
+          retention-days: 7

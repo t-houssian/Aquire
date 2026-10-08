@@ -2,9 +2,11 @@ import { defineConfig, devices } from '@playwright/test';
 export default defineConfig({
   testDir: './e2e',
   fullyParallel: true,
+  forbidOnly: !!process.env.CI,
+  workers: process.env.CI ? 2 : undefined,
   timeout: 45000,
   expect: { timeout: 10000 },
-  reporter: 'list',
+  reporter: process.env.CI ? [['list'], ['html', { open: 'never' }]] : 'list',
   use: {
     baseURL: 'http://127.0.0.1:5173',
     trace: 'retain-on-failure',
@@ -15,5 +17,5 @@ export default defineConfig({
     { name: 'mobile', use: { ...devices['iPhone 13'], defaultBrowserType: 'chromium' } },
     { name: 'mobile-webkit', testMatch: /(?:responsive-game|payouts|story)\.spec\.ts/, use: { ...devices['iPhone 13'], defaultBrowserType: 'webkit' } },
   ],
-  webServer: { command: 'npm run dev', url: 'http://127.0.0.1:5173', reuseExistingServer: true },
+  webServer: { command: 'npm run dev', url: 'http://127.0.0.1:5173', reuseExistingServer: !process.env.CI },
 });
