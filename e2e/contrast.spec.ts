@@ -100,6 +100,13 @@ for (const screen of ['lobby', 'setup', 'settings', 'character', 'rewards', 'onl
       }
     }
     await readable(page, scope);
+    if (screen === 'finale') {
+      const showBoard = page.getByRole('button', { name: 'See the board', exact: true });
+      if (await showBoard.isVisible()) await showBoard.click();
+      await expect(page.locator('.final-board-panel')).toBeVisible();
+      expect(await page.locator('.final-board-panel .hotel-nameplate-slot').count()).toBeGreaterThan(0);
+      await readable(page, page.locator('.final-board-panel'));
+    }
   });
 }
 

@@ -17,6 +17,7 @@ import './mobile-game.css';
 import './game-world.css';
 import './acquire-table.css';
 import './contrast.css';
+import './hotel-labels.css';
 // Browsers own the horizontal notch inset with viewport-fit=contain. The native
 // app uses an edge-to-edge webview and therefore needs CSS safe-area padding.
 if (Capacitor.isNativePlatform()) {

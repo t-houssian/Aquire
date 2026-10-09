@@ -139,7 +139,7 @@ test('a 12-seat city fits fully, then zooms and pans without moving the whole pa
     const scroll = await stage.evaluate((element) => {
       element.scrollLeft = element.scrollWidth;
       element.scrollTop = element.scrollHeight;
-      const last = element.querySelector('.game-board button:last-child')!.getBoundingClientRect();
+      const last = element.querySelector('.game-board button:last-of-type')!.getBoundingClientRect();
       const frame = element.getBoundingClientRect();
       return { left: element.scrollLeft, top: element.scrollTop, lastVisible: last.right <= frame.right + 1 && last.bottom <= frame.bottom + 1 };
     });

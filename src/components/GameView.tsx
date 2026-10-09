@@ -51,6 +51,8 @@ import CharacterAvatar from './CharacterAvatar';
 import { getCharacter } from '../game/characters';
 import { mapThemeStyle } from './MapPreview';
 import type { CityTileLayout } from './CityScene';
+import HotelLabels from './HotelLabels';
+import { hotelLabels } from './hotel-markers';
 const CityScene = lazy(() => import('./CityScene'));
 const colors = [
   '#8eab6b', '#dc9f7a', '#8d9fb8', '#bfa0bf', '#bcb06c', '#85b6b0',
@@ -345,6 +347,7 @@ export default function GameView({
       .filter((log) => log.type === 'found' && log.chain && log.tile)
       .map((log) => [log.chain, log.tile]),
   );
+  const labels = hotelLabels(game.board, boardTiles, boardColumns, headquarters);
   const select = (tile: Tile) => {
     if (controllable && game.phase === 'place' && player.hand.includes(tile)) {
       setSelected(tile);
@@ -552,11 +555,17 @@ export default function GameView({
                         </button>
                       );
                     })}
+                    <HotelLabels labels={labels} columns={boardColumns} projected={cityView && cityReady ? projectedTiles : undefined} />
                   </div>
                 </div>
               </div>
             </div>
-            <div className="board-legend">
+            <div className="board-legend" role="group" aria-label="Hotel and tile legend" tabIndex={active.length ? 0 : undefined}>
+              {active.length > 0 && <ul className="hotel-chain-key" aria-label="Hotel chains on this board">
+                {active.map(chain => <li key={chain.id} style={{ '--chain': chain.color, '--chain-light': chain.light } as CSSProperties}>
+                  <b aria-hidden="true">{chain.name[0]}</b>{chain.name}
+                </li>)}
+              </ul>}
               <span>
                 <i className="legend-empty" /> Unbuilt
               </span>

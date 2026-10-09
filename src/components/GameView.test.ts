@@ -157,6 +157,8 @@ describe('board chain identification and stock visibility', () => {
       expect(html).toContain(`--chain:${chain.color}`);
     }
     expect(html.match(/chain-headquarters/g)).toHaveLength(12);
+    expect(html.match(/class="hotel-nameplate"/g)).toHaveLength(12);
+    for (const chain of CHAINS) expect(html).toContain(`<span class="hotel-name-full">${chain.name}</span>`);
     expect(html).not.toContain('tile-building');
   });
 
