@@ -1,6 +1,11 @@
 import { expect, test, type Page } from '@playwright/test';
 import { createGame } from '../src/game/engine';
 import type { GameState } from '../src/game/types';
+import { freezeGameClock } from './helpers/clock';
+
+test.beforeEach(async ({ page }) => {
+  await freezeGameClock(page);
+});
 
 const players = ['Avery', 'Ellis', 'Margot'].map((name, index) => ({ id: `p${index}`, name }));
 
@@ -64,7 +69,7 @@ test('before-each-turn market rolls appear between investors without replaying o
   expect(state.lastRoundRolls).toMatchObject({ atTurn: 1, kind: 'turn', marketDie: expect.any(Number) });
 });
 
-test('a new per-turn market game reveals its opening roll', async ({ page }) => {
+async function openOpeningRoll(page: Page) {
   await page.goto('/');
   await page.getByRole('button', { name: /Let’s play/ }).first().click();
   const setup = page.getByRole('dialog', { name: 'A new opportunity' });
@@ -74,11 +79,32 @@ test('a new per-turn market game reveals its opening roll', async ({ page }) => 
   await setup.getByLabel('Market roll frequency').selectOption('turn');
   await setup.getByRole('button', { name: /Let’s build something/ }).click();
   await expect(page.getByRole('dialog', { name: 'The opening market' })).toBeVisible();
+}
+
+test('a new per-turn market game reveals its opening roll', async ({ page }) => {
+  await openOpeningRoll(page);
   const reveal = page.getByTestId('dice-reveal');
   await expect(reveal.locator('.dice-roll')).toHaveCount(1);
   await reveal.getByRole('button', { name: 'Show results' }).click();
   await reveal.getByRole('button', { name: 'Continue to the table' }).click();
   await expect(page.locator('.market-status-pill:visible')).toBeVisible();
+});
+
+test('an automatic dice reveal during a press waits for an intentional Continue', async ({ page }) => {
+  await openOpeningRoll(page);
+  const reveal = page.getByTestId('dice-reveal');
+  await expect(reveal).toHaveAttribute('data-revealed', 'false');
+  const button = reveal.getByRole('button', { name: 'Show results', exact: true });
+  await button.scrollIntoViewIfNeeded();
+  const bounds = (await button.boundingBox())!;
+  await page.mouse.move(bounds.x + bounds.width / 2, bounds.y + bounds.height / 2);
+  await page.mouse.down();
+  await page.clock.runFor(1100);
+  await expect(reveal).toHaveAttribute('data-revealed', 'true');
+  await page.mouse.up();
+  await expect(reveal).toBeVisible();
+  await reveal.getByRole('button', { name: 'Continue to the table', exact: true }).click();
+  await expect(reveal).toHaveCount(0);
 });
 
 test('computer opponents wait while the round dice are on screen', async ({ page }) => {
@@ -91,10 +117,11 @@ test('computer opponents wait while the round dice are on screen', async ({ page
   await page.getByRole('button', { name: 'Skip buying' }).click();
   await expect(page.getByTestId('dice-reveal')).toBeVisible();
   const pausedRevision = await page.evaluate(() => JSON.parse(localStorage.getItem('aquire.games.v2') || '[]')[0].game.revision);
-  await page.waitForTimeout(550);
+  await page.clock.runFor(10000);
   expect(await page.evaluate(() => JSON.parse(localStorage.getItem('aquire.games.v2') || '[]')[0].game.revision)).toBe(pausedRevision);
   const showResults = page.getByRole('button', { name: 'Show results' });
   if (await showResults.isVisible()) await showResults.click();
   await page.getByRole('button', { name: 'Continue to the table' }).click();
+  await page.clock.runFor(220);
   await expect.poll(() => page.evaluate(() => JSON.parse(localStorage.getItem('aquire.games.v2') || '[]')[0].game.revision)).toBeGreaterThan(pausedRevision);
 });

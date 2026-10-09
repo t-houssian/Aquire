@@ -50,21 +50,20 @@ function fixture(checkpoint: (typeof checkpoints)[number]): GameState {
 }
 
 async function load(page: Page, game: GameState, collapsed = false) {
-  await page.goto('/');
-  await page.evaluate(
+  await page.addInitScript(
     ({ state, gameKey, settingsKey }) => {
-      localStorage.setItem(
+      if (!localStorage.getItem(gameKey)) localStorage.setItem(
         gameKey,
         JSON.stringify([{ game: state, kind: 'local', updatedAt: '2026-09-17T15:00:00.000Z' }]),
       );
-      localStorage.setItem(
+      if (!localStorage.getItem(settingsKey)) localStorage.setItem(
         settingsKey,
         JSON.stringify({ sound: false, speed: 1400, hints: true, sidebarCollapsed: false }),
       );
     },
     { state: game, gameKey: GAME_KEY, settingsKey: SETTINGS_KEY },
   );
-  await page.reload();
+  await page.goto('/');
   await page
     .locator('.sidebar nav')
     .getByRole('button', { name: /My games/ })
@@ -176,26 +175,20 @@ test.describe('desktop gameplay fits the viewport', () => {
     { width: 1920, height: 1080 },
   ]) {
     for (const collapsed of [false, true]) {
-      test(`${viewport.width}×${viewport.height}, sidebar ${collapsed ? 'hidden' : 'shown'}: all phases and seven chains remain reachable`, async ({
-        page,
-      }, testInfo) => {
-        test.skip(
-          testInfo.project.name === 'mobile',
-          'Desktop layout matrix; mobile drawer has its own coverage.',
-        );
-        await page.setViewportSize(viewport);
-        for (const checkpoint of checkpoints) {
-          await test.step(checkpoint.phase, async () => {
-            const game = fixture(checkpoint);
-            await load(page, game, collapsed);
-            await phaseFits(
-              page,
-              game,
-              `${viewport.width}×${viewport.height} ${collapsed ? 'collapsed' : 'expanded'} ${game.phase}`,
-            );
-          });
-        }
-      });
+      for (const checkpoint of checkpoints) {
+        // Each screen gets its own time budget and browser context. Slow CI
+        // rendering must not consume the budget for the following six phases.
+        test(`${viewport.width}×${viewport.height}, sidebar ${collapsed ? 'hidden' : 'shown'}: ${checkpoint.phase} and seven chains remain reachable`, { tag: '@desktop' }, async ({ page }) => {
+          await page.setViewportSize(viewport);
+          const game = fixture(checkpoint);
+          await load(page, game, collapsed);
+          await phaseFits(
+            page,
+            game,
+            `${viewport.width}×${viewport.height} ${collapsed ? 'collapsed' : 'expanded'} ${game.phase}`,
+          );
+        });
+      }
     }
   }
 });

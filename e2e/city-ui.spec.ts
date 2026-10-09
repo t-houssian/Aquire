@@ -52,7 +52,7 @@ test('3D city survives remounting and switches between renderers without changin
 test('a device without WebGL keeps the illustrated lobby and fully playable flat board', async ({ page }) => {
   await page.addInitScript(() => {
     const original = HTMLCanvasElement.prototype.getContext;
-    HTMLCanvasElement.prototype.getContext = function (type: string, ...args: unknown[]) {
+    HTMLCanvasElement.prototype.getContext = function (this: HTMLCanvasElement, type: string, ...args: unknown[]) {
       if (type === 'webgl2' || type === 'webgl' || type === 'experimental-webgl') return null;
       return Reflect.apply(original, this, [type, ...args]);
     } as typeof original;
@@ -145,11 +145,11 @@ test('desktop zoom has gentle increments, preserves the viewed position and rese
   expect(await page.evaluate(() => localStorage.getItem('aquire.games.v2'))).toBe(saved);
 });
 
-test('all playable addresses remain selectable after camera fitting and board rotation', async ({ page }) => {
-  await openTable(page);
-  const saved = await page.evaluate(() => localStorage.getItem('aquire.games.v2'));
-  for (const [width, height] of [[1440, 900], [390, 844], [844, 390]]) {
+for (const [width, height] of [[1440, 900], [390, 844], [844, 390]]) {
+  test(`all playable addresses remain selectable after camera fitting and board rotation at ${width}×${height}`, async ({ page }) => {
     await page.setViewportSize({ width, height });
+    await openTable(page);
+    const saved = await page.evaluate(() => localStorage.getItem('aquire.games.v2'));
     await expect(page.locator('.city-rendered canvas')).toBeVisible();
     for (let rotation = 0; rotation < 2; rotation++) {
       for (const tile of getLegalTiles(game)) {
@@ -160,63 +160,60 @@ test('all playable addresses remain selectable after camera fitting and board ro
       }
       await page.getByRole('button', { name: 'Rotate board', exact: true }).click();
     }
-  }
-  expect(await page.evaluate(() => localStorage.getItem('aquire.games.v2'))).toBe(saved);
-});
+    expect(await page.evaluate(() => localStorage.getItem('aquire.games.v2'))).toBe(saved);
+  });
+}
 
-test('desktop placement leaves room for the board and keeps every coordinate readable', async ({ page }) => {
-  await page.setViewportSize({ width: 1512, height: 746 });
-  await openTable(page);
-  const saved = await page.evaluate(() => localStorage.getItem('aquire.games.v2'));
-  const tile = getLegalTiles(game)[0];
-  for (const [width, height] of [[1512, 746], [1060, 650], [1920, 1080]]) {
-    await page.setViewportSize({ width, height });
-    for (const renderer of ['3D', '2D']) {
-      await test.step(`${width}×${height}, ${renderer}`, async () => {
-        if (renderer === '2D') await page.getByRole('button', { name: 'Switch to flat board' }).click();
-        else await expect(page.locator('.city-rendered canvas')).toBeVisible();
-        for (const rotated of [false, true]) {
-          if (rotated) await page.getByRole('button', { name: 'Rotate board', exact: true }).click();
-          await expect(page.locator('.board-card')).toHaveAttribute('data-board-rotated', String(rotated));
-          const axes = page.locator(renderer === '3D'
-            ? '.city-board-axes > span'
-            : '.board-columns > span, .board-rows > span');
-          await expect(axes).toHaveCount(21);
-          for (const label of await axes.all()) {
-            await expect(label, 'the full coordinate must fit inside its clipping ancestors').toBeInViewport({ ratio: .999 });
-            expect(await label.evaluate(element => parseFloat(getComputedStyle(element).fontSize))).toBeGreaterThanOrEqual(11);
-          }
-          if (width === 1512 && renderer === '3D' && !rotated) {
-            const spacing = await page.evaluate(() => {
-              const tile = document.querySelector('.board-tile')!.getBoundingClientRect();
-              const column = document.querySelector('.city-axis-column')!.getBoundingClientRect();
-              const row = document.querySelector('.city-axis-row')!.getBoundingClientRect();
-              return { top: tile.top - column.bottom, side: tile.left - row.right };
-            });
-            // Sparse boards should have close-set numbers and a clear side gutter.
-            expect(spacing.top).toBeGreaterThan(8);
-            expect(spacing.top).toBeLessThan(24);
-            expect(spacing.side).toBeGreaterThan(15);
-          }
-          for (const control of await page.locator('.action-card button').all()) {
-            await expect(control).toBeInViewport({ ratio: .999 });
-          }
-          if (width === 1512) {
-            expect((await page.locator('.action-card').boundingBox())!.height).toBeLessThanOrEqual(90);
-            expect((await page.locator('.board-stage').boundingBox())!.height).toBeGreaterThanOrEqual(400);
-          }
-          const space = page.locator(`.game-board [data-tile="${tile}"]`);
-          await space.click();
-          await expect(space).toHaveAttribute('aria-pressed', 'true');
-          await expect(page.getByRole('button', { name: `Place ${tile}`, exact: true })).toBeEnabled();
+// Keep each renderer/viewport combination independent so CI has time to inspect
+// every coordinate and control in both orientations without sharing one budget.
+for (const [width, height] of [[1512, 746], [1060, 650], [1920, 1080]]) {
+  for (const renderer of ['3D', '2D']) {
+    test(`desktop placement at ${width}×${height} in ${renderer} keeps every coordinate readable`, async ({ page }) => {
+      await page.setViewportSize({ width, height });
+      await openTable(page);
+      const saved = await page.evaluate(() => localStorage.getItem('aquire.games.v2'));
+      const tile = getLegalTiles(game)[0];
+      if (renderer === '2D') await page.getByRole('button', { name: 'Switch to flat board' }).click();
+      else await expect(page.locator('.city-rendered canvas')).toBeVisible();
+      for (const rotated of [false, true]) {
+        if (rotated) await page.getByRole('button', { name: 'Rotate board', exact: true }).click();
+        await expect(page.locator('.board-card')).toHaveAttribute('data-board-rotated', String(rotated));
+        const axes = page.locator(renderer === '3D'
+          ? '.city-board-axes > span'
+          : '.board-columns > span, .board-rows > span');
+        await expect(axes).toHaveCount(21);
+        for (const label of await axes.all()) {
+          await expect(label, 'the full coordinate must fit inside its clipping ancestors').toBeInViewport({ ratio: .999 });
+          expect(await label.evaluate(element => parseFloat(getComputedStyle(element).fontSize))).toBeGreaterThanOrEqual(11);
         }
-        await page.getByRole('button', { name: 'Rotate board', exact: true }).click();
-      });
-    }
-    await page.getByRole('button', { name: 'Switch to 3D city' }).click();
+        if (width === 1512 && renderer === '3D' && !rotated) {
+          const spacing = await page.evaluate(() => {
+            const tile = document.querySelector('.board-tile')!.getBoundingClientRect();
+            const column = document.querySelector('.city-axis-column')!.getBoundingClientRect();
+            const row = document.querySelector('.city-axis-row')!.getBoundingClientRect();
+            return { top: tile.top - column.bottom, side: tile.left - row.right };
+          });
+          // Sparse boards should have close-set numbers and a clear side gutter.
+          expect(spacing.top).toBeGreaterThan(8);
+          expect(spacing.top).toBeLessThan(24);
+          expect(spacing.side).toBeGreaterThan(15);
+        }
+        for (const control of await page.locator('.action-card button').all()) {
+          await expect(control).toBeInViewport({ ratio: .999 });
+        }
+        if (width === 1512) {
+          expect((await page.locator('.action-card').boundingBox())!.height).toBeLessThanOrEqual(90);
+          expect((await page.locator('.board-stage').boundingBox())!.height).toBeGreaterThanOrEqual(400);
+        }
+        const space = page.locator(`.game-board [data-tile="${tile}"]`);
+        await space.click();
+        await expect(space).toHaveAttribute('aria-pressed', 'true');
+        await expect(page.getByRole('button', { name: `Place ${tile}`, exact: true })).toBeEnabled();
+      }
+      expect(await page.evaluate(() => localStorage.getItem('aquire.games.v2'))).toBe(saved);
+    });
   }
-  expect(await page.evaluate(() => localStorage.getItem('aquire.games.v2'))).toBe(saved);
-});
+}
 
 test('setup exposes optional rules on demand and keeps its start button reachable', async ({ page }) => {
   await page.goto('/');

@@ -75,7 +75,8 @@ export default function DiceReveal({ report, rules, onContinue }: {
       </div>
       <div className="dice-reveal-footer">
         <span>{report.kind === 'round' ? `Round ${report.round} is complete.` : 'The next move is ready.'}</span>
-        <button className="button primary" onClick={revealed ? onContinue : () => setRevealed(true)}>{revealed ? 'Continue to the table' : 'Show results'} <ArrowRight size={16} /></button>
+        {/* A press begun on Show results must not turn into a Continue click. */}
+        <button key={revealed ? 'continue' : 'show-results'} className="button primary" onClick={revealed ? onContinue : () => setRevealed(true)}>{revealed ? 'Continue to the table' : 'Show results'} <ArrowRight size={16} /></button>
       </div>
     </div>
   </Modal>;
