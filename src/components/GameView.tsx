@@ -728,7 +728,7 @@ export default function GameView({
                             >
                               <span
                                 className="chain-logo"
-                                style={{ background: c.light, color: c.color }}
+                                style={{ '--certificate-color': c.color, background: c.light } as CSSProperties}
                               >
                                 {c.abbreviation}
                               </span>
@@ -769,7 +769,7 @@ export default function GameView({
                             >
                               <span
                                 className="chain-logo"
-                                style={{ background: c.light, color: c.color }}
+                                style={{ '--certificate-color': c.color, background: c.light } as CSSProperties}
                               >
                                 {c.abbreviation}
                               </span>
@@ -1048,7 +1048,7 @@ export default function GameView({
                       <div className="stock-main">
                         <span
                           className="chain-logo"
-                          style={{ background: c.light, color: c.color }}
+                          style={{ '--certificate-color': c.color, background: c.light } as CSSProperties}
                         >
                           {c.abbreviation}
                         </span>

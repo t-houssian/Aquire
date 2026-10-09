@@ -46,7 +46,7 @@ export default function TurnRecap({
             {placedChain && (
               <span
                 className="recap-chain-badge"
-                style={{ background: placedChain.light, color: placedChain.color }}
+                style={{ background: placedChain.light, color: `color-mix(in srgb, ${placedChain.color} 40%, #203c43)` }}
               >
                 <b>{placedChain.name[0]}</b>
                 {placedChain.name}
@@ -155,7 +155,7 @@ export default function TurnRecap({
                   <div className="recap-purchase" key={chain}>
                     <span
                       className="recap-stock-letter"
-                      style={{ background: chainById[chain].color }}
+                      style={{ background: chainById[chain].light, color: `color-mix(in srgb, ${chainById[chain].color} 40%, #203c43)` }}
                     >
                       {chainById[chain].name[0]}
                     </span>

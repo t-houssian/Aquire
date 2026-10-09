@@ -43,7 +43,8 @@
     "@capacitor/cli": "^8.0.0",
     "@playwright/test": "^1.55.0",
     "vitest": "^4.1.11",
-    "@types/three": "^0.186.0"
+    "@types/three": "^0.186.0",
+    "axe-core": "^4.14.0"
   },
   "overrides": {
     "xcode": {

@@ -1,0 +1,199 @@
+/* Text belongs to its surface: cream panels must not inherit the world's mint. */
+:root {
+  --ink: #203c43;
+  --muted: #526459;
+  --green: #0e6d65;
+  --world-text: #e2eee4;
+  --world-muted: #d6e8df;
+}
+
+.modal,
+.history-page .history-stats > div,
+.story-page .story-finished,
+.story-page .story-result {
+  color: var(--ink);
+}
+
+/* Secondary copy remains quieter than headings, with readable contrast. */
+.eyebrow,
+.icon-button,
+.segmented button:not(.selected),
+.edition-card p,
+.setting-row div span,
+.settings-section-heading p,
+.setup-advanced > summary > span,
+.inline-note,
+.player-inputs label,
+.avatar-editor-preview p,
+.cast-preview-item small,
+.wardrobe-reward small,
+.wardrobe-reward span,
+.profile-record-heading > span,
+.profile-stats dt,
+.online-unavailable p,
+.lobby-players small,
+.open-table-heading small,
+.lobby-directory-tools span,
+.hotel-roster-heading small,
+.hotel-choice-copy small,
+.hotel-share-supply,
+.house-rule-grid small,
+.house-rule-timer small,
+.hotel-roster-summary span,
+.rule-intro p,
+.rule-number,
+.rules-list details > p,
+.price-reference th,
+.price-reference td,
+.price-reference td:first-child,
+.source-link,
+.saved-list p,
+.status-pill,
+.status-pill.finished,
+.history-stats span,
+.history-trophies span,
+.story-chapter > p,
+.story-chapter > small,
+.story-chapter-cast > span,
+.story-book-theme,
+.story-rules dd,
+.story-opponents span,
+.story-opponents p,
+.story-tip,
+.story-briefing-footer > span,
+.story-finished p,
+.story-result p,
+.story-objective p,
+.action-description,
+.order-summary,
+.market-heading p,
+.market-open,
+.stock-name > span,
+.stock-price > span,
+.stock-purchase > span,
+.stock-sale > span,
+.market-footer p,
+.market-footer p span,
+.investor-list summary > span:not(.avatar),
+.holdings > div,
+.hidden-holdings,
+.activity-list li small,
+.activity-list li p,
+.merger-controls small,
+.merger-rack span,
+.merger-rack em,
+.privacy-panel,
+.turn-track > span:not(.current):not(.complete),
+.settlement-row.settlement-head,
+.settlement-row.settlement-head strong,
+.settlement-next,
+.final-standings-list small,
+.trophy-award small,
+.tile-inventory,
+.merger-payout-intro,
+.merger-payout-hero p,
+.merger-payout-head,
+.merger-payout-footer > span,
+.share-decision-investor p,
+.share-decision-options small,
+.dice-outcome p,
+.dice-reveal-footer,
+.recap-kicker,
+.recap-label,
+.recap-no-purchase,
+.recap-footer > span,
+.final-market-roll p {
+  color: var(--muted);
+}
+
+.modal .eyebrow,
+.story-page .story-chapter .eyebrow,
+.history-page .match-history-card .eyebrow {
+  color: var(--muted);
+}
+.story-page .story-finished .eyebrow { color: var(--muted); }
+.playing-game .stock-purchase > span { color: var(--muted); }
+
+input::placeholder { color: #647365; }
+.rulebook .page-heading em { color: #4e713b; }
+.modal .icon-button:hover { color: var(--ink); }
+.button:disabled {
+  opacity: 1;
+  background: #e0e3d8;
+  border-color: #bac4b3;
+  color: var(--muted);
+  box-shadow: none;
+}
+.wardrobe-reward:disabled { opacity: 1; }
+.danger,
+.error-message { color: #88422e; }
+
+/* Keep map identities, using their ink instead of a decorative accent for text. */
+.map-preview-copy .eyebrow,
+.map-preview-copy small,
+.modal .map-preview-copy .eyebrow,
+.story-page .map-preview-copy .eyebrow,
+.final-board-title .eyebrow {
+  color: var(--map-ink);
+}
+.map-preview-copy p,
+.final-board-title small,
+.final-board-caption { opacity: 1; }
+
+/* Dark surfaces retain a separate, brighter secondary text palette. */
+.story-page .story-book-tabs button :is(span, small),
+.playing-game .player-chip div > span,
+.playing-game .player-chip strong small {
+  color: var(--world-muted);
+}
+.history-page .empty-state h2 { color: var(--world-text); }
+.story-page .story-book-theme { color: var(--world-muted); }
+
+/* Inactive hotels and locked chapters should still be easy to read. */
+.playing-game .stock-row.inactive,
+.playing-game .stock-row.inactive .stock-main,
+.story-page .story-chapter.locked { opacity: 1; }
+.playing-game .stock-row.inactive :is(.stock-name, .stock-price) strong {
+  color: var(--muted);
+}
+.playing-game .market-tabs button:not(.active) { color: var(--muted); }
+.playing-game .market-tabs button.active { color: var(--green); }
+.stepper button { color: var(--green); }
+
+/* Chain colors distinguish the pieces; certificate lettering uses darker ink. */
+.hotel-choice-mark,
+.hotel-roster-summary span {
+  color: color-mix(in srgb, var(--hotel-color) 40%, #203c43);
+}
+.final-board-tile.chain {
+  color: color-mix(in srgb, var(--final-chain) 40%, #203c43);
+}
+.final-board-tile.featured {
+  background: color-mix(in srgb, var(--final-chain-light) 65%, var(--final-chain));
+}
+.chain-logo { color: color-mix(in srgb, var(--certificate-color) 40%, #203c43); }
+.settlement-emblem {
+  background: var(--settlement-light);
+  color: color-mix(in srgb, var(--settlement-color) 40%, #203c43);
+}
+.merger-payout-emblem {
+  background: var(--payout-light);
+  color: color-mix(in srgb, var(--payout-color) 40%, #203c43);
+}
+.playing-game .map-themed .board-tile:not(.occupied):not(.map-void):not(.playable) > .tile-coordinate,
+.playing-game .map-themed .game-board.city-rendered > .board-tile:not(.occupied):not(.map-void):not(.playable) > .tile-coordinate {
+  color: #b2c6ce;
+}
+.playing-game .map-themed .game-board.city-rendered > .board-tile.occupied > .tile-coordinate,
+.playing-game .map-themed .game-board.city-rendered > .board-tile.chain-headquarters > .tile-initial {
+  color: #fff8e5;
+  background: #102b38e6;
+  border-radius: 2px;
+  text-shadow: none;
+}
+.recap-board-letter {
+  fill: #fff8e5;
+  stroke: #203c43;
+  stroke-width: 2.5px;
+  paint-order: stroke;
+}

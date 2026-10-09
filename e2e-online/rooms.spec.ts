@@ -3,6 +3,7 @@
  * UI/auth-client/polling contracts, not live Edge Functions, RLS or deployment.
  */
 import { test, expect, type Page, type Route } from '@playwright/test';
+import { readable } from '../e2e/helpers/contrast';
 import {
   ALL_TILES,
   CHAINS,
@@ -15,7 +16,7 @@ import {
 import { getMap } from '../src/game/maps';
 import { DEFAULT_AVATAR, encodeAvatar } from '../src/game/avatars';
 import type { LobbyOptions, OnlineProfile, OnlineRoom } from '../src/lib/online';
-import type { HouseRules, MapId } from '../src/game/types';
+import type { BotDifficulty, HouseRules, MapId } from '../src/game/types';
 
 const HOST = '11111111-1111-4111-8111-111111111111';
 const GUEST = '22222222-2222-4222-8222-222222222222';
@@ -62,7 +63,7 @@ class MockSupabase {
     }
     return room;
   }
-  start(options: { botCount?: number; mapId?: MapId; botDifficulty?: 'standard' | 'strategist'; houseRules?: HouseRules } = {}) {
+  start(options: { botCount?: number; mapId?: MapId; botDifficulty?: BotDifficulty; houseRules?: HouseRules } = {}) {
     if (this.room.players.length === 1)
       this.room.players.push({ id: GUEST, name: 'Morgan', isBot: false });
     if (this.room.players.length === 2 && options.botCount !== 0 && getMap(options.mapId).maxPlayers > 2)
@@ -169,7 +170,7 @@ class MockSupabase {
         mapId?: MapId;
         botCount?: number;
         houseRules?: HouseRules;
-        botDifficulty?: 'standard' | 'strategist';
+        botDifficulty?: BotDifficulty;
       };
       this.operations.push(body);
       if(body.operation==='profile')return this.respond(route,{profile:this.profile});
@@ -279,6 +280,18 @@ test.describe('online room UI — HTTP-mocked Supabase', () => {
       ),
     ).toBeTruthy();
     expect(backend.operations.some((operation) => operation.operation === 'start')).toBeTruthy();
+  });
+  test('online setup and the waiting lobby keep readable text on a phone', async ({ page }) => {
+    await page.setViewportSize({ width: 393, height: 852 });
+    await page.emulateMedia({ reducedMotion: 'reduce' });
+    const backend = new MockSupabase();
+    await backend.install(page);
+    await page.goto('/');
+    await openOnline(page);
+    await readable(page, page.getByRole('dialog'));
+    await page.getByRole('button', { name: 'Open your table' }).click();
+    await expect(page.locator('.room-code')).toContainText(CODE);
+    await readable(page, page.getByRole('dialog'));
   });
   test('a host can save an online room for later, then end it from My games', async ({ page }) => {
     const backend = new MockSupabase();
